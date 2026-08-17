@@ -33,7 +33,7 @@ export const ProviderDashboard: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setIsOnline(!isOnline)}
               className="btn"
@@ -41,17 +41,28 @@ export const ProviderDashboard: React.FC = () => {
                 background: isOnline ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                 borderColor: isOnline ? '#10b981' : '#ef4444',
                 color: isOnline ? '#34d399' : '#f87171',
-                padding: '10px 18px'
+                padding: '8px 14px',
+                fontSize: '13px'
               }}
             >
-              <Power size={16} />
-              <span>{isOnline ? '🟢 Available for Requests' : '🔴 Currently Offline'}</span>
+              <Power size={14} />
+              <span>{isOnline ? '🟢 Online' : '🔴 Offline'}</span>
             </button>
 
-            <button className="btn btn-primary">
-              <Calendar size={16} />
+            <a href="/provider/profile" className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '13px' }}>
+              <Briefcase size={14} />
+              <span>My Profile</span>
+            </a>
+
+            <a href="/provider/certificates" className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '13px' }}>
+              <ShieldCheck size={14} />
+              <span>Certificates</span>
+            </a>
+
+            <a href="/provider/availability" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>
+              <Calendar size={14} />
               <span>Manage Slots</span>
-            </button>
+            </a>
           </div>
         </div>
 
