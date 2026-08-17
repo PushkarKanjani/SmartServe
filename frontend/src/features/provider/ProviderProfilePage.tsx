@@ -8,7 +8,7 @@ import {
   Briefcase,
   Wrench,
   Clock,
-  DollarSign,
+  IndianRupee,
   MapPin,
   ShieldCheck,
   Save,
@@ -26,7 +26,7 @@ export const ProviderProfilePage: React.FC = () => {
   const [category, setCategory] = useState('');
   const [skills, setSkills] = useState('');
   const [experienceYears, setExperienceYears] = useState<number>(0);
-  const [basePrice, setBasePrice] = useState<string>('0.00');
+  const [basePrice, setBasePrice] = useState<string>('500.00');
   const [serviceArea, setServiceArea] = useState('');
 
   const [isLoading, setIsLoading] = useState(true);
@@ -45,7 +45,7 @@ export const ProviderProfilePage: React.FC = () => {
         setCategory(data.category || 'Plumbing & Repairs');
         setSkills(data.skills || '');
         setExperienceYears(data.experience_years || 0);
-        setBasePrice(String(data.base_price || '0.00'));
+        setBasePrice(String(data.base_price || '500.00'));
         setServiceArea(data.service_area || '');
       } catch {
         // Fallback for offline/demo mode
@@ -53,7 +53,7 @@ export const ProviderProfilePage: React.FC = () => {
         setCategory('Plumbing & Smart Home Diagnostics');
         setSkills('Leak detection, Pipe welding, Water pressure balancing, Smart fixtures');
         setExperienceYears(6);
-        setBasePrice('65.00');
+        setBasePrice('500.00');
         setServiceArea('Greater Noida & Sector 62');
       } finally {
         setIsLoading(false);
@@ -81,11 +81,10 @@ export const ProviderProfilePage: React.FC = () => {
       });
 
       setProfile(updated);
-      setSuccessMsg('Provider profile updated successfully!');
+      setSuccessMsg('Provider profile updated successfully.');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch {
-      // Demo mode fallback notification
-      setSuccessMsg('Profile changes saved locally (demo mode active)');
+      setSuccessMsg('Profile changes saved locally (demo mode active).');
       setTimeout(() => setSuccessMsg(null), 4000);
     } finally {
       setIsSaving(false);
@@ -93,107 +92,108 @@ export const ProviderProfilePage: React.FC = () => {
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#0a0e1a' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#F9FAFB' }}>
       <Navbar />
 
-      <main className="container" style={{ flex: 1, maxWidth: '1000px' }}>
+      <main className="container" style={{ flex: 1, maxWidth: '960px' }}>
         {/* Header */}
-        <div style={{ marginBottom: '28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
-              Provider Professional Profile
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#111827' }}>
+              Provider Profile
             </h1>
             <span className="badge badge-provider">Public Listing</span>
           </div>
-          <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>
-            Configure your public profile, rates, trade specializations, and service boundaries.
+          <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '2px' }}>
+            Configure your professional rates, specializations, and service coverage area.
           </p>
         </div>
 
         {/* Notifications */}
         {successMsg && (
           <div style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid #10b981',
-            color: '#34d399',
-            padding: '12px 16px',
-            borderRadius: '10px',
-            marginBottom: '20px',
+            background: '#ECFDF5',
+            border: '1px solid #A7F3D0',
+            color: '#065F46',
+            padding: '10px 14px',
+            borderRadius: '6px',
+            marginBottom: '16px',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            fontSize: '14px'
+            gap: '8px',
+            fontSize: '13px'
           }}>
-            <CheckCircle2 size={18} />
+            <CheckCircle2 size={16} />
             <span>{successMsg}</span>
           </div>
         )}
 
         {errorMsg && (
           <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid #ef4444',
-            color: '#f87171',
-            padding: '12px 16px',
-            borderRadius: '10px',
-            marginBottom: '20px',
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            color: '#991B1B',
+            padding: '10px 14px',
+            borderRadius: '6px',
+            marginBottom: '16px',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            fontSize: '14px'
+            gap: '8px',
+            fontSize: '13px'
           }}>
-            <AlertCircle size={18} />
+            <AlertCircle size={16} />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* Trust & Quality Metric Snapshot */}
-        <div className="glass-panel" style={{ padding: '20px', marginBottom: '28px' }}>
-          <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '14px' }}>
-            📊 Live Platform Performance Signals
+        {/* Performance Signals Snapshot */}
+        <div className="card" style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px' }}>
+            Performance Metrics
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
-            <div className="glass-card" style={{ padding: '14px' }}>
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>Reliability Score</div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#818cf8', marginTop: '2px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+            <div className="stat-card" style={{ padding: '12px 16px' }}>
+              <div className="stat-label">Reliability Score</div>
+              <div className="stat-value" style={{ fontSize: '20px', color: '#4F46E5' }}>
                 {profile?.reliability_score || 96.5}%
               </div>
-              <div style={{ fontSize: '11px', color: '#34d399', marginTop: '2px' }}>High Trust Band</div>
+              <div className="stat-subtext" style={{ color: '#059669' }}>High Trust Band</div>
             </div>
 
-            <div className="glass-card" style={{ padding: '14px' }}>
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>Acceptance Rate</div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#fff', marginTop: '2px' }}>
+            <div className="stat-card" style={{ padding: '12px 16px' }}>
+              <div className="stat-label">Acceptance Rate</div>
+              <div className="stat-value" style={{ fontSize: '20px' }}>
                 {profile?.acceptance_rate || 98.0}%
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>Last 30 days</div>
+              <div className="stat-subtext">Last 30 days</div>
             </div>
 
-            <div className="glass-card" style={{ padding: '14px' }}>
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>On-Time Arrival</div>
-              <div style={{ fontSize: '22px', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
+            <div className="stat-card" style={{ padding: '12px 16px' }}>
+              <div className="stat-label">On-Time Arrival</div>
+              <div className="stat-value" style={{ fontSize: '20px', color: '#059669' }}>
                 {profile?.on_time_rate || 99.2}%
               </div>
-              <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>Geofence verified</div>
+              <div className="stat-subtext">Geofence verified</div>
             </div>
 
-            <div className="glass-card" style={{ padding: '14px' }}>
-              <div style={{ fontSize: '12px', color: '#94a3b8' }}>Verification Status</div>
-              <div style={{ fontSize: '15px', fontWeight: 700, color: '#34d399', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <ShieldCheck size={18} color="#10b981" />
-                <span>Verified Pro</span>
+            <div className="stat-card" style={{ padding: '12px 16px' }}>
+              <div className="stat-label">Verification Status</div>
+              <div style={{ marginTop: '6px' }}>
+                <span className="badge badge-verified">
+                  <ShieldCheck size={12} /> Verified Pro
+                </span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Profile Edit Form */}
-        <div className="glass-panel" style={{ padding: '32px' }}>
+        <div className="card" style={{ padding: '24px' }}>
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
               
               <div className="form-group">
-                <label className="form-label" htmlFor="fullName">Full Name / Business Trade Name</label>
+                <label className="form-label" htmlFor="fullName">Full Name / Trade Name</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     id="fullName"
@@ -202,9 +202,9 @@ export const ProviderProfilePage: React.FC = () => {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
-                    style={{ paddingLeft: '40px' }}
+                    style={{ paddingLeft: '36px' }}
                   />
-                  <User size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <User size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
 
@@ -217,29 +217,29 @@ export const ProviderProfilePage: React.FC = () => {
                     className="form-input"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    placeholder="e.g. Plumbing & Sanitary, HVAC, Electrical"
+                    placeholder="e.g. Plumbing, HVAC, Electrical"
                     required
-                    style={{ paddingLeft: '40px' }}
+                    style={{ paddingLeft: '36px' }}
                   />
-                  <Briefcase size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <Briefcase size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="basePrice">Base Call-Out Fee / Rate ($)</label>
+                <label className="form-label" htmlFor="basePrice">Base Call-Out Fee / Rate (INR)</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     id="basePrice"
                     type="number"
-                    step="0.01"
+                    step="1"
                     min="0"
                     className="form-input"
                     value={basePrice}
                     onChange={(e) => setBasePrice(e.target.value)}
                     required
-                    style={{ paddingLeft: '40px' }}
+                    style={{ paddingLeft: '36px' }}
                   />
-                  <DollarSign size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <IndianRupee size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
 
@@ -255,14 +255,14 @@ export const ProviderProfilePage: React.FC = () => {
                     value={experienceYears}
                     onChange={(e) => setExperienceYears(Number(e.target.value))}
                     required
-                    style={{ paddingLeft: '40px' }}
+                    style={{ paddingLeft: '36px' }}
                   />
-                  <Clock size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <Clock size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="serviceArea">Primary Service Area / Bounding Radius</label>
+                <label className="form-label" htmlFor="serviceArea">Service Area / Coverage Bounding</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     id="serviceArea"
@@ -270,10 +270,10 @@ export const ProviderProfilePage: React.FC = () => {
                     className="form-input"
                     value={serviceArea}
                     onChange={(e) => setServiceArea(e.target.value)}
-                    placeholder="e.g. Noida Sector 62 & 15km surrounding"
-                    style={{ paddingLeft: '40px' }}
+                    placeholder="e.g. Noida Sector 62 & 15km radius"
+                    style={{ paddingLeft: '36px' }}
                   />
-                  <MapPin size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <MapPin size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
 
@@ -287,15 +287,15 @@ export const ProviderProfilePage: React.FC = () => {
                     value={photoUrl}
                     onChange={(e) => setPhotoUrl(e.target.value)}
                     placeholder="https://..."
-                    style={{ paddingLeft: '40px' }}
+                    style={{ paddingLeft: '36px' }}
                   />
-                  <ImageIcon size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <ImageIcon size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
 
             </div>
 
-            <div className="form-group" style={{ marginTop: '8px' }}>
+            <div className="form-group" style={{ marginTop: '6px' }}>
               <label className="form-label" htmlFor="skills">Specific Skills & Specializations</label>
               <div style={{ position: 'relative' }}>
                 <textarea
@@ -304,10 +304,10 @@ export const ProviderProfilePage: React.FC = () => {
                   rows={3}
                   value={skills}
                   onChange={(e) => setSkills(e.target.value)}
-                  placeholder="Describe your capabilities, e.g. Hydro-jetting drain cleaning, Smart thermostat wiring, Copper pipe welding"
-                  style={{ paddingLeft: '40px', resize: 'vertical' }}
+                  placeholder="Describe your capabilities, e.g. Drain cleaning, Smart thermostat wiring, Pipe welding"
+                  style={{ paddingLeft: '36px', resize: 'vertical' }}
                 />
-                <Wrench size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '16px' }} />
+                <Wrench size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '12px' }} />
               </div>
             </div>
 
@@ -316,10 +316,10 @@ export const ProviderProfilePage: React.FC = () => {
                 type="submit"
                 className="btn btn-primary"
                 disabled={isSaving || isLoading}
-                style={{ padding: '12px 28px', fontSize: '15px' }}
+                style={{ padding: '10px 24px', fontSize: '14px' }}
               >
-                <Save size={18} />
-                <span>{isSaving ? 'Saving Profile...' : 'Save Profile Changes'}</span>
+                <Save size={16} />
+                <span>{isSaving ? 'Saving...' : 'Save Profile'}</span>
               </button>
             </div>
           </form>

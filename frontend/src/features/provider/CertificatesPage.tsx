@@ -73,10 +73,9 @@ export const CertificatesPage: React.FC = () => {
 
       setCertificates((prev) => [newCert, ...prev]);
       setDocumentUrl('');
-      setSuccessMsg('Certificate metadata submitted for admin verification!');
+      setSuccessMsg('Certificate submitted for admin verification.');
       setTimeout(() => setSuccessMsg(null), 4000);
     } catch {
-      // Demo fallback
       const demoCert: Certificate = {
         id: `cert-${Date.now()}`,
         provider_id: 'demo-provider-1',
@@ -87,7 +86,7 @@ export const CertificatesPage: React.FC = () => {
       };
       setCertificates((prev) => [demoCert, ...prev]);
       setDocumentUrl('');
-      setSuccessMsg('Certificate submitted to verification queue (demo mode)');
+      setSuccessMsg('Certificate submitted to verification queue (demo mode).');
       setTimeout(() => setSuccessMsg(null), 4000);
     } finally {
       setIsSubmitting(false);
@@ -97,92 +96,92 @@ export const CertificatesPage: React.FC = () => {
   const getStatusBadge = (status: string) => {
     if (status === 'VERIFIED') {
       return (
-        <span className="badge badge-verified" style={{ gap: '6px' }}>
-          <ShieldCheck size={14} color="#10b981" />
-          <span>Verified Pro</span>
+        <span className="badge badge-verified" style={{ gap: '4px' }}>
+          <ShieldCheck size={13} />
+          <span>Verified</span>
         </span>
       );
     }
     if (status === 'REJECTED') {
       return (
-        <span className="badge badge-admin" style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.3)', gap: '6px' }}>
-          <XCircle size={14} color="#ef4444" />
+        <span className="badge badge-danger" style={{ gap: '4px' }}>
+          <XCircle size={13} />
           <span>Rejected</span>
         </span>
       );
     }
     return (
-      <span className="badge badge-customer" style={{ background: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.3)', gap: '6px' }}>
-        <Clock size={14} color="#f59e0b" />
-        <span>Pending Admin Review</span>
+      <span className="badge badge-warning" style={{ gap: '4px' }}>
+        <Clock size={13} />
+        <span>Pending Review</span>
       </span>
     );
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#0a0e1a' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#F9FAFB' }}>
       <Navbar />
 
-      <main className="container" style={{ flex: 1, maxWidth: '1000px' }}>
+      <main className="container" style={{ flex: 1, maxWidth: '960px' }}>
         {/* Header */}
-        <div style={{ marginBottom: '28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
-              Provider Verification & Certifications
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#111827' }}>
+              Verification & Certifications
             </h1>
-            <span className="badge badge-provider">Trust & Safety</span>
+            <span className="badge badge-provider">Compliance</span>
           </div>
-          <p style={{ color: '#94a3b8', fontSize: '14px', marginTop: '4px' }}>
-            Upload your professional licenses, trade certificates, and insurance documents to earn the Verified Pro badge and rank higher in search algorithms.
+          <p style={{ color: '#6B7280', fontSize: '13px', marginTop: '2px' }}>
+            Submit your trade licenses and technical certifications to earn the Verified Pro badge and rank higher in customer searches.
           </p>
         </div>
 
         {/* Notifications */}
         {successMsg && (
           <div style={{
-            background: 'rgba(16, 185, 129, 0.15)',
-            border: '1px solid #10b981',
-            color: '#34d399',
-            padding: '12px 16px',
-            borderRadius: '10px',
-            marginBottom: '20px',
+            background: '#ECFDF5',
+            border: '1px solid #A7F3D0',
+            color: '#065F46',
+            padding: '10px 14px',
+            borderRadius: '6px',
+            marginBottom: '16px',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            fontSize: '14px'
+            gap: '8px',
+            fontSize: '13px'
           }}>
-            <CheckCircle2 size={18} />
+            <CheckCircle2 size={16} />
             <span>{successMsg}</span>
           </div>
         )}
 
         {errorMsg && (
           <div style={{
-            background: 'rgba(239, 68, 68, 0.15)',
-            border: '1px solid #ef4444',
-            color: '#f87171',
-            padding: '12px 16px',
-            borderRadius: '10px',
-            marginBottom: '20px',
+            background: '#FEF2F2',
+            border: '1px solid #FECACA',
+            color: '#991B1B',
+            padding: '10px 14px',
+            borderRadius: '6px',
+            marginBottom: '16px',
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            fontSize: '14px'
+            gap: '8px',
+            fontSize: '13px'
           }}>
-            <AlertCircle size={18} />
+            <AlertCircle size={16} />
             <span>{errorMsg}</span>
           </div>
         )}
 
-        {/* Upload Form */}
-        <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Upload size={18} color="#818cf8" />
-            <span>Submit New Verification Document</span>
+        {/* Upload Form Card */}
+        <div className="card" style={{ padding: '20px', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '14px', fontWeight: 600, color: '#111827', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Upload size={16} color="#4F46E5" />
+            <span>Upload New Verification Document</span>
           </h2>
 
           <form onSubmit={handleUpload}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
               <div className="form-group">
                 <label className="form-label" htmlFor="certType">Document / Certification Type</label>
                 <select
@@ -190,7 +189,6 @@ export const CertificatesPage: React.FC = () => {
                   className="form-input"
                   value={certificateType}
                   onChange={(e) => setCertificateType(e.target.value)}
-                  style={{ background: 'rgba(15, 23, 42, 0.8)' }}
                 >
                   <option value="Government Trade License">Government Trade License</option>
                   <option value="Vocational / Technical Diploma">Vocational / Technical Diploma</option>
@@ -201,7 +199,7 @@ export const CertificatesPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="docUrl">Document Storage URL (S3 / Cloud Storage)</label>
+                <label className="form-label" htmlFor="docUrl">Document Storage URL</label>
                 <div style={{ position: 'relative' }}>
                   <input
                     id="docUrl"
@@ -211,27 +209,27 @@ export const CertificatesPage: React.FC = () => {
                     onChange={(e) => setDocumentUrl(e.target.value)}
                     placeholder="https://storage.smartserve.dev/..."
                     required
-                    style={{ paddingLeft: '40px' }}
+                    style={{ paddingLeft: '36px' }}
                   />
-                  <FileText size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                  <FileText size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
                 </div>
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ fontSize: '12px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Lock size={14} color="#818cf8" />
-                <span>Documents are stored in private object storage and reviewed only by verified administrators.</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ fontSize: '12px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Lock size={13} color="#6B7280" />
+                <span>Documents are encrypted in private storage and reviewed by platform admins.</span>
               </div>
 
               <button
                 type="submit"
                 className="btn btn-primary"
                 disabled={isSubmitting}
-                style={{ padding: '10px 24px' }}
+                style={{ padding: '8px 20px' }}
               >
-                <Upload size={16} />
-                <span>{isSubmitting ? 'Submitting...' : 'Upload for Verification'}</span>
+                <Upload size={14} />
+                <span>{isSubmitting ? 'Uploading...' : 'Submit Document'}</span>
               </button>
             </div>
           </form>
@@ -239,47 +237,48 @@ export const CertificatesPage: React.FC = () => {
 
         {/* Existing Certificates List */}
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#f1f5f9' }}>
-              📜 Submitted Credentials ({certificates.length})
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+              Submitted Credentials ({certificates.length})
             </h2>
           </div>
 
           {isLoading ? (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Loading documents...</div>
+            <div style={{ textAlign: 'center', padding: '30px', color: '#6B7280' }}>Loading documents...</div>
           ) : certificates.length === 0 ? (
-            <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+            <div className="card" style={{ padding: '30px', textAlign: 'center', color: '#6B7280' }}>
               No credentials uploaded yet. Upload a certificate above to boost customer trust.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {certificates.map((cert) => (
-                <div key={cert.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div key={cert.id} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
-                      width: '42px',
-                      height: '42px',
-                      borderRadius: '10px',
-                      background: 'rgba(99, 102, 241, 0.15)',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '6px',
+                      background: '#EEF2FF',
+                      border: '1px solid #C7D2FE',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      color: '#4F46E5'
                     }}>
-                      <FileText size={20} color="#818cf8" />
+                      <FileText size={18} />
                     </div>
 
                     <div>
-                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
                         {cert.certificate_type}
                       </div>
-                      <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-                        Uploaded: {new Date(cert.uploaded_at).toLocaleDateString()}
+                      <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '1px' }}>
+                        Uploaded on {new Date(cert.uploaded_at).toLocaleDateString('en-IN')}
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {getStatusBadge(cert.verification_status)}
 
                     <a
@@ -287,9 +286,9 @@ export const CertificatesPage: React.FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-secondary"
-                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                      style={{ padding: '4px 10px', fontSize: '12px' }}
                     >
-                      <ExternalLink size={14} />
+                      <ExternalLink size={12} />
                       <span>View</span>
                     </a>
                   </div>

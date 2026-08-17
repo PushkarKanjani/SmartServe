@@ -20,19 +20,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: '#0b0f19',
-        color: '#94a3b8',
-        gap: '16px'
+        background: '#F9FAFB',
+        color: '#6B7280',
+        gap: '12px'
       }}>
         <div style={{
-          width: '40px',
-          height: '40px',
-          border: '3px solid rgba(99, 102, 241, 0.2)',
-          borderTopColor: '#6366f1',
+          width: '32px',
+          height: '32px',
+          border: '3px solid #E5E7EB',
+          borderTopColor: '#4F46E5',
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite'
         }} />
-        <p style={{ fontSize: '14px', fontWeight: 500 }}>Authenticating session...</p>
+        <p style={{ fontSize: '13px', fontWeight: 500 }}>Authenticating session...</p>
       </div>
     );
   }

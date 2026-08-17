@@ -18,8 +18,9 @@ const RootRedirect: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        background: '#0a0e1a',
-        color: '#94a3b8'
+        background: '#F9FAFB',
+        color: '#6B7280',
+        fontSize: '13px'
       }}>
         Loading SmartServe...
       </div>

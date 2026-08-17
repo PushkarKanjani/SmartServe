@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
-import { Sparkles, LogOut, ShieldCheck, UserCheck, Briefcase } from 'lucide-react';
+import { Wrench, LogOut } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
   const { user, role, isAuthenticated, logout } = useAuth();
@@ -18,21 +18,25 @@ export const Navbar: React.FC = () => {
     return '/customer';
   };
 
+  const getRoleBadgeClass = () => {
+    if (role === 'admin') return 'badge-admin';
+    if (role === 'provider') return 'badge-provider';
+    return 'badge-customer';
+  };
+
   return (
     <header style={{
-      background: 'rgba(11, 15, 25, 0.85)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+      background: '#FFFFFF',
+      borderBottom: '1px solid #E5E7EB',
       position: 'sticky',
       top: 0,
       zIndex: 50,
-      padding: '0 24px'
+      padding: '0 20px'
     }}>
       <div style={{
-        maxWidth: '1280px',
+        maxWidth: '1200px',
         margin: '0 auto',
-        height: '68px',
+        height: '60px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between'
@@ -41,50 +45,44 @@ export const Navbar: React.FC = () => {
         <Link to={isAuthenticated ? getDashboardPath() : '/login'} style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
+          gap: '10px',
           textDecoration: 'none',
-          color: '#ffffff'
+          color: '#111827'
         }}>
           <div style={{
-            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-            width: '38px',
-            height: '38px',
-            borderRadius: '10px',
+            background: '#4F46E5',
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.35)'
+            color: '#FFFFFF'
           }}>
-            <Sparkles size={20} color="#ffffff" />
+            <Wrench size={18} />
           </div>
           <div>
-            <div style={{ fontWeight: 800, fontSize: '18px', letterSpacing: '-0.02em' }}>
-              Smart<span style={{ color: '#818cf8' }}>Serve</span>
-            </div>
-            <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Service Marketplace
-            </div>
+            <span style={{ fontWeight: 700, fontSize: '17px', color: '#111827' }}>
+              SmartServe
+            </span>
           </div>
         </Link>
 
         {/* User Info & Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           {isAuthenticated && user ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, color: '#111827' }}>
                     {user.full_name || user.email}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                  <div style={{ fontSize: '11px', color: '#6B7280' }}>
                     {user.email}
                   </div>
                 </div>
 
-                <span className={`badge badge-${role || 'customer'}`}>
-                  {role === 'admin' && <ShieldCheck size={12} />}
-                  {role === 'provider' && <Briefcase size={12} />}
-                  {role === 'customer' && <UserCheck size={12} />}
+                <span className={`badge ${getRoleBadgeClass()}`} style={{ textTransform: 'capitalize' }}>
                   {role}
                 </span>
               </div>
@@ -92,19 +90,19 @@ export const Navbar: React.FC = () => {
               <button
                 onClick={handleLogout}
                 className="btn btn-secondary"
-                style={{ padding: '8px 14px', fontSize: '13px' }}
+                style={{ padding: '6px 12px', fontSize: '12px' }}
                 title="Log out"
               >
-                <LogOut size={16} />
+                <LogOut size={14} />
                 <span>Logout</span>
               </button>
             </>
           ) : (
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Link to="/login" className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '13px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Link to="/login" className="btn btn-secondary" style={{ padding: '6px 14px', fontSize: '13px' }}>
                 Sign In
               </Link>
-              <Link to="/register" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '13px' }}>
+              <Link to="/register" className="btn btn-primary" style={{ padding: '6px 14px', fontSize: '13px' }}>
                 Register
               </Link>
             </div>

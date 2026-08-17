@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../store/AuthContext';
 import { UserRole } from '../../types/auth';
-import { Sparkles, Lock, Mail, User as UserIcon, Phone, AlertCircle, ArrowRight, UserCheck, Briefcase } from 'lucide-react';
+import { Wrench, Lock, Mail, User as UserIcon, Phone, AlertCircle, ArrowRight, UserCheck, Briefcase } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -52,54 +52,52 @@ export const RegisterPage: React.FC = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '24px',
-      background: 'radial-gradient(ellipse at top, rgba(99, 102, 241, 0.15), transparent 70%), #0a0e1a'
+      padding: '24px 16px',
+      background: '#F9FAFB'
     }}>
-      <div style={{ width: '100%', maxWidth: '480px' }}>
+      <div style={{ width: '100%', maxWidth: '440px' }}>
         
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '54px',
-            height: '54px',
-            borderRadius: '16px',
-            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-            boxShadow: '0 8px 24px rgba(99, 102, 241, 0.35)',
-            marginBottom: '16px'
+            width: '44px',
+            height: '44px',
+            borderRadius: '8px',
+            background: '#4F46E5',
+            color: '#FFFFFF',
+            marginBottom: '12px'
           }}>
-            <Sparkles size={28} color="#ffffff" />
+            <Wrench size={22} />
           </div>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em', color: '#fff' }}>
-            Create Your Account
+          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#111827', letterSpacing: '-0.01em' }}>
+            Create an Account
           </h1>
-          <p style={{ fontSize: '14px', color: '#94a3b8', marginTop: '6px' }}>
+          <p style={{ fontSize: '13px', color: '#6B7280', marginTop: '4px' }}>
             Join SmartServe as a Customer or Service Provider
           </p>
         </div>
 
-        {/* Register Panel */}
-        <div className="glass-panel" style={{ padding: '32px' }}>
+        {/* Register Card */}
+        <div className="card" style={{ padding: '24px' }}>
           
           {error && (
             <div style={{
-              background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
-              borderRadius: '10px',
-              padding: '12px 14px',
-              color: '#f87171',
+              background: '#FEF2F2',
+              border: '1px solid #FECACA',
+              borderRadius: '6px',
+              padding: '10px 12px',
+              color: '#991B1B',
               fontSize: '13px',
               display: 'flex',
               alignItems: 'flex-start',
-              gap: '10px',
-              marginBottom: '20px'
+              gap: '8px',
+              marginBottom: '16px'
             }}>
-              <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-              <div>
-                <strong>Registration Notice:</strong> {error}
-              </div>
+              <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+              <div>{error}</div>
             </div>
           )}
 
@@ -107,51 +105,51 @@ export const RegisterPage: React.FC = () => {
             {/* Role Selector Tabs */}
             <div className="form-group">
               <label className="form-label">I want to join as</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                 <button
                   type="button"
                   onClick={() => setRole('customer')}
                   style={{
-                    padding: '12px',
-                    borderRadius: '10px',
-                    background: role === 'customer' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                    border: `1px solid ${role === 'customer' ? '#6366f1' : 'rgba(255, 255, 255, 0.08)'}`,
-                    color: role === 'customer' ? '#818cf8' : '#94a3b8',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    background: role === 'customer' ? '#EEF2FF' : '#FFFFFF',
+                    border: `1px solid ${role === 'customer' ? '#4F46E5' : '#D1D5DB'}`,
+                    color: role === 'customer' ? '#4F46E5' : '#4B5563',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '4px',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    fontWeight: 600,
-                    fontSize: '13px'
+                    fontWeight: 500,
+                    fontSize: '12px'
                   }}
                 >
-                  <UserCheck size={20} />
-                  <span>Customer (Book Services)</span>
+                  <UserCheck size={18} />
+                  <span>Customer</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setRole('provider')}
                   style={{
-                    padding: '12px',
-                    borderRadius: '10px',
-                    background: role === 'provider' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                    border: `1px solid ${role === 'provider' ? '#10b981' : 'rgba(255, 255, 255, 0.08)'}`,
-                    color: role === 'provider' ? '#34d399' : '#94a3b8',
+                    padding: '10px',
+                    borderRadius: '6px',
+                    background: role === 'provider' ? '#ECFDF5' : '#FFFFFF',
+                    border: `1px solid ${role === 'provider' ? '#059669' : '#D1D5DB'}`,
+                    color: role === 'provider' ? '#059669' : '#4B5563',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '4px',
                     cursor: 'pointer',
                     fontFamily: 'inherit',
-                    fontWeight: 600,
-                    fontSize: '13px'
+                    fontWeight: 500,
+                    fontSize: '12px'
                   }}
                 >
-                  <Briefcase size={20} />
-                  <span>Provider (Offer Services)</span>
+                  <Briefcase size={18} />
+                  <span>Service Provider</span>
                 </button>
               </div>
             </div>
@@ -163,13 +161,13 @@ export const RegisterPage: React.FC = () => {
                   id="fullName"
                   type="text"
                   className="form-input"
-                  placeholder="e.g. Alex Johnson"
+                  placeholder="e.g. Rahul Sharma"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
-                  style={{ paddingLeft: '40px' }}
+                  style={{ paddingLeft: '36px' }}
                 />
-                <UserIcon size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <UserIcon size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               </div>
             </div>
 
@@ -184,9 +182,9 @@ export const RegisterPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  style={{ paddingLeft: '40px' }}
+                  style={{ paddingLeft: '36px' }}
                 />
-                <Mail size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Mail size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               </div>
             </div>
 
@@ -197,12 +195,12 @@ export const RegisterPage: React.FC = () => {
                   id="regPhone"
                   type="tel"
                   className="form-input"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+91 98765 43210"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  style={{ paddingLeft: '40px' }}
+                  style={{ paddingLeft: '36px' }}
                 />
-                <Phone size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Phone size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               </div>
             </div>
 
@@ -218,9 +216,9 @@ export const RegisterPage: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={8}
-                  style={{ paddingLeft: '40px' }}
+                  style={{ paddingLeft: '36px' }}
                 />
-                <Lock size={18} color="#64748b" style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)' }} />
+                <Lock size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
               </div>
             </div>
 
@@ -228,18 +226,18 @@ export const RegisterPage: React.FC = () => {
               type="submit"
               className="btn btn-primary"
               disabled={isSubmitting}
-              style={{ width: '100%', padding: '12px', marginTop: '8px', fontSize: '15px' }}
+              style={{ width: '100%', padding: '10px', marginTop: '6px', fontSize: '14px' }}
             >
-              {isSubmitting ? 'Creating Account...' : 'Register & Continue'}
-              <ArrowRight size={18} />
+              {isSubmitting ? 'Creating account...' : 'Create Account'}
+              <ArrowRight size={16} />
             </button>
           </form>
 
           {/* Footer Link */}
-          <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: '#94a3b8' }}>
+          <div style={{ textAlign: 'center', marginTop: '18px', fontSize: '13px', color: '#6B7280' }}>
             Already have an account?{' '}
-            <Link to="/login" style={{ color: '#818cf8', fontWeight: 600, textDecoration: 'none' }}>
-              Sign In
+            <Link to="/login" style={{ color: '#4F46E5', fontWeight: 500, textDecoration: 'none' }}>
+              Sign in
             </Link>
           </div>
         </div>
