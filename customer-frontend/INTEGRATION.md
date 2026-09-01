@@ -42,30 +42,30 @@ This document provides the exact field-level contract, data models, endpoint spe
 
 | Endpoint | Method | Required Payload / Params | Expected Response | Live Status |
 |---|---|---|---|---|
-| `/customer/auth/register` | `POST` | `{ full_name, email, password, phone? }` | `{ access_token, token_type, user }` | 🔴 Missing (404) |
-| `/customer/auth/login` | `POST` | `{ email, password }` | `{ access_token, token_type, user }` | 🔴 Missing (404) |
-| `/customer/auth/me` | `GET` | Header Bearer Token | `CustomerUser` object | 🔴 Missing (404) |
-| `/customer/auth/logout` | `POST` | Header Bearer Token | `{ success: true }` | 🔴 Missing (404) |
-| `/customer/auth/forgot-password` | `POST` | `{ email }` | `{ message: string }` | 🔴 Missing (404) |
-| `/customer/auth/reset-password` | `POST` | `{ token, password }` | `{ message: string }` | 🔴 Missing (404) |
-| `/customer/catalog/categories` | `GET` | None | `Array<CategoryItem>` | 🔴 Missing (404) |
-| `/customer/catalog/services` | `GET` | `?category_id&search&page&limit` | `{ items: ServiceItem[], total, page }` | 🔴 Missing (404) |
-| `/customer/catalog/services/{id}` | `GET` | Path `id` | `ServiceItem` (with addons & faqs) | 🔴 Missing (404) |
-| `/customer/bookings` | `GET` | `?status` (`all` \| `upcoming` \| `completed`) | `Array<BookingItem>` | 🔴 Missing (404) |
-| `/customer/bookings` | `POST` | `CreateBookingPayload` | `BookingItem` | 🔴 Missing (404) |
-| `/customer/bookings/{id}` | `GET` | Path `id` | `BookingItem` | 🔴 Missing (404) |
-| `/customer/bookings/{id}/cancel` | `POST` | `{ reason: string }` | `BookingItem` (status: Cancelled) | 🔴 Missing (404) |
-| `/customer/bookings/{id}/feedback`| `POST` | `{ rating, review_text?, image_urls? }`| `BookingItem` | 🔴 Missing (404) |
-| `/customer/support/tickets` | `GET` | None | `Array<SupportTicket>` | 🔴 Missing (404) |
-| `/customer/support/tickets` | `POST` | `CreateTicketPayload` | `SupportTicket` | 🔴 Missing (404) |
-| `/customer/support/tickets/{id}` | `GET` | Path `id` | `SupportTicket` | 🔴 Missing (404) |
-| `/customer/support/tickets/{id}/messages`| `POST`| `{ text, attachments? }` | `TicketMessage` | 🔴 Missing (404) |
-| `/customer/profile` | `GET` | Header Bearer Token | `CustomerProfile` | 🔴 Missing (404) |
-| `/customer/profile` | `PATCH` | `{ full_name?, email?, phone? }` | `CustomerProfile` | 🔴 Missing (404) |
-| `/customer/sessions` | `GET` | Header Bearer Token | `Array<UserSession>` | 🔴 Missing (404) |
-| `/customer/sessions/{id}/revoke` | `POST` | Path `id` | `{ success: true }` | 🔴 Missing (404) |
-| `/customer/sessions/revoke-all` | `POST` | Header Bearer Token | `{ success: true }` | 🔴 Missing (404) |
-| `/customer/uploads/image` | `POST` | `multipart/form-data` | `Array<string>` (image URLs) | 🔴 Missing (404) |
+| `/customer/auth/register` | `POST` | `{ full_name, email, password, phone? }` | `{ access_token, token_type, customer_id }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/auth/login` | `POST` | `{ email, password }` | `{ access_token, token_type, customer_id }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/auth/me` | `GET` | Header Bearer Token | `CustomerSessionResponse` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/auth/logout` | `POST` | Header Bearer Token | `{ status: "ok" }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/auth/forgot-password` | `POST` | `{ email }` | `{ status: "ok" }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/auth/reset-password` | `POST` | `{ token, password }` | `{ status: "ok" }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/catalog/categories` | `GET` | None | `Array<CategoryItem>` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/catalog/services` | `GET` | `?category&emergency_only&q` | `Array<ServiceItem>` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/catalog/services/{id}` | `GET` | Path `id` | `ServiceItem` (with addons & faqs) | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/bookings` | `GET` | `?status_filter` | `Array<BookingDetail>` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/bookings` | `POST` | `CreateBookingPayload` | `BookingDetail` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/bookings/{id}` | `GET` | Path `id` | `BookingDetail` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/bookings/{id}/cancel` | `POST` | `{ reason: string }` | `BookingDetail` (status: CANCELLED) | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/bookings/{id}/feedback`| `POST` | `{ rating, review_text?, image_urls? }`| `{ status: "ok" }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/support/tickets` | `GET` | None | `Array<SupportTicketDetail>` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/support/tickets` | `POST` | `CreateTicketPayload` | `SupportTicketDetail` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/support/tickets/{id}` | `GET` | Path `id` | `SupportTicketDetail` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/support/tickets/{id}/messages`| `POST`| `{ message_text, attachment_url? }` | `MessageItem` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/profile` | `GET` | Header Bearer Token | `CustomerSessionResponse` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/profile` | `PATCH` | `{ full_name?, email?, phone? }` | `CustomerSessionResponse` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/sessions` | `GET` | Header Bearer Token | `Array<SessionListItem>` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/sessions/{id}/revoke` | `POST` | Path `id` | `{ status: "ok" }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/sessions/revoke-all` | `POST` | Header Bearer Token | `{ status: "ok" }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
+| `/customer/uploads/image` | `POST` | `multipart/form-data` | `{ url: string }` | 🟢 Live (`backend/app/api/v1/customer.py`) |
 
 ---
 
