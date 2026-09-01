@@ -149,6 +149,57 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Customer Support Escalations & Feedback */}
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+              Customer Support Tickets & Live Feedback
+            </h2>
+            <span className="badge" style={{ backgroundColor: '#EEF2FF', color: '#4F46E5' }}>Live Feed</span>
+          </div>
+
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th>Issue Category</th>
+                  <th>Subject / Review</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ fontWeight: 600, color: '#111827' }}>Pushkar Kanjani</td>
+                  <td>Booking Issue</td>
+                  <td style={{ color: '#4B5563' }}>Technician running behind schedule for Split AC Deep Service</td>
+                  <td><span className="badge" style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>High</span></td>
+                  <td><span className="badge" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>OPEN</span></td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '12px' }}>
+                      <span>Respond</span>
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{ fontWeight: 600, color: '#111827' }}>Aastha Singh</td>
+                  <td>Service Quality</td>
+                  <td style={{ color: '#4B5563' }}>"5★ Excellent deep cleaning performance by team!"</td>
+                  <td><span className="badge" style={{ backgroundColor: '#E0E7FF', color: '#4338CA' }}>Normal</span></td>
+                  <td><span className="badge" style={{ backgroundColor: '#D1FAE5', color: '#059669' }}>RESOLVED</span></td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: '12px' }}>
+                      <span>View</span>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
       </main>
     </div>
   );
