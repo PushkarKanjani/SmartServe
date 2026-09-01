@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.api.v1.providers import router as providers_router
+from app.api.v1.customer import router as customer_router
 
 # Auto-create tables for local development mode
 Base.metadata.create_all(bind=engine)
@@ -26,6 +27,7 @@ app.add_middleware(
 
 # Mount API Routers
 app.include_router(providers_router, prefix=settings.API_V1_PREFIX)
+app.include_router(customer_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/health", tags=["System"])

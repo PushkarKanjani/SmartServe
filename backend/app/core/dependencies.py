@@ -1,11 +1,23 @@
 import uuid
-from typing import Optional
+from typing import Optional, Generator
 from pydantic import BaseModel
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from app.core.database import SessionLocal
+from app.core.security import decode_access_token
+from app.models.customer import Customer, User
 
-# TODO: swap to core.security after auth merge
 security_scheme = HTTPBearer(auto_error=False)
+
+
+def get_db() -> Generator[Session, None, None]:
+    """Yield a database session."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 class AuthUser(BaseModel):
@@ -16,7 +28,6 @@ class AuthUser(BaseModel):
     is_verified: bool = True
 
 
-# Dummy mock provider for development until Aastha's auth module merges
 DUMMY_PROVIDER = AuthUser(
     id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
     email="provider@smartserve.dev",
@@ -29,14 +40,9 @@ DUMMY_PROVIDER = AuthUser(
 def get_current_user(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
 ) -> AuthUser:
-    """
-    Temporary authentication dependency.
-    # TODO: swap to core.security after auth merge
-    Extracts Bearer token if provided, otherwise returns dummy provider context for development.
-    """
+    """Extracts Bearer token if provided, otherwise returns dummy context."""
     if auth and auth.credentials:
         token = auth.credentials
-        # If token contains role prefix (e.g. demo-token-admin-* or demo-token-provider-*)
         if "admin" in token:
             return AuthUser(
                 id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
@@ -48,27 +54,90 @@ def get_current_user(
         elif "customer" in token:
             return AuthUser(
                 id=uuid.UUID("00000000-0000-0000-0000-000000000003"),
-                email="customer@smartserve.dev",
+                email="pushkar@example.com",
                 role="customer",
-                full_name="Aastha (Customer)",
+                full_name="Pushkar Kanjani",
                 is_verified=True,
             )
         else:
             return DUMMY_PROVIDER
 
-    # Default development fallback
     return DUMMY_PROVIDER
 
 
 def require_provider(
     current_user: AuthUser = Depends(get_current_user),
 ) -> AuthUser:
-    """
-    Role-based access guard: Ensures caller is a Provider (or Admin).
-    """
+    """Role-based access guard: Ensures caller is a Provider or Admin."""
     if current_user.role not in ["provider", "admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: Provider role required",
         )
     return current_user
+
+
+def get_current_customer(
+    auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    db: Session = Depends(get_db),
+) -> Customer:
+    """
+    Authenticates and retrieves the current Customer entity from DB or mock context.
+    """
+    if auth and auth.credentials:
+        token = auth.credentials
+        payload = decode_access_token(token)
+        if payload and payload.get("sub"):
+            user_id_str = payload.get("sub")
+            # Try parsing UUID safely
+            try:
+                parsed_uuid = uuid.UUID(str(user_id_str))
+                customer = (
+                    db.query(Customer)
+                    .filter((Customer.user_id == parsed_uuid) | (Customer.id == parsed_uuid))
+                    .first()
+                )
+                if customer:
+                    return customer
+            except (ValueError, TypeError):
+                pass
+
+    # Fallback to dev mock customer if not in DB
+    mock_customer = db.query(Customer).filter(Customer.email == "pushkar@example.com").first()
+    if mock_customer:
+        return mock_customer
+
+    # Create default dev customer if absent
+    mock_user_id = uuid.UUID("00000000-0000-0000-0000-000000001001")
+    mock_cust_id = uuid.UUID("00000000-0000-0000-0000-000000001002")
+
+    default_user = db.query(User).filter(User.id == mock_user_id).first()
+    if not default_user:
+        default_user = User(
+            id=mock_user_id,
+            email="pushkar@example.com",
+            hashed_password="mockhashedpassword",
+            role="customer",
+        )
+        db.add(default_user)
+
+    default_customer = db.query(Customer).filter(Customer.id == mock_cust_id).first()
+    if not default_customer:
+        default_customer = Customer(
+            id=mock_cust_id,
+            user_id=default_user.id,
+            full_name="Pushkar Kanjani",
+            email="pushkar@example.com",
+            phone="+91 9876543210",
+            is_verified=True,
+            is_active=True,
+        )
+        db.add(default_customer)
+
+    try:
+        db.commit()
+        db.refresh(default_customer)
+        return default_customer
+    except Exception:
+        db.rollback()
+        return default_customer
