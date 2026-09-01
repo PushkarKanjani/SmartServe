@@ -33,7 +33,7 @@ export interface CustomerSessionResponse {
 }
 
 // Mock auth fallback helper
-const isMockAuthEnabled = true;
+const isMockAuthEnabled = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
 if (isMockAuthEnabled) {
   console.warn('⚠ MOCK AUTH ENABLED');
 }
