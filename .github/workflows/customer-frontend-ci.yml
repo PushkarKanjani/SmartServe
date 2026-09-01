@@ -1,0 +1,77 @@
+name: customer-frontend CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'customer-frontend/**'
+      - '.github/workflows/customer-frontend-ci.yml'
+  pull_request:
+    paths:
+      - 'customer-frontend/**'
+
+defaults:
+  run:
+    working-directory: customer-frontend
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: customer-frontend/package-lock.json
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Grep for any-types
+        run: ! grep -REn ":\s*any\b|as\s+any\b" src/ || (echo "❌ Found 'any' types" && exit 1)
+      - name: Grep for hardcoded secrets
+        run: ! grep -REn "sk_live|pk_live|AKIA[A-Z0-9]{16}|ghp_[A-Za-z0-9]{36}" src/ || (echo "❌ Possible secret found" && exit 1)
+
+  build:
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: customer-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: customer-frontend-dist
+          path: customer-frontend/dist
+          retention-days: 7
+
+  e2e:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: customer-frontend/package-lock.json
+      - run: npm ci
+      - run: npm run test:e2e:install
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report
+          path: customer-frontend/playwright-report
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: test-results
+          path: customer-frontend/test-results
+          retention-days: 7
