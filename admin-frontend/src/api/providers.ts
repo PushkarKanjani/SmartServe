@@ -28,7 +28,25 @@ export interface ProviderItem {
     extracted_name?: string;
     is_duplicate: boolean;
     verification_status: string;
+    uploaded_at?: string;
+    verified_at?: string;
     ai_scan_signal?: any;
+  }>;
+  services?: Array<{
+    id: string;
+    name: string;
+    category: string;
+    subcategory?: string;
+    base_price: number;
+    is_active: boolean;
+  }>;
+  audit_logs?: Array<{
+    id: string;
+    action: string;
+    actor_email: string;
+    actor_role: string;
+    created_at: string;
+    metadata_json?: any;
   }>;
 }
 
@@ -83,6 +101,18 @@ export const verifyProviderDocuments = async (
   const response = await apiClient.post(`/admin/providers/${providerUserId}/verify`, {
     verification_status: verificationStatus,
     reason,
+  });
+  return response.data;
+};
+
+export const requestDocumentReplacement = async (
+  providerUserId: string,
+  reason: string,
+  documentId?: string
+): Promise<{ status: string; verification_status: string; message: string }> => {
+  const response = await apiClient.post(`/admin/providers/${providerUserId}/request-replacement`, {
+    reason,
+    document_id: documentId,
   });
   return response.data;
 };

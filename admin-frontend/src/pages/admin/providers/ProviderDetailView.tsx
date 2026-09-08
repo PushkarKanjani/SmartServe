@@ -15,11 +15,15 @@ import {
   ChevronRight,
   Phone,
   Mail,
-  X
+  X,
+  History,
+  AlertCircle,
+  Wrench
 } from 'lucide-react';
 import { 
   getProviderDetail, 
   verifyProviderDocuments, 
+  requestDocumentReplacement,
   updateProviderAccountStatus, 
   estimateProviderEta 
 } from '../../../api/providers';
@@ -48,6 +52,10 @@ export const ProviderDetailView: React.FC = () => {
   const [statusActionType, setStatusActionType] = useState<boolean>(false); // true = reactivate, false = suspend
   const [statusReason, setStatusReason] = useState<string>('');
   const [statusLoading, setStatusLoading] = useState<boolean>(false);
+
+  const [replacementModalOpen, setReplacementModalOpen] = useState<boolean>(false);
+  const [replacementReason, setReplacementReason] = useState<string>('');
+  const [replacementLoading, setReplacementLoading] = useState<boolean>(false);
 
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null);
 
@@ -116,6 +124,23 @@ export const ProviderDetailView: React.FC = () => {
       showToast(err.response?.data?.detail || 'Account status action failed.', 'error');
     } finally {
       setStatusLoading(false);
+    }
+  };
+
+  const handleReplacementSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!provider) return;
+    setReplacementLoading(true);
+    try {
+      await requestDocumentReplacement(provider.id, replacementReason);
+      showToast('Document replacement request logged and marked in audit trail.', 'warning');
+      setReplacementModalOpen(false);
+      setReplacementReason('');
+      fetchProviderData();
+    } catch (err: any) {
+      showToast(err.response?.data?.detail || 'Document replacement action failed.', 'error');
+    } finally {
+      setReplacementLoading(false);
     }
   };
 
@@ -238,6 +263,13 @@ export const ProviderDetailView: React.FC = () => {
                   Approve Verification
                 </button>
               )}
+
+              <button
+                onClick={() => setReplacementModalOpen(true)}
+                className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-2xl border border-amber-300 text-xs transition-colors"
+              >
+                Request Correction
+              </button>
 
               {provider.is_active ? (
                 <button
@@ -398,6 +430,43 @@ export const ProviderDetailView: React.FC = () => {
             </div>
           </div>
 
+          {/* Selected Catalog Services Offered */}
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#E5DEC9] shadow-sm space-y-5">
+            <div className="flex items-center justify-between border-b border-[#E5DEC9]/60 pb-3">
+              <h3 className="text-lg font-bold font-serif text-[#1F2A1E] flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-[#2F5233]" />
+                <span>Selected Catalog Services</span>
+              </h3>
+              <span className="text-xs font-bold text-[#2F5233] bg-[#F2EDE1] px-3 py-1 rounded-full border border-[#E5DEC9]">
+                {(provider.services || []).length} Services Selected
+              </span>
+            </div>
+
+            {(!provider.services || provider.services.length === 0) ? (
+              <div className="p-6 bg-[#FAF7F0] rounded-2xl text-center text-xs font-semibold text-slate-500">
+                No catalog services linked to this provider account yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {provider.services.map((svc) => (
+                  <div key={svc.id} className="p-4 bg-[#FAF7F0] rounded-2xl border border-[#E5DEC9] space-y-2 hover:border-[#2F5233]/40 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-bold text-slate-900 text-sm">{svc.name}</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        {svc.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">{svc.category}</p>
+                    <div className="pt-2 border-t border-[#E5DEC9]/60 flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-medium">Catalog Price</span>
+                      <span className="font-mono font-bold text-[#2F5233] text-sm">₹{svc.base_price}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Verification Documents & AI-Assisted OCR Signals */}
           <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#E5DEC9] shadow-sm space-y-5">
             <h3 className="text-lg font-bold font-serif text-[#1F2A1E] border-b border-[#E5DEC9]/60 pb-3 flex items-center gap-2">
@@ -416,7 +485,19 @@ export const ProviderDetailView: React.FC = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5DEC9]/60 pb-3">
                       <div>
                         <span className="font-bold text-slate-900 text-sm block">{doc.certificate_type}</span>
-                        <p className="text-xs text-slate-500 font-mono mt-0.5">Doc #: {doc.document_number || 'N/A'}</p>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 font-mono mt-0.5 flex-wrap">
+                          <span>Doc #: {doc.document_number || 'N/A'}</span>
+                          {doc.uploaded_at && (
+                            <span className="text-[11px] text-slate-400 font-sans">
+                              Uploaded: {new Date(doc.uploaded_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                            </span>
+                          )}
+                          {doc.verified_at && (
+                            <span className="text-[11px] text-emerald-600 font-sans">
+                              Verified: {new Date(doc.verified_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <span className={`px-3 py-1 rounded-full text-xs font-bold self-start border ${
@@ -424,11 +505,28 @@ export const ProviderDetailView: React.FC = () => {
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           : doc.verification_status === 'Rejected'
                           ? 'bg-rose-50 text-rose-700 border-rose-200'
+                          : doc.verification_status === 'Correction Requested'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
                           : 'bg-amber-50 text-amber-700 border-amber-200'
                       }`}>
                         {doc.verification_status}
                       </span>
                     </div>
+
+                    {/* Document link / preview banner */}
+                    {doc.document_url && (
+                      <div className="flex items-center justify-between bg-white px-3.5 py-2 rounded-xl border border-[#E5DEC9] text-xs">
+                        <span className="text-slate-500 truncate font-mono">{doc.document_url}</span>
+                        <a
+                          href={doc.document_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#2F5233] font-bold hover:underline shrink-0 ml-2"
+                        >
+                          View Document ↗
+                        </a>
+                      </div>
+                    )}
 
                     {/* AI-Assisted Signal Box */}
                     {doc.ai_scan_signal && (
@@ -450,6 +548,44 @@ export const ProviderDetailView: React.FC = () => {
                         </p>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Administrative Audit Trail */}
+          <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#E5DEC9] shadow-sm space-y-5">
+            <div className="flex items-center justify-between border-b border-[#E5DEC9]/60 pb-3">
+              <h3 className="text-lg font-bold font-serif text-[#1F2A1E] flex items-center gap-2">
+                <History className="w-5 h-5 text-[#2F5233]" />
+                <span>Verification & Administrative Audit Trail</span>
+              </h3>
+              <span className="text-xs font-semibold text-slate-500">
+                Immutable Compliance Logs
+              </span>
+            </div>
+
+            {(!provider.audit_logs || provider.audit_logs.length === 0) ? (
+              <div className="p-6 bg-[#FAF7F0] rounded-2xl text-center text-xs font-semibold text-slate-500">
+                No administrative actions logged yet for this provider.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {provider.audit_logs.map((log) => (
+                  <div key={log.id} className="p-3.5 bg-[#FAF7F0] rounded-xl border border-[#E5DEC9] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div>
+                      <span className="font-bold text-slate-900 block">{log.action}</span>
+                      <p className="text-slate-500 text-[11px] mt-0.5">
+                        By <span className="font-semibold text-slate-700">{log.actor_email}</span> ({log.actor_role})
+                        {log.metadata_json?.reason && (
+                          <span className="italic ml-1 text-slate-600">— Reason: "{log.metadata_json.reason}"</span>
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-[11px] text-slate-400 font-mono self-start sm:self-center shrink-0">
+                      {log.created_at ? new Date(log.created_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }) : ''}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -555,6 +691,56 @@ export const ProviderDetailView: React.FC = () => {
                 }`}
               >
                 {statusLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Confirm ${statusActionType ? 'Reactivation' : 'Suspension'}`}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Document Replacement Request Modal (Return-for-Correction) */}
+      {replacementModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={handleReplacementSubmit} className="bg-white w-full max-w-md rounded-3xl shadow-xl border border-[#E5DEC9] p-6 space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between border-b border-[#E5DEC9]/60 pb-3">
+              <h3 className="text-base font-bold font-serif text-[#1F2A1E] flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <span>Request Document Correction</span>
+              </h3>
+              <button type="button" onClick={() => setReplacementModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-600 font-medium">
+              Specify correction details for <strong>{provider.full_name}</strong>. Their account will remain intact with status <em>Correction Requested</em> rather than being deleted.
+            </p>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Correction Instructions / Reason *</label>
+              <textarea
+                value={replacementReason}
+                onChange={(e) => setReplacementReason(e.target.value)}
+                placeholder="e.g. Identity document is blurry or unreadable. Please re-upload a clear copy of your Aadhaar/PAN..."
+                className="w-full bg-[#FAF7F0] border border-[#E5DEC9] rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
+                rows={3}
+                required
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setReplacementModalOpen(false)}
+                className="px-4 py-2 bg-[#F2EDE1] text-slate-700 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={replacementLoading}
+                className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow-sm"
+              >
+                {replacementLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit Correction Request'}
               </button>
             </div>
           </form>
