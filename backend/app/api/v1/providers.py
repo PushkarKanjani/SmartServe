@@ -53,9 +53,34 @@ def update_my_provider_profile(
     return service.update_my_profile(current_user, update_data)
 
 
+@router.get(
+    "/providers/{provider_id}",
+    response_model=ProviderProfileResponse,
+    summary="Get provider profile with strict ownership check",
+)
+def get_provider_profile(
+    provider_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    return service.get_provider_profile(current_user, provider_id)
+
+
 # ==========================================
 # PROVIDER SERVICES ENDPOINTS
 # ==========================================
+
+@router.get(
+    "/providers/me/services",
+    response_model=List[ProviderServiceResponse],
+    summary="List customized services offered by current authenticated provider",
+)
+def list_my_provider_services(
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    return service.list_provider_services(current_user, current_user.id)
+
 
 @router.post(
     "/providers/me/services",
@@ -85,21 +110,48 @@ def update_provider_service_offering(
     return service.update_provider_service(current_user, id, data)
 
 
+@router.delete(
+    "/providers/me/services/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a service offering from current provider profile",
+)
+def delete_provider_service_offering(
+    id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    service.delete_provider_service(current_user, id)
+    return None
+
+
 @router.get(
     "/providers/{provider_id}/services",
     response_model=List[ProviderServiceResponse],
-    summary="List customized services offered by a provider",
+    summary="List customized services offered by a provider with ownership check",
 )
 def list_provider_services(
     provider_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
-    return service.list_provider_services(provider_id)
+    return service.list_provider_services(current_user, provider_id)
 
 
 # ==========================================
 # AVAILABILITY SCHEDULE ENDPOINTS
 # ==========================================
+
+@router.get(
+    "/providers/me/availability",
+    response_model=List[AvailabilityResponse],
+    summary="View active available timeslots for current provider",
+)
+def get_my_availability(
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    return service.list_availability(current_user, current_user.id)
+
 
 @router.post(
     "/providers/me/availability",
@@ -118,13 +170,14 @@ def add_availability_slot(
 @router.get(
     "/providers/{provider_id}/availability",
     response_model=List[AvailabilityResponse],
-    summary="View active available timeslots for a provider",
+    summary="View active available timeslots for a provider with ownership check",
 )
 def get_provider_availability(
     provider_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
-    return service.list_availability(provider_id)
+    return service.list_availability(current_user, provider_id)
 
 
 @router.delete(
@@ -169,3 +222,30 @@ def list_my_certificates(
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
     return service.get_my_certificates(current_user)
+
+
+@router.get(
+    "/certificates/{id}",
+    response_model=CertificateResponse,
+    summary="Get a certificate by ID with strict ownership check",
+)
+def get_certificate_by_id(
+    id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    return service.get_certificate_by_id(current_user, id)
+
+
+@router.delete(
+    "/certificates/{id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a certificate with strict ownership check",
+)
+def delete_certificate(
+    id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    service.delete_certificate(current_user, id)
+    return None

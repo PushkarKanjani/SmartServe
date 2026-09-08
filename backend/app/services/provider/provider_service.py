@@ -29,7 +29,13 @@ class ProviderServiceDomain:
         provider = self.repo.get_or_create(user_id=user.id, default_name=user.full_name)
         return self.repo.update_profile(provider, update_data)
 
-    def get_provider_profile(self, provider_id: uuid.UUID) -> Provider:
+    def get_provider_profile(self, user: AuthUser, provider_id: uuid.UUID) -> Provider:
+        # Cross-provider ownership check: a provider can only access their own profile
+        if user.role == "provider" and user.id != provider_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You cannot access another provider's profile",
+            )
         provider = self.repo.get_by_user_id(provider_id)
         if not provider:
             raise HTTPException(
@@ -49,6 +55,34 @@ class ProviderServiceDomain:
     def get_my_certificates(self, user: AuthUser) -> List[Certificate]:
         return self.repo.list_certificates_by_provider(provider_id=user.id)
 
+    def get_certificate_by_id(self, user: AuthUser, cert_id: uuid.UUID) -> Certificate:
+        cert = self.repo.get_certificate_by_id(cert_id)
+        if not cert:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Certificate document not found",
+            )
+        if cert.provider_id != user.id and user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You cannot access another provider's certificate",
+            )
+        return cert
+
+    def delete_certificate(self, user: AuthUser, cert_id: uuid.UUID) -> None:
+        cert = self.repo.get_certificate_by_id(cert_id)
+        if not cert:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Certificate document not found",
+            )
+        if cert.provider_id != user.id and user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You cannot delete another provider's certificate",
+            )
+        self.repo.delete_certificate(cert)
+
     # ==========================================
     # AVAILABILITY SCHEDULE
     # ==========================================
@@ -64,7 +98,13 @@ class ProviderServiceDomain:
         self.repo.get_or_create(user_id=user.id, default_name=user.full_name)
         return self.repo.create_availability_slot(provider_id=user.id, data=data)
 
-    def list_availability(self, provider_id: uuid.UUID) -> List[Availability]:
+    def list_availability(self, user: AuthUser, provider_id: uuid.UUID) -> List[Availability]:
+        # Cross-provider ownership check: a provider can only view their own schedule
+        if user.role == "provider" and user.id != provider_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You cannot view another provider's availability schedule",
+            )
         return self.repo.list_availability_by_provider(provider_id=provider_id)
 
     def delete_availability_slot(self, user: AuthUser, slot_id: uuid.UUID) -> None:
@@ -110,5 +150,27 @@ class ProviderServiceDomain:
 
         return self.repo.update_provider_service(entry, data)
 
-    def list_provider_services(self, provider_id: uuid.UUID) -> List[ProviderService]:
+    def delete_provider_service(self, user: AuthUser, entry_id: uuid.UUID) -> None:
+        entry = self.repo.get_provider_service_by_id(entry_id)
+        if not entry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Provider service offering not found",
+            )
+
+        if entry.provider_id != user.id and user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You cannot delete another provider's service offering",
+            )
+
+        self.repo.delete_provider_service(entry)
+
+    def list_provider_services(self, user: AuthUser, provider_id: uuid.UUID) -> List[ProviderService]:
+        # Cross-provider ownership check: a provider can only view their own service offerings
+        if user.role == "provider" and user.id != provider_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Forbidden: You cannot view another provider's service offerings",
+            )
         return self.repo.list_provider_services(provider_id=provider_id)

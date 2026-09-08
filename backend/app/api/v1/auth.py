@@ -174,12 +174,18 @@ def admin_login(
 
     from app.models.security import AdminRole
     role_entry = db.query(AdminRole).filter(AdminRole.user_id == user.id).first()
-    r_name = role_entry.role_name if role_entry else ("super_admin" if user.role in ["admin", "super_admin"] else user.role)
-    
-    if r_name == "super_admin" or user.role in ["admin", "super_admin"]:
+    if role_entry:
+        r_name = role_entry.role_name
+        perms = role_entry.permissions
+    elif user.role in ["admin", "super_admin"]:
+        r_name = "super_admin"
         perms = ['dashboard:view', 'catalog:manage', 'providers:manage', 'customers:manage', 'admins:manage', 'bookings:manage', 'insights:view', 'support:manage', 'security:manage', 'emails:manage', 'settings:manage']
+    elif user.role == "provider":
+        r_name = "provider"
+        perms = ['provider:profile', 'provider:services', 'provider:availability', 'provider:documents', 'provider:bookings']
     else:
-        perms = role_entry.permissions if role_entry else ['customer:browse', 'customer:book']
+        r_name = "customer"
+        perms = ['customer:browse', 'customer:book']
 
     return TokenResponse(
         access_token=access_token,
@@ -201,11 +207,18 @@ def get_admin_session(
     """Return active session details with dynamic role & permissions."""
     from app.models.security import AdminRole
     role_entry = db.query(AdminRole).filter(AdminRole.user_id == current_user.id).first()
-    r_name = role_entry.role_name if role_entry else ("super_admin" if current_user.role in ["admin", "super_admin"] else current_user.role)
-    if r_name == "super_admin" or current_user.role in ["admin", "super_admin"]:
+    if role_entry:
+        r_name = role_entry.role_name
+        perms = role_entry.permissions
+    elif current_user.role in ["admin", "super_admin"]:
+        r_name = "super_admin"
         perms = ['dashboard:view', 'catalog:manage', 'providers:manage', 'customers:manage', 'admins:manage', 'bookings:manage', 'insights:view', 'support:manage', 'security:manage', 'emails:manage', 'settings:manage']
+    elif current_user.role == "provider":
+        r_name = "provider"
+        perms = ['provider:profile', 'provider:services', 'provider:availability', 'provider:documents', 'provider:bookings']
     else:
-        perms = role_entry.permissions if role_entry else ['customer:browse', 'customer:book']
+        r_name = "customer"
+        perms = ['customer:browse', 'customer:book']
 
     return SessionResponse(
         user_id=str(current_user.id),

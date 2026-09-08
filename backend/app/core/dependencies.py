@@ -30,83 +30,86 @@ class AuthUser(BaseModel):
     is_active: bool = True
 
 
-DUMMY_PROVIDER = AuthUser(
-    id=uuid.UUID("00000000-0000-0000-0000-000000000002"),
-    email="provider@smartserve.dev",
-    role="provider",
-    full_name="Pushkar (Provider)",
-    is_verified=True,
-)
-
-
 def get_current_user(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
+    db: Session = Depends(get_db),
 ) -> AuthUser:
-    """Extracts Bearer token if provided, otherwise returns dummy context."""
-    if auth and auth.credentials:
-        token = auth.credentials
-        payload = decode_access_token(token)
-        if payload:
-            role = payload.get("role", "")
-            sub = payload.get("sub", "")
-            email = payload.get("email", "")
-            try:
-                user_id = uuid.UUID(str(sub))
-            except (ValueError, TypeError):
-                user_id = uuid.UUID("00000000-0000-0000-0000-000000000001") if "admin" in str(role) else uuid.UUID("00000000-0000-0000-0000-000000000003")
+    """Extracts Bearer token, decodes and verifies JWT, and validates against database."""
+    if not auth or not auth.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated: Bearer token required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-            if "admin" in str(role):
-                return AuthUser(
-                    id=user_id,
-                    email=email or "admin@smartserve.dev",
-                    role="admin",
-                    full_name=payload.get("full_name", "Admin User"),
-                    is_verified=True,
-                )
-            elif "customer" in str(role):
-                return AuthUser(
-                    id=user_id,
-                    email=email or "pushkar@example.com",
-                    role="customer",
-                    full_name=payload.get("full_name", "Pushkar Kanjani"),
-                    is_verified=True,
-                )
-            elif "provider" in str(role):
-                return AuthUser(
-                    id=user_id,
-                    email=email or "provider@smartserve.dev",
-                    role="provider",
-                    full_name=payload.get("full_name", "Pushkar (Provider)"),
-                    is_verified=True,
-                )
+    token = auth.credentials
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-        if "admin" in token:
-            return AuthUser(
-                id=uuid.UUID("00000000-0000-0000-0000-000000000001"),
-                email="admin@smartserve.dev",
-                role="admin",
-                full_name="Admin User",
-                is_verified=True,
-            )
-        elif "customer" in token:
-            return AuthUser(
-                id=uuid.UUID("00000000-0000-0000-0000-000000000003"),
-                email="pushkar@example.com",
-                role="customer",
-                full_name="Pushkar Kanjani",
-                is_verified=True,
-            )
-        else:
-            return DUMMY_PROVIDER
+    sub = payload.get("sub")
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload: missing subject",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-    return DUMMY_PROVIDER
+    try:
+        user_id = uuid.UUID(str(sub))
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user identifier format in token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found in system",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive or suspended",
+        )
+
+    role = payload.get("role") or user.role
+    full_name = payload.get("full_name") or user.email
+
+    if user.role == "provider":
+        from app.models.provider import Provider
+        prov = db.query(Provider).filter(Provider.user_id == user.id).first()
+        if prov and prov.full_name:
+            full_name = prov.full_name
+    elif user.role == "customer":
+        cust = db.query(Customer).filter(Customer.user_id == user.id).first()
+        if cust and cust.full_name:
+            full_name = cust.full_name
+
+    return AuthUser(
+        id=user.id,
+        email=user.email,
+        role=role,
+        full_name=full_name,
+        is_verified=True,
+        is_active=user.is_active,
+    )
 
 
 def require_provider(
     current_user: AuthUser = Depends(get_current_user),
 ) -> AuthUser:
-    """Role-based access guard: Ensures caller is a Provider or Admin."""
-    if current_user.role not in ["provider", "admin"]:
+    """Role-based access guard: Ensures caller has Provider role."""
+    if current_user.role != "provider":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: Provider role required",
@@ -119,28 +122,21 @@ def require_admin(
     db: Session = Depends(get_db),
 ) -> User:
     """Guard ensuring caller has Admin role."""
-    if current_user.role != "admin":
+    if current_user.role not in ["admin", "super_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: Admin role required",
         )
-    admin_user = db.query(User).filter(User.email == current_user.email, User.role == "admin").first()
+    admin_user = (
+        db.query(User)
+        .filter(User.id == current_user.id, User.role.in_(["admin", "super_admin"]))
+        .first()
+    )
     if not admin_user:
-        admin_user = db.query(User).filter(User.role == "admin").first()
-    if not admin_user:
-        admin_user = User(
-            id=current_user.id if isinstance(current_user.id, uuid.UUID) else uuid.uuid4(),
-            email=current_user.email or "admin@smartserve.dev",
-            hashed_password="adminpasswordhash",
-            role="admin",
-            is_active=True,
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Admin account not found",
         )
-        db.add(admin_user)
-        try:
-            db.commit()
-            db.refresh(admin_user)
-        except Exception:
-            db.rollback()
     return admin_user
 
 
@@ -148,14 +144,25 @@ def require_admin(
 def require_permission(perm: str):
     """Guard checking specific granular admin permission."""
     def permission_guard(
-        admin_user: User = Depends(require_admin)
+        admin_user: User = Depends(require_admin),
+        db: Session = Depends(get_db),
     ) -> User:
-        if admin_user.role != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Access forbidden: Permission '{perm}' required",
-            )
-        return admin_user
+        if admin_user.role == "super_admin":
+            return admin_user
+
+        from app.models.security import AdminRole
+        role_entry = (
+            db.query(AdminRole)
+            .filter(AdminRole.user_id == admin_user.id, AdminRole.is_active == True)
+            .first()
+        )
+        if role_entry and (perm in role_entry.permissions or "*" in role_entry.permissions):
+            return admin_user
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Access forbidden: Permission '{perm}' required",
+        )
     return permission_guard
 
 

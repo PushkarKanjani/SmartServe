@@ -65,6 +65,13 @@ class ProviderRepository:
             .all()
         )
 
+    def get_certificate_by_id(self, cert_id: uuid.UUID) -> Optional[Certificate]:
+        return self.db.query(Certificate).filter(Certificate.id == cert_id).first()
+
+    def delete_certificate(self, cert: Certificate) -> None:
+        self.db.delete(cert)
+        self.db.commit()
+
     # ==========================================
     # AVAILABILITY OPERATIONS
     # ==========================================
@@ -123,6 +130,10 @@ class ProviderRepository:
         self.db.commit()
         self.db.refresh(entry)
         return entry
+
+    def delete_provider_service(self, entry: ProviderService) -> None:
+        self.db.delete(entry)
+        self.db.commit()
 
     def list_provider_services(self, provider_id: uuid.UUID) -> List[ProviderService]:
         return (
