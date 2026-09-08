@@ -528,21 +528,29 @@ class AIService:
                 "seo_keywords": [name.lower(), category.lower()]
             }
 
-    def analyze_provider_document(self, document_url: str, certificate_type: str, provider_name: str = "") -> Dict[str, Any]:
-        """Perform OCR document verification."""
-        return {
-            "document_url": document_url,
-            "certificate_type": certificate_type,
-            "ocr_text_extracted": f"LICENSE VERIFIED: {certificate_type.upper()} #SS-98421. Expiry: 2028-12-31.",
-            "document_number": "SS-98421",
-            "expiry_date": "2028-12-31",
-            "name_mismatch_detected": False,
-            "name_match_confidence": 0.98,
-            "is_duplicate_license": False,
-            "legitimacy_score": 0.96,
-            "ai_summary": "Document matches official licensing registry. Zero duplicate license numbers detected.",
-            "recommendation": "APPROVED"
-        }
+    def analyze_provider_document(
+        self,
+        document_url: str,
+        certificate_type: str,
+        provider_name: str = "",
+        provider_id: str = "",
+        cert_id: Optional[str] = None,
+        db: Optional[Any] = None,
+        existing_doc_number: Optional[str] = None,
+        existing_extracted_name: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Perform OCR document verification using PaddleOCR/EasyOCR and transparent rule-based risk scoring."""
+        from app.services.ocr_service import ocr_service
+        return ocr_service.verify_document(
+            document_url=document_url,
+            certificate_type=certificate_type,
+            provider_name=provider_name,
+            provider_id=provider_id,
+            cert_id=cert_id,
+            db=db,
+            existing_doc_number=existing_doc_number,
+            existing_extracted_name=existing_extracted_name
+        )
 
     def scan_complaint_image(self, image_url: str, complaint_context: str = "") -> Dict[str, Any]:
         """Perform OCR complaint photo analysis."""

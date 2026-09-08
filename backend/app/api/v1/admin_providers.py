@@ -41,7 +41,14 @@ def _build_provider_item(
         ai_signal = None
         try:
             ai_signal = ai_service.analyze_provider_document(
-                c.document_url, c.certificate_type, p.full_name
+                document_url=c.document_url,
+                certificate_type=c.certificate_type,
+                provider_name=p.full_name,
+                provider_id=str(p.user_id),
+                cert_id=str(c.id),
+                db=db,
+                existing_doc_number=c.document_number,
+                existing_extracted_name=c.extracted_name,
             )
         except Exception:
             ai_signal = {

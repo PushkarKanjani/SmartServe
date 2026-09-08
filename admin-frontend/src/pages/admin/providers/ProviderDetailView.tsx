@@ -536,16 +536,43 @@ export const ProviderDetailView: React.FC = () => {
                           <span>AI-Assisted Signal (Automated Document Scan)</span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-slate-700 font-medium pt-1">
-                          <p>Extracted Name: <strong className="text-slate-900">{doc.ai_scan_signal.extracted_name}</strong></p>
-                          <p>Doc Number: <strong className="text-slate-900 font-mono">{doc.ai_scan_signal.document_number}</strong></p>
-                          <p>Validity Signal: <strong className="text-emerald-600">{doc.ai_scan_signal.validity_signal}</strong></p>
+                          <p>Extracted Name: <strong className="text-slate-900">{doc.ai_scan_signal.extracted_name || 'N/A'}</strong></p>
+                          <p>Doc Number: <strong className="text-slate-900 font-mono">{doc.ai_scan_signal.document_number || 'N/A'}</strong></p>
+                          <p>Validity Signal: <strong className={doc.ai_scan_signal.validity_signal === 'Valid' ? 'text-emerald-600' : 'text-amber-600'}>{doc.ai_scan_signal.validity_signal}</strong></p>
                           <p>Duplicate Check: <strong className={doc.ai_scan_signal.duplicate_detected ? 'text-rose-600' : 'text-emerald-600'}>
                             {doc.ai_scan_signal.duplicate_detected ? 'Duplicate Detected' : 'Clean (No Duplicates)'}
                           </strong></p>
+                          {doc.ai_scan_signal.risk_score !== undefined && (
+                            <p>Risk Score: <strong className={doc.ai_scan_signal.risk_score <= 0.2 ? 'text-emerald-600' : doc.ai_scan_signal.risk_score <= 0.45 ? 'text-amber-600' : 'text-rose-600'}>
+                              {doc.ai_scan_signal.risk_score} ({doc.ai_scan_signal.risk_level || 'LOW'})
+                            </strong></p>
+                          )}
+                          {doc.ai_scan_signal.engine_used && (
+                            <p>OCR Engine: <span className="text-slate-600 font-mono text-[11px]">{doc.ai_scan_signal.engine_used}</span></p>
+                          )}
                         </div>
-                        <p className="text-[11px] text-slate-400 italic pt-1 border-t border-[#E5DEC9]/60">
-                          ℹ️ Note: AI signals provide diagnostic assistance. Final verification decision requires administrative review.
-                        </p>
+                        {doc.ai_scan_signal.risk_factors && doc.ai_scan_signal.risk_factors.length > 0 && (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-[11px] text-amber-800 space-y-0.5">
+                            <span className="font-bold">Detected Flags / Risk Triggers:</span>
+                            <ul className="list-disc list-inside">
+                              {doc.ai_scan_signal.risk_factors.map((factor: string, fIdx: number) => (
+                                <li key={fIdx}>{factor}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-[#E5DEC9]/60">
+                          <span className="italic">Scoring: {doc.ai_scan_signal.scoring_method || 'Transparent Heuristic Risk Engine'}</span>
+                          {doc.ai_scan_signal.recommendation && (
+                            <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                              doc.ai_scan_signal.recommendation === 'CLEAR_FOR_ADMIN_APPROVAL' 
+                                ? 'bg-emerald-100 text-emerald-800' 
+                                : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {doc.ai_scan_signal.recommendation === 'CLEAR_FOR_ADMIN_APPROVAL' ? '✓ Clear Precheck' : '⚠️ Manual Review Req.'}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
