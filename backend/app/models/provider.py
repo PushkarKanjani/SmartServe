@@ -95,8 +95,14 @@ class Certificate(Base):
     verified_by = Column(GUID(), nullable=True)  # Admin UUID
     uploaded_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     verified_at = Column(DateTime, nullable=True)
+    # Added in d2_admin_full_completeness migration
+    document_number = Column(String(100), nullable=True)
+    expiry_date = Column(DateTime, nullable=True)
+    extracted_name = Column(String(255), nullable=True)
+    is_duplicate = Column(Boolean, default=False, nullable=False)
 
     provider = relationship("Provider", back_populates="certificates")
+
 
 
 class Availability(Base):
