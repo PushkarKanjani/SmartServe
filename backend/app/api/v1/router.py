@@ -11,6 +11,8 @@ from app.api.v1.reports import router as reports_router
 from app.api.v1.security import router as security_router
 from app.api.v1.admins import router as admins_router
 from app.api.v1.services import router as services_router
+from app.api.v1.provider_onboarding import router as provider_onboarding_router
+from app.api.v1.admin_providers import router as admin_providers_router
 
 
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -21,6 +23,8 @@ for r in [
     catalog_router,
     services_router,
     providers_router,
+    admin_providers_router,
+    provider_onboarding_router,
     customers_router,
     admins_router,
     bookings_router,
