@@ -5,11 +5,15 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 export const App: React.FC = () => {
   const [splashDone, setSplashDone] = useState(() => {
-    return sessionStorage.getItem('smartserve_splash_done') === 'true';
+    return (
+      sessionStorage.getItem('smartserve_splash_done') === 'true' ||
+      localStorage.getItem('smartserve_splash_done') === 'true'
+    );
   });
 
   const handleFinish = () => {
     sessionStorage.setItem('smartserve_splash_done', 'true');
+    localStorage.setItem('smartserve_splash_done', 'true');
     setSplashDone(true);
   };
 

@@ -8,7 +8,8 @@ from sqlalchemy import desc
 from app.core.database import get_db
 from app.core.dependencies import require_admin, require_permission
 from app.models.user import User
-from app.models.provider import Provider, Certificate, ProviderService
+from app.models.provider import Provider, Certificate, ProviderService, Availability
+from app.models.customer import Booking
 from app.models.service import Service
 from app.models.security import AuditLog
 from app.services.ranking_service import calculate_provider_rankings, estimate_provider_eta
@@ -19,6 +20,9 @@ from app.schemas.admin_provider import (
     AdminProviderDocumentItem,
     AdminProviderServiceItem,
     AdminProviderAuditLogItem,
+    AdminSlotOccupiedBooking,
+    AdminProviderSlotItem,
+    AdminProviderBookingItem,
     ProviderVerifyRequest,
     ProviderReplacementRequest,
     AccountStatusRequest,
@@ -104,6 +108,99 @@ def _build_provider_item(
                 )
             )
 
+    # Fetch provider availability slots
+    slots_query = (
+        db.query(Availability)
+        .filter(Availability.provider_id == p.user_id)
+        .order_by(Availability.slot_date, Availability.start_time)
+        .all()
+    )
+
+    # Fetch provider bookings
+    bookings_query = (
+        db.query(Booking)
+        .filter(Booking.provider_id == p.user_id)
+        .order_by(desc(Booking.scheduled_time))
+        .all()
+    )
+
+    # Build booking items
+    booking_items = []
+    for b in bookings_query:
+        c_name = b.customer.full_name if b.customer else "Customer"
+        c_phone = b.customer.phone if (b.customer and b.customer.phone) else ""
+        s_name = b.service.name if b.service else "Service"
+        sched_str = b.scheduled_time.isoformat() if b.scheduled_time else ""
+        req_slot = b.scheduled_time.strftime("%d %b %Y, %I:%M %p") if b.scheduled_time else ""
+
+        booking_items.append(
+            AdminProviderBookingItem(
+                id=str(b.id),
+                booking_reference=b.booking_reference,
+                customer_id=str(b.customer_id),
+                customer_name=c_name,
+                customer_phone=c_phone,
+                provider_id=str(p.user_id),
+                provider_name=p.full_name,
+                service_id=str(b.service_id),
+                service_name=s_name,
+                status=b.status if isinstance(b.status, str) else b.status.value,
+                emergency_flag=b.emergency_flag,
+                scheduled_time=sched_str,
+                requested_slot=req_slot,
+                address=b.address or "",
+                total_price=float(b.total_price or 0.0),
+                payment_status=b.payment_status if isinstance(b.payment_status, str) else b.payment_status.value,
+                created_at=b.created_at.isoformat() if b.created_at else ""
+            )
+        )
+
+    # Build slot items with occupation detection
+    slot_items = []
+    for s in slots_query:
+        occupied_info = None
+        is_occ = False
+        for b in bookings_query:
+            if b.status in ["Cancelled", "Rejected"]:
+                continue
+            if b.scheduled_time:
+                b_date = b.scheduled_time.date()
+                b_time = b.scheduled_time.time()
+                if b_date == s.slot_date and s.start_time <= b_time < s.end_time:
+                    is_occ = True
+                    c_name = b.customer.full_name if b.customer else "Customer"
+                    c_phone = b.customer.phone if (b.customer and b.customer.phone) else ""
+                    s_name = b.service.name if b.service else "Service"
+                    occupied_info = AdminSlotOccupiedBooking(
+                        booking_id=str(b.id),
+                        booking_reference=b.booking_reference,
+                        customer_id=str(b.customer_id),
+                        customer_name=c_name,
+                        customer_phone=c_phone,
+                        service_id=str(b.service_id),
+                        service_name=s_name,
+                        status=b.status if isinstance(b.status, str) else b.status.value,
+                        emergency_flag=b.emergency_flag,
+                        scheduled_time=b.scheduled_time.isoformat(),
+                        total_price=float(b.total_price or 0.0),
+                    )
+                    break
+
+        slot_items.append(
+            AdminProviderSlotItem(
+                id=str(s.id),
+                provider_id=str(p.user_id),
+                provider_name=p.full_name,
+                slot_date=s.slot_date.isoformat(),
+                start_time=s.start_time.strftime("%H:%M:%S"),
+                end_time=s.end_time.strftime("%H:%M:%S"),
+                status=s.status,
+                is_occupied=is_occ,
+                occupied_booking=occupied_info,
+                created_at=s.created_at.isoformat() if s.created_at else None,
+            )
+        )
+
     p_rank = rank_map.get(str(p.user_id), {})
 
     return AdminProviderItem(
@@ -129,6 +226,8 @@ def _build_provider_item(
         documents=doc_list,
         services=svc_list,
         audit_logs=log_list,
+        slots=slot_items,
+        bookings=booking_items,
     )
 
 
@@ -251,6 +350,151 @@ def get_admin_provider_detail(
     return _build_provider_item(
         provider, user, certs, p_services, db, rank_map, audit_logs=audit_logs
     )
+
+
+@router.get("/{provider_user_id}/slots", response_model=List[AdminProviderSlotItem])
+def get_admin_provider_slots(
+    provider_user_id: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Retrieve provider availability slots with booking occupancy signals (Read Only)."""
+    try:
+        p_uuid = uuid.UUID(provider_user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid provider ID format",
+        )
+
+    provider = db.query(Provider).filter(Provider.user_id == p_uuid).first()
+    if not provider:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Provider not found",
+        )
+
+    slots_query = (
+        db.query(Availability)
+        .filter(Availability.provider_id == p_uuid)
+        .order_by(Availability.slot_date, Availability.start_time)
+        .all()
+    )
+
+    bookings_query = (
+        db.query(Booking)
+        .filter(Booking.provider_id == p_uuid)
+        .all()
+    )
+
+    slot_items = []
+    for s in slots_query:
+        occupied_info = None
+        is_occ = False
+        for b in bookings_query:
+            if b.status in ["Cancelled", "Rejected"]:
+                continue
+            if b.scheduled_time:
+                b_date = b.scheduled_time.date()
+                b_time = b.scheduled_time.time()
+                if b_date == s.slot_date and s.start_time <= b_time < s.end_time:
+                    is_occ = True
+                    c_name = b.customer.full_name if b.customer else "Customer"
+                    c_phone = b.customer.phone if (b.customer and b.customer.phone) else ""
+                    s_name = b.service.name if b.service else "Service"
+                    occupied_info = AdminSlotOccupiedBooking(
+                        booking_id=str(b.id),
+                        booking_reference=b.booking_reference,
+                        customer_id=str(b.customer_id),
+                        customer_name=c_name,
+                        customer_phone=c_phone,
+                        service_id=str(b.service_id),
+                        service_name=s_name,
+                        status=b.status if isinstance(b.status, str) else b.status.value,
+                        emergency_flag=b.emergency_flag,
+                        scheduled_time=b.scheduled_time.isoformat(),
+                        total_price=float(b.total_price or 0.0),
+                    )
+                    break
+
+        slot_items.append(
+            AdminProviderSlotItem(
+                id=str(s.id),
+                provider_id=str(p_uuid),
+                provider_name=provider.full_name,
+                slot_date=s.slot_date.isoformat(),
+                start_time=s.start_time.strftime("%H:%M:%S"),
+                end_time=s.end_time.strftime("%H:%M:%S"),
+                status=s.status,
+                is_occupied=is_occ,
+                occupied_booking=occupied_info,
+                created_at=s.created_at.isoformat() if s.created_at else None,
+            )
+        )
+
+    return slot_items
+
+
+@router.get("/{provider_user_id}/bookings", response_model=List[AdminProviderBookingItem])
+def get_admin_provider_bookings(
+    provider_user_id: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Retrieve provider assigned bookings with customer and emergency visibility (Read Only)."""
+    try:
+        p_uuid = uuid.UUID(provider_user_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid provider ID format",
+        )
+
+    provider = db.query(Provider).filter(Provider.user_id == p_uuid).first()
+    if not provider:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Provider not found",
+        )
+
+    bookings_query = (
+        db.query(Booking)
+        .filter(Booking.provider_id == p_uuid)
+        .order_by(desc(Booking.scheduled_time))
+        .all()
+    )
+
+    booking_items = []
+    for b in bookings_query:
+        c_name = b.customer.full_name if b.customer else "Customer"
+        c_phone = b.customer.phone if (b.customer and b.customer.phone) else ""
+        s_name = b.service.name if b.service else "Service"
+        sched_str = b.scheduled_time.isoformat() if b.scheduled_time else ""
+        req_slot = b.scheduled_time.strftime("%d %b %Y, %I:%M %p") if b.scheduled_time else ""
+
+        booking_items.append(
+            AdminProviderBookingItem(
+                id=str(b.id),
+                booking_reference=b.booking_reference,
+                customer_id=str(b.customer_id),
+                customer_name=c_name,
+                customer_phone=c_phone,
+                provider_id=str(p_uuid),
+                provider_name=provider.full_name,
+                service_id=str(b.service_id),
+                service_name=s_name,
+                status=b.status if isinstance(b.status, str) else b.status.value,
+                emergency_flag=b.emergency_flag,
+                scheduled_time=sched_str,
+                requested_slot=req_slot,
+                address=b.address or "",
+                total_price=float(b.total_price or 0.0),
+                payment_status=b.payment_status if isinstance(b.payment_status, str) else b.payment_status.value,
+                created_at=b.created_at.isoformat() if b.created_at else ""
+            )
+        )
+
+    return booking_items
 
 
 @router.post("/{provider_user_id}/verify", status_code=status.HTTP_200_OK)

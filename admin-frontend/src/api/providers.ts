@@ -48,6 +48,55 @@ export interface ProviderItem {
     created_at: string;
     metadata_json?: any;
   }>;
+  slots?: AdminProviderSlotItem[];
+  bookings?: AdminProviderBookingItem[];
+}
+
+export interface AdminSlotOccupiedBooking {
+  booking_id: string;
+  booking_reference: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone?: string;
+  service_id: string;
+  service_name: string;
+  status: string;
+  emergency_flag?: string | null;
+  scheduled_time: string;
+  total_price: number;
+}
+
+export interface AdminProviderSlotItem {
+  id: string;
+  provider_id: string;
+  provider_name: string;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  is_occupied: boolean;
+  occupied_booking?: AdminSlotOccupiedBooking | null;
+  created_at?: string | null;
+}
+
+export interface AdminProviderBookingItem {
+  id: string;
+  booking_reference: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone?: string;
+  provider_id?: string;
+  provider_name?: string;
+  service_id: string;
+  service_name: string;
+  status: string;
+  emergency_flag?: string | null;
+  scheduled_time: string;
+  requested_slot?: string;
+  address: string;
+  total_price: number;
+  payment_status: string;
+  created_at: string;
 }
 
 export interface ProviderRanking {
@@ -143,5 +192,15 @@ export const estimateProviderEta = async (
   query.append('distance_km', String(distanceKm));
 
   const response = await apiClient.get<ProviderEtaEstimate>(`/admin/providers/eta-estimate?${query.toString()}`);
+  return response.data;
+};
+
+export const getProviderSlots = async (providerUserId: string): Promise<AdminProviderSlotItem[]> => {
+  const response = await apiClient.get<AdminProviderSlotItem[]>(`/admin/providers/${providerUserId}/slots`);
+  return response.data;
+};
+
+export const getProviderBookings = async (providerUserId: string): Promise<AdminProviderBookingItem[]> => {
+  const response = await apiClient.get<AdminProviderBookingItem[]>(`/admin/providers/${providerUserId}/bookings`);
   return response.data;
 };

@@ -18,7 +18,12 @@ import {
   X,
   History,
   AlertCircle,
-  Wrench
+  Wrench,
+  Calendar,
+  Clock,
+  Siren,
+  CalendarCheck,
+  ArrowUpRight
 } from 'lucide-react';
 import { 
   getProviderDetail, 
@@ -31,9 +36,11 @@ import type { ProviderItem, ProviderEtaEstimate } from '../../../api/providers';
 import { getAuthenticatedAdmin } from '../../../api/admins';
 import type { SessionAdminInfo } from '../../../api/admins';
 import { hasPermission } from '../../../utils/rbac';
+import { formatCurrencyINR } from '../../../utils/formatters';
 
 export const ProviderDetailView: React.FC = () => {
-  const { providerUserId } = useParams<{ providerUserId: string }>();
+  const params = useParams<{ providerId?: string; providerUserId?: string }>();
+  const providerUserId = params.providerId || params.providerUserId;
   const navigate = useNavigate();
 
   const [provider, setProvider] = useState<ProviderItem | null>(null);
@@ -58,8 +65,49 @@ export const ProviderDetailView: React.FC = () => {
   const [replacementLoading, setReplacementLoading] = useState<boolean>(false);
 
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null);
+  const [slotFilter, setSlotFilter] = useState<'all' | 'occupied' | 'free'>('all');
 
   const canManageProviders = hasPermission(adminSession, 'providers:manage');
+
+  const getSlotStatusBadge = (statusStr: string, isOccupied: boolean) => {
+    if (isOccupied) {
+      return 'bg-amber-100 text-amber-900 border-amber-300';
+    }
+    switch (statusStr.toUpperCase()) {
+      case 'FREE':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'RESERVED':
+        return 'bg-amber-50 text-amber-800 border-amber-300';
+      case 'BOOKED':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'UNAVAILABLE':
+        return 'bg-rose-50 text-rose-700 border-rose-200';
+      default:
+        return 'bg-[#F2EDE1] text-slate-700 border-[#E5DEC9]';
+    }
+  };
+
+  const getBookingStatusBadge = (statusStr: string) => {
+    switch (statusStr?.toLowerCase()) {
+      case 'requested':
+        return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'assigned':
+        return 'bg-[#F2EDE1] text-[#2F5233] border-[#E5DEC9]';
+      case 'accepted':
+        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'started':
+        return 'bg-purple-50 text-purple-700 border-purple-200';
+      case 'completed':
+      case 'paid':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'cancelled':
+      case 'rejected':
+      case 'expired':
+        return 'bg-rose-50 text-rose-700 border-rose-200';
+      default:
+        return 'bg-[#F2EDE1] text-slate-700 border-[#E5DEC9]';
+    }
+  };
 
   const showToast = (text: string, type: 'success' | 'warning' | 'error' = 'success') => {
     setToastMessage({ text, type });
@@ -619,6 +667,264 @@ export const ProviderDetailView: React.FC = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Provider Availability & Schedule Slots (Read-Only Admin View) */}
+      <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#E5DEC9] shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5DEC9]/60 pb-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold font-serif text-[#1F2A1E] flex items-center gap-2.5">
+              <Calendar className="w-5 h-5 text-[#2F5233]" />
+              <span>Availability & Schedule Slots</span>
+            </h3>
+            <p className="text-xs text-slate-500 font-medium">
+              Read-only operations view • Slot status, provider ownership & booking occupancy
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-[#2F5233] bg-[#F2EDE1] px-3 py-1 rounded-full border border-[#E5DEC9]">
+              {(provider.slots || []).length} Total Slots
+            </span>
+            <div className="flex items-center bg-[#F2EDE1] p-1 rounded-xl border border-[#E5DEC9] text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setSlotFilter('all')}
+                className={`px-3 py-1 rounded-lg transition-colors ${slotFilter === 'all' ? 'bg-white text-[#2F5233] shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                All ({(provider.slots || []).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSlotFilter('occupied')}
+                className={`px-3 py-1 rounded-lg transition-colors ${slotFilter === 'occupied' ? 'bg-white text-amber-900 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                Occupied ({(provider.slots || []).filter(s => s.is_occupied).length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSlotFilter('free')}
+                className={`px-3 py-1 rounded-lg transition-colors ${slotFilter === 'free' ? 'bg-white text-emerald-800 shadow-xs font-bold' : 'text-slate-600 hover:text-slate-900'}`}
+              >
+                Free ({(provider.slots || []).filter(s => !s.is_occupied && s.status.toUpperCase() === 'FREE').length})
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {(!provider.slots || provider.slots.length === 0) ? (
+          <div className="p-8 bg-[#FAF7F0] rounded-2xl text-center text-xs font-semibold text-slate-500">
+            No availability slots published by this provider yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#FAF7F0] text-slate-600 font-bold uppercase text-[10px] border-b border-[#E5DEC9]">
+                <tr>
+                  <th className="py-3 px-4">Date & Day</th>
+                  <th className="py-3 px-4">Time Window</th>
+                  <th className="py-3 px-4">Owner (Provider)</th>
+                  <th className="py-3 px-4">Slot Status</th>
+                  <th className="py-3 px-4">Occupying Booking</th>
+                  <th className="py-3 px-4 text-right">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {(provider.slots || [])
+                  .filter((s) => {
+                    if (slotFilter === 'occupied') return s.is_occupied;
+                    if (slotFilter === 'free') return !s.is_occupied && s.status.toUpperCase() === 'FREE';
+                    return true;
+                  })
+                  .map((slot) => {
+                    const slotDateObj = new Date(`${slot.slot_date}T00:00:00`);
+                    const dayName = slotDateObj.toLocaleDateString('en-IN', { weekday: 'short' });
+                    const formattedDate = slotDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                    const timeRange = `${slot.start_time.substring(0, 5)} - ${slot.end_time.substring(0, 5)}`;
+
+                    return (
+                      <tr
+                        key={slot.id}
+                        className={`transition-colors ${
+                          slot.is_occupied ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-[#FAF7F0]/80'
+                        }`}
+                      >
+                        <td className="py-3.5 px-4">
+                          <span className="font-bold text-slate-900 block">{formattedDate}</span>
+                          <span className="text-[11px] text-slate-400 font-medium">{dayName}</span>
+                        </td>
+
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
+                          <span className="inline-flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            {timeRange}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4 text-slate-700">
+                          <span className="font-bold block">{slot.provider_name}</span>
+                          <span className="font-mono text-[10px] text-slate-400">{slot.provider_id.substring(0, 8)}...</span>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border ${getSlotStatusBadge(slot.status, slot.is_occupied)}`}>
+                            {slot.is_occupied ? 'OCCUPIED' : slot.status}
+                          </span>
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {slot.occupied_booking ? (
+                            <div className="p-2.5 bg-white rounded-xl border border-amber-200 shadow-xs space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-mono font-extrabold text-slate-900 text-xs">
+                                  {slot.occupied_booking.booking_reference}
+                                </span>
+                                {slot.occupied_booking.emergency_flag && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[9px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
+                                    <Siren className="w-2.5 h-2.5 text-rose-600 animate-pulse" />
+                                    <span>{slot.occupied_booking.emergency_flag}</span>
+                                  </span>
+                                )}
+                                <span className="px-2 py-0.2 rounded-full text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  {slot.occupied_booking.status}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-600 font-medium">
+                                <strong className="text-slate-800">{slot.occupied_booking.service_name}</strong> • Cust: {slot.occupied_booking.customer_name}
+                              </p>
+                              <p className="text-[10px] text-slate-400">
+                                Scheduled: {new Date(slot.occupied_booking.scheduled_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} • ₹{slot.occupied_booking.total_price}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-xs italic">
+                              Free / Open Slot
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right">
+                          {slot.occupied_booking ? (
+                            <Link
+                              to={`/admin/bookings/${slot.occupied_booking.booking_id}`}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#F2EDE1] hover:bg-[#2F5233] hover:text-white text-slate-700 font-bold rounded-xl text-xs transition-colors"
+                            >
+                              <span>Inspect</span>
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            </Link>
+                          ) : (
+                            <span className="text-[11px] text-slate-400 font-medium">Available</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Provider Assigned Bookings & Service Operations */}
+      <div className="bg-white p-6 md:p-8 rounded-3xl border border-[#E5DEC9] shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5DEC9]/60 pb-4">
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold font-serif text-[#1F2A1E] flex items-center gap-2.5">
+              <CalendarCheck className="w-5 h-5 text-[#2F5233]" />
+              <span>Assigned Bookings & Service Operations</span>
+            </h3>
+            <p className="text-xs text-slate-500 font-medium">
+              Read-only operations log • Complete lifecycle audit, requested slot & emergency signals
+            </p>
+          </div>
+
+          <span className="text-xs font-bold text-[#2F5233] bg-[#F2EDE1] px-3.5 py-1 rounded-full border border-[#E5DEC9] self-start sm:self-auto">
+            {(provider.bookings || []).length} Total Bookings
+          </span>
+        </div>
+
+        {(!provider.bookings || provider.bookings.length === 0) ? (
+          <div className="p-8 bg-[#FAF7F0] rounded-2xl text-center text-xs font-semibold text-slate-500">
+            No bookings assigned to this provider yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#FAF7F0] text-slate-600 font-bold uppercase text-[10px] border-b border-[#E5DEC9]">
+                <tr>
+                  <th className="py-3 px-4">Booking Ref & ID</th>
+                  <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Service</th>
+                  <th className="py-3 px-4">Requested Slot</th>
+                  <th className="py-3 px-4">Priority / Flag</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Amount</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {(provider.bookings || []).map((b) => (
+                  <tr key={b.id} className="hover:bg-[#FAF7F0]/80 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <span className="font-mono font-extrabold text-slate-900 block text-xs">
+                        {b.booking_reference || `#${b.id.substring(0, 8).toUpperCase()}`}
+                      </span>
+                      <span className="font-mono text-[10px] text-slate-400">ID: {b.id.substring(0, 8)}...</span>
+                    </td>
+
+                    <td className="py-3.5 px-4 font-bold text-slate-900">
+                      <span>{b.customer_name}</span>
+                      {b.customer_phone && (
+                        <span className="block text-[11px] text-slate-400 font-normal">{b.customer_phone}</span>
+                      )}
+                    </td>
+
+                    <td className="py-3.5 px-4 font-semibold text-[#2F5233]">
+                      {b.service_name}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <span className="font-bold text-slate-800 block">
+                        {b.requested_slot || (b.scheduled_time ? new Date(b.scheduled_time).toLocaleString('en-IN') : 'N/A')}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      {b.emergency_flag ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
+                          <Siren className="w-3 h-3 text-rose-600 animate-pulse" />
+                          <span>{b.emergency_flag}</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px] font-semibold">Standard</span>
+                      )}
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getBookingStatusBadge(b.status)}`}>
+                        {b.status}
+                      </span>
+                    </td>
+
+                    <td className="py-3.5 px-4 font-extrabold text-slate-900">
+                      {formatCurrencyINR(b.total_price)}
+                    </td>
+
+                    <td className="py-3.5 px-4 text-right">
+                      <Link
+                        to={`/admin/bookings/${b.id}`}
+                        className="inline-flex items-center gap-1 px-3.5 py-1.5 bg-[#F2EDE1] hover:bg-[#2F5233] hover:text-white text-slate-700 font-bold rounded-xl transition-colors text-xs"
+                      >
+                        <span>Inspect Booking</span>
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Verification Approve/Reject Modal */}

@@ -353,7 +353,7 @@ export const BookingListView: React.FC = () => {
                     className="hover:bg-[#FAF7F0]/80 transition-colors cursor-pointer"
                   >
                     <td className="py-4 px-6">
-                      <p className="font-mono font-bold text-slate-900 text-xs">#{b.id.substring(0, 8)}</p>
+                      <p className="font-mono font-bold text-slate-900 text-xs">BK-{b.id.substring(0, 8).toUpperCase()}</p>
                       <p className="text-[11px] text-slate-400 font-medium mt-0.5">
                         {b.scheduled_time ? new Date(b.scheduled_time).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                       </p>
