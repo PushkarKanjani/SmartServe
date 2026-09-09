@@ -53,7 +53,14 @@ export const ProviderAvailabilityView: React.FC = () => {
       setEndTime('');
       fetchSlots();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to add slot. Check for overlaps.');
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string') {
+        setError(detail);
+      } else if (Array.isArray(detail)) {
+        setError(detail.map((d: any) => d.msg || JSON.stringify(d)).join('; '));
+      } else {
+        setError('Failed to add slot. Check for overlaps or invalid times.');
+      }
     }
   };
 
@@ -68,10 +75,7 @@ export const ProviderAvailabilityView: React.FC = () => {
 
   const handleUpdateStatus = async (slot: AvailabilitySlot, newStatus: string) => {
     try {
-      await apiClient.put(`/providers/me/availability/${slot.id}`, {
-        slot_date: slot.slot_date,
-        start_time: slot.start_time,
-        end_time: slot.end_time,
+      await apiClient.patch(`/providers/me/availability/${slot.id}`, {
         status: newStatus
       });
       fetchSlots();

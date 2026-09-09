@@ -101,7 +101,7 @@ export const ProviderServicesView: React.FC = () => {
                           <div className="flex flex-wrap gap-3 mb-4 text-xs">
                             <div className="flex items-center gap-1.5 text-[#2F5233] bg-[#2F5233]/5 px-2 py-1 rounded-md font-semibold">
                               <span className="text-[#1F2A1E]/50">Base:</span>
-                              ₹{svc.base_price.toFixed(2)}
+                              ₹{Number(svc.base_price).toFixed(2)}
                             </div>
                             <div className="flex items-center gap-1.5 text-[#1F2A1E]/70 bg-slate-50 px-2 py-1 rounded-md">
                               <Clock className="w-3.5 h-3.5 text-[#1F2A1E]/40" />

@@ -1,38 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { User, ShieldCheck, Star, Award, MapPin, CheckCircle, AlertTriangle } from 'lucide-react';
+import { User, ShieldCheck, Star, Award, MapPin, CheckCircle, AlertTriangle, FileCheck, Activity, Phone, Mail } from 'lucide-react';
 import { apiClient } from '../../api/client';
 
+interface ProfileTrust {
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  photo_url?: string;
+  category?: string;
+  skills?: string;
+  experience_years: number;
+  base_price: string;
+  service_area?: string;
+  is_verified: boolean;
+  reliability_score: string;
+  acceptance_rate: string;
+  cancellation_rate: string;
+  no_show_rate: string;
+  on_time_rate: string;
+  response_time_score: string;
+  completed_jobs_count: number;
+  certificates_count: number;
+}
+
 export const ProviderProfileView: React.FC = () => {
-  const [profile, setProfile] = useState<any>(null);
+  const [trust, setTrust] = useState<ProfileTrust | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  // Form State
+  // Editable form fields only - read-only metrics are excluded
   const [formData, setFormData] = useState({
-    full_name: '',
     photo_url: '',
-    category: '',
     skills: '',
     experience_years: 0,
     service_area: '',
+    base_price: '',
   });
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchTrust = async () => {
     try {
-      const res = await apiClient.get('/providers/me');
-      setProfile(res.data);
+      const res = await apiClient.get('/providers/me/profile-trust');
+      setTrust(res.data);
       setFormData({
-        full_name: res.data.full_name || '',
         photo_url: res.data.photo_url || '',
-        category: res.data.category || '',
         skills: res.data.skills || '',
         experience_years: res.data.experience_years || 0,
         service_area: res.data.service_area || '',
+        base_price: res.data.base_price || '0.00',
       });
     } catch (err) {
       console.error('Failed to load profile', err);
@@ -42,17 +58,21 @@ export const ProviderProfileView: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    fetchTrust();
+  }, []);
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setMessage({ text: '', type: '' });
     try {
-      await apiClient.put('/providers/me', formData);
+      await apiClient.patch('/providers/me', formData);
       setMessage({ text: 'Profile updated successfully!', type: 'success' });
-      fetchProfile();
-    } catch (err) {
+      fetchTrust();
+    } catch (err: any) {
       console.error('Update failed', err);
-      setMessage({ text: 'Failed to update profile.', type: 'error' });
+      setMessage({ text: err.response?.data?.detail || 'Failed to update profile.', type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -66,12 +86,19 @@ export const ProviderProfileView: React.FC = () => {
     );
   }
 
+  const MetricRow = ({ label, value, highlight }: { label: string; value: string; highlight?: string }) => (
+    <div className="flex justify-between items-center py-2 border-b border-slate-50">
+      <span className="text-xs text-[#1F2A1E]/60">{label}</span>
+      <span className={`text-xs font-bold ${highlight || 'text-[#1F2A1E]'}`}>{value}</span>
+    </div>
+  );
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
       <div className="mb-8">
         <h1 className="font-serif-display text-3xl font-bold text-[#1F2A1E] tracking-tight">Profile & Trust</h1>
         <p className="text-[#1F2A1E]/70 mt-2 text-sm max-w-2xl">
-          Manage your public profile information. Your verification status and performance metrics are read-only and maintained by SmartServe.
+          Manage your public profile. Verification status, performance metrics, and completed jobs are read-only — maintained by the SmartServe platform.
         </p>
       </div>
 
@@ -85,49 +112,33 @@ export const ProviderProfileView: React.FC = () => {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Editable Profile */}
+        {/* Editable Profile Form */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-3xl border border-[#2F5233]/10 shadow-sm p-6 sm:p-8">
-            <h2 className="text-xl font-bold text-[#1F2A1E] mb-6 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-[#1F2A1E] mb-6 flex items-center gap-2">
               <User className="w-5 h-5 text-[#2F5233]" />
-              Personal Information
+              Editable Information
             </h2>
 
             <form onSubmit={handleUpdate} className="space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">
+                  Photo URL
+                </label>
+                <input
+                  type="url"
+                  value={formData.photo_url}
+                  onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
+                  placeholder="https://..."
+                  className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm"
+                />
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">Full Name</label>
-                  <input
-                    type="text"
-                    value={formData.full_name}
-                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    required
-                    className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm"
-                  />
-                </div>
-                
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">Photo URL</label>
-                  <input
-                    type="url"
-                    value={formData.photo_url}
-                    onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm"
-                  />
-                </div>
-
                 <div>
-                  <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">Primary Category</label>
-                  <input
-                    type="text"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">Years of Experience</label>
+                  <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">
+                    Years of Experience
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -136,103 +147,142 @@ export const ProviderProfileView: React.FC = () => {
                     className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm"
                   />
                 </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">Service Area</label>
+                <div>
+                  <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">
+                    Base Rate (₹)
+                  </label>
                   <input
-                    type="text"
-                    value={formData.service_area}
-                    onChange={(e) => setFormData({ ...formData, service_area: e.target.value })}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.base_price}
+                    onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
                     className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">Skills & Qualifications</label>
-                  <textarea
-                    rows={3}
-                    value={formData.skills}
-                    onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm resize-none"
-                    placeholder="e.g. Certified Electrician, Advanced Plumbing, Fluent in English & Hindi"
                   />
                 </div>
               </div>
 
-              <div className="pt-4 flex justify-end">
+              <div>
+                <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">
+                  Service Area / Coverage
+                </label>
+                <input
+                  type="text"
+                  value={formData.service_area}
+                  onChange={(e) => setFormData({ ...formData, service_area: e.target.value })}
+                  placeholder="e.g. Delhi NCR, Noida, Gurgaon"
+                  className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-[#1F2A1E]/60 uppercase tracking-wider mb-1.5">
+                  Skills & Qualifications (Professional Summary)
+                </label>
+                <textarea
+                  rows={4}
+                  value={formData.skills}
+                  onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
+                  placeholder="e.g. Certified Electrician, Advanced Plumbing, Fluent in English & Hindi"
+                  className="w-full px-4 py-2.5 bg-[#FAF7F0] border border-[#2F5233]/20 rounded-xl focus:outline-none focus:border-[#2F5233] focus:ring-1 focus:ring-[#2F5233] text-sm resize-none"
+                />
+              </div>
+
+              {/* Read-only fields */}
+              <div className="p-4 bg-[#FAF7F0] rounded-2xl border border-[#2F5233]/10">
+                <p className="text-[10px] font-bold text-[#1F2A1E]/40 uppercase tracking-wider mb-3">Read-Only Fields (Managed by SmartServe)</p>
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-[#1F2A1E]/50 block mb-0.5">Full Name</span>
+                    <span className="font-semibold text-[#1F2A1E]">{trust?.full_name}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#1F2A1E]/50 block mb-0.5">Primary Category</span>
+                    <span className="font-semibold text-[#1F2A1E] text-[11px]">{trust?.category?.replace(/^\d+\.\s*/, '') || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#1F2A1E]/50 flex items-center gap-1 mb-0.5"><Mail className="w-3 h-3" /> Email</span>
+                    <span className="font-semibold text-[#1F2A1E]">{trust?.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-[#1F2A1E]/50 flex items-center gap-1 mb-0.5"><Phone className="w-3 h-3" /> Phone</span>
+                    <span className="font-semibold text-[#1F2A1E]">{trust?.phone || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
                 <button
                   type="submit"
                   disabled={saving}
                   className="px-6 py-2.5 bg-[#2F5233] text-white rounded-xl font-bold hover:bg-[#2F5233]/90 transition-colors shadow-sm disabled:opacity-50"
                 >
-                  {saving ? 'Saving...' : 'Save Profile'}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>
           </div>
         </div>
 
-        {/* Right Column: Read-Only Trust Metrics */}
-        <div className="space-y-6">
+        {/* Right Column: Trust & Metrics */}
+        <div className="space-y-5">
+          {/* Trust Identity Card */}
           <div className="bg-white rounded-3xl border border-[#2F5233]/10 shadow-sm p-6 overflow-hidden relative">
-            {profile?.is_verified && (
+            {trust?.is_verified && (
               <div className="absolute top-0 right-0 bg-[#2F5233] text-white px-3 py-1 text-[10px] font-bold uppercase rounded-bl-xl shadow-sm">
                 Verified
               </div>
             )}
-            
-            <div className="flex flex-col items-center text-center mb-6 mt-2">
+
+            <div className="flex flex-col items-center text-center mb-5 mt-2">
               <div className="w-20 h-20 rounded-full bg-[#FAF7F0] border-4 border-white shadow-md overflow-hidden mb-3">
-                {profile?.photo_url ? (
-                  <img src={profile.photo_url} alt="Profile" className="w-full h-full object-cover" />
+                {trust?.photo_url ? (
+                  <img src={trust.photo_url} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <User className="w-full h-full p-4 text-[#1F2A1E]/30" />
                 )}
               </div>
-              <h3 className="font-bold text-[#1F2A1E]">{profile?.full_name}</h3>
-              <p className="text-xs text-[#1F2A1E]/60">{profile?.category || 'Service Partner'}</p>
+              <h3 className="font-bold text-[#1F2A1E] text-base">{trust?.full_name}</h3>
+              <p className="text-xs text-[#1F2A1E]/60 mt-0.5">{trust?.category?.replace(/^\d+\.\s*/, '') || 'Service Partner'}</p>
+              {trust?.service_area && (
+                <div className="flex items-center gap-1 mt-1">
+                  <MapPin className="w-3 h-3 text-[#1F2A1E]/40" />
+                  <span className="text-[11px] text-[#1F2A1E]/50">{trust.service_area}</span>
+                </div>
+              )}
             </div>
 
-            <div className="pt-4 border-t border-[#2F5233]/10 space-y-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-sm text-[#1F2A1E]/70 font-medium">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  Status
+            <div className="space-y-0.5 border-t border-[#2F5233]/10 pt-4">
+              <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                <div className="flex items-center gap-1.5 text-xs text-[#1F2A1E]/60">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> Verification
                 </div>
-                <span className={`text-xs font-bold uppercase ${profile?.is_verified ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  {profile?.is_verified ? 'Verified' : 'Pending'}
+                <span className={`text-xs font-bold ${trust?.is_verified ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  {trust?.is_verified ? 'Approved' : 'Pending Review'}
                 </span>
               </div>
-              
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-sm text-[#1F2A1E]/70 font-medium">
-                  <Star className="w-4 h-4 text-amber-500" />
-                  Reliability Score
-                </div>
-                <span className="text-sm font-bold text-[#1F2A1E]">{profile?.reliability_score || '0.0'}/5.0</span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-sm text-[#1F2A1E]/70 font-medium">
-                  <Award className="w-4 h-4 text-[#2F5233]" />
-                  Acceptance Rate
-                </div>
-                <span className="text-sm font-bold text-[#1F2A1E]">{profile?.acceptance_rate || 0}%</span>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2 text-sm text-[#1F2A1E]/70 font-medium">
-                  <MapPin className="w-4 h-4 text-blue-500" />
-                  Service Area
-                </div>
-                <span className="text-xs font-semibold text-[#1F2A1E]/80 truncate max-w-[120px]" title={profile?.service_area}>
-                  {profile?.service_area || 'N/A'}
+              <MetricRow label="✦ Reliability Score" value={`${trust?.reliability_score}%`} highlight="text-emerald-600" />
+              <MetricRow label="Acceptance Rate" value={`${trust?.acceptance_rate}%`} />
+              <MetricRow label="On-Time Rate" value={`${trust?.on_time_rate}%`} />
+              <MetricRow label="Cancellation Rate" value={`${trust?.cancellation_rate}%`} />
+              <MetricRow label="No-Show Rate" value={`${trust?.no_show_rate}%`} />
+              <MetricRow label="Response Score" value={`${trust?.response_time_score}%`} />
+              <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                <span className="text-xs text-[#1F2A1E]/60 flex items-center gap-1.5">
+                  <Activity className="w-3.5 h-3.5 text-[#2F5233]" /> Completed Jobs
                 </span>
+                <span className="text-xs font-bold text-[#1F2A1E]">{trust?.completed_jobs_count}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-xs text-[#1F2A1E]/60 flex items-center gap-1.5">
+                  <FileCheck className="w-3.5 h-3.5 text-blue-500" /> Certificates
+                </span>
+                <span className="text-xs font-bold text-[#1F2A1E]">{trust?.certificates_count}</span>
               </div>
             </div>
-            
-            <div className="mt-6 p-3 bg-[#FAF7F0] rounded-xl text-[10px] text-[#1F2A1E]/60 leading-relaxed italic text-center">
-              Metrics are calculated based on your platform activity and customer feedback. High performance leads to more job requests.
+
+            <div className="mt-4 p-3 bg-[#FAF7F0] rounded-xl text-[10px] text-[#1F2A1E]/60 leading-relaxed italic text-center">
+              Metrics are calculated from your platform activity and verified customer feedback. High performance scores lead to more job placements.
             </div>
           </div>
         </div>
