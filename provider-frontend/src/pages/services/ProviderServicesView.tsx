@@ -109,25 +109,30 @@ export const ProviderServicesView: React.FC = () => {
                             </div>
                           </div>
                           
-                          {(svc.distinct_features?.length > 0 || svc.suggested_addons?.length > 0) && (
+                          {(Boolean(svc.distinct_features) || Boolean(svc.suggested_addons)) && (
                             <div className="mt-4 pt-4 border-t border-[#2F5233]/5 space-y-3">
-                              {svc.distinct_features?.length > 0 && (
+                              {Array.isArray(svc.distinct_features) && svc.distinct_features.length > 0 && (
                                 <div>
                                   <span className="text-[10px] font-bold text-[#1F2A1E]/40 uppercase tracking-wider block mb-1">Features</span>
                                   <ul className="text-xs text-[#1F2A1E]/70 space-y-1 pl-3 list-disc marker:text-[#2F5233]/30">
-                                    {svc.distinct_features.map((f, i) => <li key={i}>{f}</li>)}
+                                    {svc.distinct_features.map((f: any, i: number) => (
+                                      <li key={i}>{typeof f === 'string' ? f : (f.title || f.name || f.text || JSON.stringify(f))}</li>
+                                    ))}
                                   </ul>
                                 </div>
                               )}
-                              {svc.suggested_addons?.length > 0 && (
+                              {Array.isArray(svc.suggested_addons) && svc.suggested_addons.length > 0 && (
                                 <div>
                                   <span className="text-[10px] font-bold text-[#1F2A1E]/40 uppercase tracking-wider block mb-1">Standard Add-ons</span>
                                   <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                    {svc.suggested_addons.map((a, i) => (
-                                      <span key={i} className="text-[10px] bg-[#FAF7F0] text-[#7A9E6E] px-2 py-0.5 rounded-full font-medium border border-[#2F5233]/10">
-                                        {a}
-                                      </span>
-                                    ))}
+                                    {svc.suggested_addons.map((a: any, i: number) => {
+                                      const label = typeof a === 'string' ? a : (a.name || a.title || a.type || a.text || 'Add-on');
+                                      return (
+                                        <span key={i} className="text-[10px] bg-[#FAF7F0] text-[#7A9E6E] px-2 py-0.5 rounded-full font-medium border border-[#2F5233]/10">
+                                          {label}
+                                        </span>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
