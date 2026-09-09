@@ -107,6 +107,11 @@ class ProviderServiceDomain:
         self.repo.get_or_create(user_id=user.id, default_name=user.full_name)
         return self.repo.create_certificate(provider_id=user.id, data=data)
 
+    upload_certificate = add_certificate
+
+    def get_my_certificates(self, user: AuthUser) -> List[Certificate]:
+        return self.list_certificates(user, user.id)
+
     def list_certificates(self, user: AuthUser, provider_id: uuid.UUID) -> List[Certificate]:
         # Cross-provider ownership check: a provider can only view their own certificates
         if user.role == "provider" and user.id != provider_id:

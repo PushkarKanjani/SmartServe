@@ -4,11 +4,12 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import require_admin, require_permission
+from app.core.dependencies import require_admin, require_permission, get_current_customer
 from app.repositories.db import get_db
 from app.repositories import booking_repository, audit_repository
 from app.models.user import User
 from app.models.provider import Provider
+from app.models.customer import Customer
 from app.models.booking import Booking, BookingStatus, PaymentStatus
 from app.schemas.booking import (
     BookingCreateRequest,
@@ -344,14 +345,23 @@ class MobileBookingPayload(PyBaseModel):
 
 @customer_bookings_router.get("")
 @customer_bookings_router.get("/")
-def list_customer_bookings(db: Session = Depends(get_db)):
-    bookings = db.query(Booking).order_by(Booking.created_at.desc()).limit(50).all()
+def list_customer_bookings(
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db),
+):
+    bookings = (
+        db.query(Booking)
+        .filter(Booking.customer_id == current_customer.id)
+        .order_by(Booking.created_at.desc())
+        .limit(50)
+        .all()
+    )
     results = []
     for b in bookings:
         results.append({
             "id": str(b.id),
             "booking_reference": f"BK-{str(b.id)[:8].upper()}",
-            "customer_name": b.customer.user.email.split('@')[0] if b.customer and b.customer.user else "Customer",
+            "customer_name": current_customer.full_name or "Customer",
             "service_name": b.service.name if b.service else "Service",
             "category": b.service.category if b.service else "General",
             "subcategory": b.service.subcategory if b.service else "",
@@ -366,12 +376,16 @@ def list_customer_bookings(db: Session = Depends(get_db)):
 
 @customer_bookings_router.post("")
 @customer_bookings_router.post("/")
-def create_customer_mobile_booking(req: MobileBookingPayload, db: Session = Depends(get_db)):
+def create_customer_mobile_booking(
+    req: MobileBookingPayload,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db),
+):
     ref = f"BK-{uuid.uuid4().hex[:8].upper()}"
     return {
         "id": str(uuid.uuid4()),
         "booking_reference": ref,
-        "customer_name": req.customer_name or "Customer",
+        "customer_name": current_customer.full_name or req.customer_name or "Customer",
         "service_name": req.service_name or "SmartServe Service",
         "category": req.category or "General",
         "status": "confirmed",
@@ -381,4 +395,5 @@ def create_customer_mobile_booking(req: MobileBookingPayload, db: Session = Depe
         "service_address": req.service_address or "Bangalore",
         "message": "Booking scheduled successfully."
     }
+
 

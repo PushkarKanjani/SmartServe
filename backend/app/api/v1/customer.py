@@ -818,35 +818,20 @@ def get_booking_by_id(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db),
 ):
+    # Strict lookup: check if booking exists in DB first
     record = (
         db.query(Booking)
         .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
-        .filter(Booking.customer_id == current_customer.id)
         .first()
     )
     if not record:
-        record = (
-            db.query(Booking)
-            .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
-            .first()
-        )
-    if not record:
-        return BookingDetail(
-            id=booking_id,
-            booking_reference="BK-1001",
-            customer_id=str(current_customer.id),
-            service_id="srv-ac-101",
-            service_name="Split AC Foam Jet Deep Service",
-            category="AC & Appliance Repair",
-            status="CONFIRMED",
-            scheduled_date="2026-09-02",
-            scheduled_time="14:00",
-            address_line1="Flat 402, Green Valley Heights, Sector 62, Noida",
-            city="Noida",
-            pincode="201301",
-            total_price=699.0,
-            payment_method="COD",
-            created_at=datetime.utcnow(),
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    # Strict RBAC: Ensure requesting customer owns this booking
+    if record.customer_id != current_customer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot access bookings belonging to another customer",
         )
 
     return BookingDetail(
@@ -888,63 +873,52 @@ def cancel_booking(
     record = (
         db.query(Booking)
         .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
-        .filter(Booking.customer_id == current_customer.id)
         .first()
     )
     if not record:
-        record = (
-            db.query(Booking)
-            .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
-            .first()
-        )
-    if record:
-        record.status = "CANCELLED"
-        record.cancellation_reason = effective_reason
-        db.commit()
-        db.refresh(record)
-        
-        sched_time_str = (
-            record.scheduled_time.strftime("%H:%M:%S")
-            if hasattr(record.scheduled_time, "strftime")
-            else str(record.scheduled_time)
-        )
-        
-        return BookingDetail(
-            id=str(record.id),
-            booking_reference=record.booking_reference,
-            customer_id=str(record.customer_id),
-            service_id=str(record.service_id),
-            service_name=record.service_name,
-            category=record.category,
-            status=str(record.status.value if hasattr(record.status, "value") else record.status),
-            scheduled_date=record.scheduled_date,
-            scheduled_time=sched_time_str,
-            address_line1=record.address_line1,
-            city=record.city,
-            pincode=record.pincode,
-            total_price=float(record.total_price),
-            payment_method=record.payment_method,
-            cancellation_reason=effective_reason,
-            created_at=record.created_at,
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if record.customer_id != current_customer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot cancel a booking belonging to another customer",
         )
 
+    record.status = "CANCELLED"
+    record.cancellation_reason = effective_reason
+    db.commit()
+    db.refresh(record)
+    
+    sched_time_str = (
+        record.scheduled_time.strftime("%H:%M:%S")
+        if hasattr(record.scheduled_time, "strftime")
+        else str(record.scheduled_time)
+    )
+    
     return BookingDetail(
-        id=booking_id,
-        booking_reference="BK-1001",
-        customer_id=str(current_customer.id),
-        service_id="srv-ac-101",
-        service_name="Split AC Foam Jet Deep Service",
-        category="AC & Appliance Repair",
-        status="CANCELLED",
-        scheduled_date="2026-09-02",
-        scheduled_time="14:00",
-        address_line1="Flat 402, Green Valley Heights",
-        city="Noida",
-        pincode="201301",
-        total_price=699.0,
-        payment_method="COD",
-        cancellation_reason=payload.reason,
-        created_at=datetime.utcnow(),
+        id=str(record.id),
+        booking_reference=record.booking_reference,
+        customer_id=str(record.customer_id),
+        provider_id=str(record.provider_id) if record.provider_id else None,
+        provider_name=record.provider.full_name if record.provider else None,
+        service_id=str(record.service_id),
+        service_name=record.service_name,
+        category=record.category,
+        status=str(record.status.value if hasattr(record.status, "value") else record.status),
+        scheduled_date=record.scheduled_date,
+        scheduled_time=sched_time_str,
+        address_line1=record.address_line1,
+        landmark=record.landmark,
+        city=record.city,
+        pincode=record.pincode,
+        total_price=float(record.total_price),
+        payment_method=record.payment_method,
+        cancellation_reason=effective_reason,
+        notes=record.notes,
+        otp_code=record.otp_code,
+        emergency_flag=record.emergency_flag,
+        timeline=record.timeline,
+        created_at=record.created_at,
     )
 
 
@@ -956,9 +930,30 @@ def submit_booking_feedback(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db),
 ):
+    record = (
+        db.query(Booking)
+        .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
+        .first()
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if record.customer_id != current_customer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot submit feedback for a booking belonging to another customer",
+        )
+
+    b_status = str(record.status.value if hasattr(record.status, "value") else record.status).upper()
+    if b_status != "COMPLETED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot submit feedback for booking in '{b_status}' status. Service must be Completed.",
+        )
+
     fb = BookingFeedback(
         id=uuid.uuid4(),
-        booking_id=uuid.UUID(booking_id) if len(booking_id) == 36 else uuid.uuid4(),
+        booking_id=record.id,
         customer_id=current_customer.id,
         rating=payload.rating,
         review_text=payload.review_text,
@@ -1191,13 +1186,18 @@ def get_customer_sessions(current_customer: Customer = Depends(get_current_custo
 
 # 25. POST /customer/sessions/{id}/revoke
 @router.post("/sessions/{session_id}/revoke")
-def revoke_session(session_id: str):
+def revoke_session(
+    session_id: str,
+    current_customer: Customer = Depends(get_current_customer),
+):
     return {"status": "ok", "message": f"Session {session_id} revoked"}
 
 
 # 26. POST /customer/sessions/revoke-all
 @router.post("/sessions/revoke-all")
-def revoke_all_sessions():
+def revoke_all_sessions(
+    current_customer: Customer = Depends(get_current_customer),
+):
     return {"status": "ok", "message": "All other sessions revoked"}
 
 
