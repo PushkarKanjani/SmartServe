@@ -15,10 +15,14 @@ from app.schemas.provider import (
     ProviderServiceUpdate,
     ProviderServiceResponse,
     AvailabilityCreate,
+    AvailabilityUpdate,
     AvailabilityResponse,
     CertificateCreate,
     CertificateResponse,
     ProviderBookingResponse,
+    ProviderServiceCatalogResponse,
+    ProviderDashboardStatsResponse,
+    ProviderProfileTrustResponse,
     BookingStatusUpdatePayload,
     BookingRejectPayload,
     BookingCompletePayload,
@@ -61,6 +65,18 @@ def update_my_provider_profile(
 
 
 @router.get(
+    "/providers/me/profile-trust",
+    response_model=ProviderProfileTrustResponse,
+    summary="Get verified trust signals and stats for current provider",
+)
+def get_my_profile_trust(
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    return service.get_profile_trust(current_user)
+
+
+@router.get(
     "/providers/{provider_id}",
     response_model=ProviderProfileResponse,
     summary="Get provider profile with strict ownership check",
@@ -79,14 +95,14 @@ def get_provider_profile(
 
 @router.get(
     "/providers/me/services",
-    response_model=List[ProviderServiceResponse],
-    summary="List customized services offered by current authenticated provider",
+    response_model=List[ProviderServiceCatalogResponse],
+    summary="List customized services offered by current authenticated provider joined with master catalog",
 )
 def list_my_provider_services(
     current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
-    return service.list_provider_services(current_user, current_user.id)
+    return service.list_my_services_catalog(current_user)
 
 
 @router.post(
@@ -172,6 +188,20 @@ def add_availability_slot(
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
     return service.add_availability_slot(current_user, data)
+
+
+@router.patch(
+    "/providers/me/availability/{id}",
+    response_model=AvailabilityResponse,
+    summary="Update an existing timeslot (status or hours) with conflict checks",
+)
+def update_availability_slot(
+    id: uuid.UUID,
+    data: AvailabilityUpdate,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    return service.update_availability_slot(current_user, id, data)
 
 
 @router.get(
@@ -261,6 +291,18 @@ def delete_certificate(
 # ==========================================
 # PROVIDER BOOKINGS & ASSIGNED JOBS
 # ==========================================
+
+@router.get(
+    "/providers/me/dashboard-stats",
+    response_model=ProviderDashboardStatsResponse,
+    summary="Get aggregated live dashboard metrics for current provider",
+)
+def get_my_dashboard_stats(
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    return service.get_dashboard_stats(current_user)
+
 
 @router.get(
     "/providers/me/bookings",

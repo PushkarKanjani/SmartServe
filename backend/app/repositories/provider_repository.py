@@ -6,6 +6,7 @@ from app.schemas.provider import (
     ProviderProfileUpdate,
     CertificateCreate,
     AvailabilityCreate,
+    AvailabilityUpdate,
     ProviderServiceCreate,
     ProviderServiceUpdate,
 )
@@ -99,6 +100,17 @@ class ProviderRepository:
 
     def get_availability_by_id(self, slot_id: uuid.UUID) -> Optional[Availability]:
         return self.db.query(Availability).filter(Availability.id == slot_id).first()
+
+    def update_availability_slot(self, slot: Availability, data: AvailabilityUpdate) -> Availability:
+        if data.status is not None:
+            slot.status = data.status
+        if data.start_time is not None:
+            slot.start_time = data.start_time
+        if data.end_time is not None:
+            slot.end_time = data.end_time
+        self.db.commit()
+        self.db.refresh(slot)
+        return slot
 
     def delete_availability_slot(self, slot: Availability) -> None:
         self.db.delete(slot)

@@ -99,6 +99,11 @@ class AvailabilityResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class AvailabilityUpdate(BaseModel):
+    status: Optional[str] = Field(None, description="Updated status: FREE or UNAVAILABLE")
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+
 
 # ==========================================
 # PROVIDER SERVICE SCHEMAS
@@ -125,6 +130,62 @@ class ProviderServiceResponse(BaseModel):
     duration_minutes: int
     active: bool
     created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProviderServiceCatalogResponse(BaseModel):
+    id: uuid.UUID
+    provider_id: uuid.UUID
+    service_id: uuid.UUID
+    price: Decimal
+    duration_minutes: int
+    active: bool
+    service_name: str
+    category: str
+    subcategory: str
+    base_price: Decimal
+    is_emergency_eligible: bool
+    distinct_features: Optional[Any] = None
+    suggested_addons: Optional[Any] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProviderDashboardStatsResponse(BaseModel):
+    today_bookings_count: int
+    active_jobs_count: int
+    completed_jobs_count: int
+    pending_requests_count: int
+    total_earnings: Decimal
+    pipeline_count: int
+    urgent_alerts_count: int
+    recent_activity: List[Dict[str, Any]]
+
+
+class ProviderProfileTrustResponse(BaseModel):
+    user_id: uuid.UUID
+    full_name: str
+    email: str
+    phone: Optional[str] = None
+    photo_url: Optional[str] = None
+    category: Optional[str] = None
+    skills: Optional[str] = None
+    experience_years: int
+    base_price: Decimal
+    service_area: Optional[str] = None
+    is_verified: bool
+    reliability_score: Decimal
+    acceptance_rate: Decimal
+    cancellation_rate: Decimal
+    no_show_rate: Decimal
+    on_time_rate: Decimal
+    response_time_score: Decimal
+    completed_jobs_count: int
+    certificates_count: int
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
