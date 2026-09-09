@@ -7,6 +7,7 @@ from app.core.database import get_db
 from app.core.dependencies import AuthUser, require_provider
 from app.models.customer import Booking
 from app.services.provider.provider_service import ProviderServiceDomain
+from app.services.booking.state_machine import transition_booking_status
 from app.schemas.provider import (
     ProviderProfileResponse,
     ProviderProfileUpdate,
@@ -18,6 +19,9 @@ from app.schemas.provider import (
     CertificateCreate,
     CertificateResponse,
     ProviderBookingResponse,
+    BookingStatusUpdatePayload,
+    BookingRejectPayload,
+    BookingCompletePayload,
 )
 
 router = APIRouter(tags=["Providers & Verification"])
@@ -337,3 +341,130 @@ def get_my_assigned_booking_detail(
         timeline=b.timeline,
         created_at=b.created_at,
     )
+
+
+def _serialize_booking_response(b: Booking) -> ProviderBookingResponse:
+    return ProviderBookingResponse(
+        id=b.id,
+        booking_reference=b.booking_reference,
+        customer_id=b.customer_id,
+        customer_name=b.customer.full_name if b.customer else "Customer",
+        customer_phone=b.customer.phone if b.customer else None,
+        service_id=b.service_id,
+        service_name=b.service_name,
+        category=b.category,
+        status=str(b.status.value if hasattr(b.status, "value") else b.status),
+        payment_status=str(b.payment_status or "Pending"),
+        scheduled_time=b.scheduled_time,
+        scheduled_date=b.scheduled_date,
+        address=b.address or "",
+        total_price=Decimal(str(b.total_price or "0.00")),
+        otp_code=b.otp_code,
+        emergency_flag=b.emergency_flag,
+        timeline=b.timeline,
+        created_at=b.created_at,
+    )
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/accept",
+    response_model=ProviderBookingResponse,
+    summary="Accept an incoming requested booking",
+)
+def accept_booking(
+    booking_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    updated = transition_booking_status(
+        db=db,
+        booking_id=booking_id,
+        next_status="Accepted",
+        user=current_user,
+    )
+    return _serialize_booking_response(updated)
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/reject",
+    response_model=ProviderBookingResponse,
+    summary="Reject an incoming requested booking with optional reason",
+)
+def reject_booking(
+    booking_id: uuid.UUID,
+    payload: Optional[BookingRejectPayload] = None,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    reason = payload.reason if payload else "Declined by service partner"
+    updated = transition_booking_status(
+        db=db,
+        booking_id=booking_id,
+        next_status="Rejected",
+        user=current_user,
+        reason=reason,
+    )
+    return _serialize_booking_response(updated)
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/start",
+    response_model=ProviderBookingResponse,
+    summary="Mark an accepted booking as Started (service delivery initiated)",
+)
+def start_booking(
+    booking_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    updated = transition_booking_status(
+        db=db,
+        booking_id=booking_id,
+        next_status="Started",
+        user=current_user,
+    )
+    return _serialize_booking_response(updated)
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/complete",
+    response_model=ProviderBookingResponse,
+    summary="Complete a job in progress with optional customer OTP verification",
+)
+def complete_booking(
+    booking_id: uuid.UUID,
+    payload: Optional[BookingCompletePayload] = None,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    otp = payload.otp_code if payload else None
+    updated = transition_booking_status(
+        db=db,
+        booking_id=booking_id,
+        next_status="Completed",
+        user=current_user,
+        otp_code=otp,
+    )
+    return _serialize_booking_response(updated)
+
+
+@router.patch(
+    "/providers/me/bookings/{booking_id}/status",
+    response_model=ProviderBookingResponse,
+    summary="Generic state machine transition endpoint for provider booking",
+)
+def update_booking_status(
+    booking_id: uuid.UUID,
+    payload: BookingStatusUpdatePayload,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    updated = transition_booking_status(
+        db=db,
+        booking_id=booking_id,
+        next_status=payload.status,
+        user=current_user,
+        reason=payload.reason,
+        otp_code=payload.otp_code,
+    )
+    return _serialize_booking_response(updated)

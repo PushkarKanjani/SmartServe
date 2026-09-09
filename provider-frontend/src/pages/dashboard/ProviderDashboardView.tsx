@@ -10,6 +10,9 @@ import {
   MapPin,
   User,
   RefreshCw,
+  Play,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../api/client';
@@ -47,12 +50,37 @@ export const ProviderDashboardView: React.FC = () => {
     fetchData();
   }, []);
 
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const refreshBookings = async () => {
     try {
       const res = await apiClient.get('/providers/me/bookings');
       setBookings(res.data);
     } catch (err) {
       console.error('Failed to refresh bookings:', err);
+    }
+  };
+
+  const handleBookingAction = async (bookingId: string, action: 'accept' | 'reject' | 'start' | 'complete') => {
+    setActionLoading(bookingId);
+    setActionError(null);
+    try {
+      if (action === 'accept') {
+        await apiClient.post(`/providers/me/bookings/${bookingId}/accept`);
+      } else if (action === 'reject') {
+        await apiClient.post(`/providers/me/bookings/${bookingId}/reject`, { reason: 'Declined by service partner' });
+      } else if (action === 'start') {
+        await apiClient.post(`/providers/me/bookings/${bookingId}/start`);
+      } else if (action === 'complete') {
+        await apiClient.post(`/providers/me/bookings/${bookingId}/complete`);
+      }
+      await refreshBookings();
+    } catch (err: any) {
+      console.error(`Failed to ${action} booking:`, err);
+      setActionError(err.response?.data?.detail || `Failed to ${action} booking.`);
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -178,6 +206,13 @@ export const ProviderDashboardView: React.FC = () => {
             </button>
           </div>
 
+          {actionError && (
+            <div className="mb-4 p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              <span>{actionError}</span>
+            </div>
+          )}
+
           {bookings.length === 0 ? (
             <div className="text-center py-8 px-4 rounded-2xl bg-[#FAF7F0]/60 border border-dashed border-[#2F5233]/20">
               <Calendar className="w-8 h-8 text-[#2F5233]/40 mx-auto mb-2" />
@@ -211,6 +246,10 @@ export const ProviderDashboardView: React.FC = () => {
                         booking.status === 'Requested'
                           ? 'bg-amber-100 text-amber-900 border border-amber-300'
                           : booking.status === 'Accepted'
+                          ? 'bg-blue-100 text-blue-900 border border-blue-300'
+                          : booking.status === 'Started'
+                          ? 'bg-indigo-100 text-indigo-900 border border-indigo-300'
+                          : booking.status === 'Completed'
                           ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
                           : 'bg-slate-100 text-slate-800'
                       }`}>
@@ -246,6 +285,67 @@ export const ProviderDashboardView: React.FC = () => {
                         <span className="text-[10px] text-[#1F2A1E]/50 block">Service Location</span>
                         <span className="font-medium line-clamp-1">{booking.address}</span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Interactive Action Bar Enforcing State Machine */}
+                  <div className="mt-4 pt-3 border-t border-[#2F5233]/10 flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-[11px] text-[#1F2A1E]/70 font-medium">
+                      {booking.status === 'Requested' && 'New job request. Accept to confirm or decline to return to pool.'}
+                      {booking.status === 'Accepted' && 'Booking accepted. Click "Start Job" when beginning service.'}
+                      {booking.status === 'Started' && 'Service in progress. Mark complete when work is finished.'}
+                      {booking.status === 'Completed' && 'Job successfully completed and payment reconciled.'}
+                      {booking.status === 'Rejected' && 'Job was declined by you.'}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {booking.status === 'Requested' && (
+                        <>
+                          <button
+                            onClick={() => handleBookingAction(booking.id, 'reject')}
+                            disabled={actionLoading === booking.id}
+                            className="px-3.5 py-1.5 rounded-xl border border-red-200 text-red-700 hover:bg-red-50 text-xs font-semibold transition-colors disabled:opacity-50 cursor-pointer"
+                          >
+                            Decline
+                          </button>
+                          <button
+                            onClick={() => handleBookingAction(booking.id, 'accept')}
+                            disabled={actionLoading === booking.id}
+                            className="px-4 py-1.5 rounded-xl bg-[#2F5233] text-white hover:bg-[#254228] text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Accept Job
+                          </button>
+                        </>
+                      )}
+
+                      {booking.status === 'Accepted' && (
+                        <button
+                          onClick={() => handleBookingAction(booking.id, 'start')}
+                          disabled={actionLoading === booking.id}
+                          className="px-4 py-1.5 rounded-xl bg-blue-700 text-white hover:bg-blue-800 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          Start Job
+                        </button>
+                      )}
+
+                      {booking.status === 'Started' && (
+                        <button
+                          onClick={() => handleBookingAction(booking.id, 'complete')}
+                          disabled={actionLoading === booking.id}
+                          className="px-4 py-1.5 rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Complete Job
+                        </button>
+                      )}
+
+                      {booking.status === 'Completed' && (
+                        <span className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-900 text-xs font-bold flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Completed
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

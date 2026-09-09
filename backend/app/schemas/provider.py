@@ -154,3 +154,17 @@ class ProviderBookingResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class BookingStatusUpdatePayload(BaseModel):
+    status: str = Field(..., description="Target booking status (Accepted, Rejected, Started, Completed)")
+    reason: Optional[str] = Field(None, description="Reason for status change")
+    otp_code: Optional[str] = Field(None, description="Customer OTP verification code")
+
+
+class BookingRejectPayload(BaseModel):
+    reason: Optional[str] = Field(None, description="Reason for declining the booking request")
+
+
+class BookingCompletePayload(BaseModel):
+    otp_code: Optional[str] = Field(None, description="Customer OTP verification code")
