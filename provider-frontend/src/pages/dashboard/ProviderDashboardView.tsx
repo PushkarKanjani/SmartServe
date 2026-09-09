@@ -6,6 +6,10 @@ import {
   Briefcase,
   LogOut,
   FileCheck,
+  Calendar,
+  MapPin,
+  User,
+  RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../api/client';
@@ -17,27 +21,40 @@ export const ProviderDashboardView: React.FC = () => {
   const [profile, setProfile] = useState<any>(null);
   const [services, setServices] = useState<any[]>([]);
   const [certificates, setCertificates] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchData = async () => {
+    try {
+      const [profRes, svcsRes, certsRes, bookingsRes] = await Promise.all([
+        apiClient.get('/providers/me'),
+        apiClient.get('/providers/me/services'),
+        apiClient.get('/certificates'),
+        apiClient.get('/providers/me/bookings'),
+      ]);
+      setProfile(profRes.data);
+      setServices(svcsRes.data);
+      setCertificates(certsRes.data);
+      setBookings(bookingsRes.data);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [profRes, svcsRes, certsRes] = await Promise.all([
-          apiClient.get('/providers/me'),
-          apiClient.get('/providers/me/services'),
-          apiClient.get('/certificates'),
-        ]);
-        setProfile(profRes.data);
-        setServices(svcsRes.data);
-        setCertificates(certsRes.data);
-      } catch (err) {
-        console.error('Failed to load dashboard data:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
+
+  const refreshBookings = async () => {
+    try {
+      const res = await apiClient.get('/providers/me/bookings');
+      setBookings(res.data);
+    } catch (err) {
+      console.error('Failed to refresh bookings:', err);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -132,6 +149,110 @@ export const ProviderDashboardView: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Assigned Customer Bookings Section */}
+        <div className="mb-8 bg-white rounded-3xl p-6 border border-[#2F5233]/10 shadow-sm">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[#2F5233] flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#2F5233]" />
+                  Assigned Customer Bookings ({bookings.length})
+                </h3>
+                {bookings.length > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                    Live Jobs
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#1F2A1E]/60 mt-0.5">
+                Real customer marketplace bookings matching your active catalog services and free availability slots
+              </p>
+            </div>
+            <button
+              onClick={refreshBookings}
+              className="p-2 rounded-xl text-slate-500 hover:text-[#2F5233] hover:bg-[#FAF7F0] transition-colors"
+              title="Refresh Bookings"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="text-center py-8 px-4 rounded-2xl bg-[#FAF7F0]/60 border border-dashed border-[#2F5233]/20">
+              <Calendar className="w-8 h-8 text-[#2F5233]/40 mx-auto mb-2" />
+              <p className="text-xs font-semibold text-[#1F2A1E]/80">No incoming bookings currently</p>
+              <p className="text-[11px] text-[#1F2A1E]/50 mt-1 max-w-sm mx-auto">
+                When a customer books one of your active catalog services during your available slots, the order will appear here in real time.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {bookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  className="p-5 rounded-2xl bg-[#FAF7F0] border border-[#2F5233]/15 hover:border-[#2F5233]/30 transition-all shadow-xs"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#2F5233]/10 pb-3 mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold text-[#2F5233] bg-white px-2 py-0.5 rounded-md border border-[#2F5233]/20">
+                          {booking.booking_reference}
+                        </span>
+                        <h4 className="text-sm font-bold text-[#1F2A1E]">{booking.service_name}</h4>
+                      </div>
+                      <p className="text-[11px] text-[#1F2A1E]/60 mt-0.5">{booking.category}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-[#2F5233] bg-emerald-100/80 px-2.5 py-1 rounded-lg">
+                        ₹{booking.total_price}
+                      </span>
+                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-lg ${
+                        booking.status === 'Requested'
+                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                          : booking.status === 'Accepted'
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          : 'bg-slate-100 text-slate-800'
+                      }`}>
+                        Status: {booking.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[#1F2A1E]/80">
+                    <div className="flex items-center gap-2">
+                      <User className="w-3.5 h-3.5 text-[#2F5233] shrink-0" />
+                      <div>
+                        <span className="text-[10px] text-[#1F2A1E]/50 block">Customer</span>
+                        <span className="font-semibold">{booking.customer_name}</span>
+                        {booking.customer_phone && (
+                          <span className="text-[11px] text-[#1F2A1E]/60 block">{booking.customer_phone}</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-[#2F5233] shrink-0" />
+                      <div>
+                        <span className="text-[10px] text-[#1F2A1E]/50 block">Schedule</span>
+                        <span className="font-semibold">{booking.scheduled_date}</span>
+                        <span className="text-[11px] text-[#1F2A1E]/60 block">{booking.scheduled_time}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5 text-[#2F5233] shrink-0" />
+                      <div>
+                        <span className="text-[10px] text-[#1F2A1E]/50 block">Service Location</span>
+                        <span className="font-medium line-clamp-1">{booking.address}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Profile Card & Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">

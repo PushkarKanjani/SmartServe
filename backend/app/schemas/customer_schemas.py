@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -204,6 +204,11 @@ class BookingDetail(BaseModel):
     payment_method: str
     cancellation_reason: Optional[str] = None
     notes: Optional[str] = None
+    provider_id: Optional[str] = None
+    provider_name: Optional[str] = None
+    otp_code: Optional[str] = None
+    emergency_flag: Optional[str] = None
+    timeline: Optional[List[Dict[str, Any]]] = None
     created_at: datetime
 
 

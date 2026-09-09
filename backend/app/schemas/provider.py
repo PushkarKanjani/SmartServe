@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date, time
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -124,6 +124,33 @@ class ProviderServiceResponse(BaseModel):
     price: Decimal
     duration_minutes: int
     active: bool
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==========================================
+# PROVIDER BOOKING SCHEMAS
+# ==========================================
+
+class ProviderBookingResponse(BaseModel):
+    id: uuid.UUID
+    booking_reference: str
+    customer_id: uuid.UUID
+    customer_name: str
+    customer_phone: Optional[str] = None
+    service_id: uuid.UUID
+    service_name: str
+    category: str
+    status: str
+    payment_status: str
+    scheduled_time: datetime
+    scheduled_date: str
+    address: str
+    total_price: Decimal
+    otp_code: Optional[str] = None
+    emergency_flag: Optional[str] = None
+    timeline: Optional[List[Dict[str, Any]]] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,9 +1,11 @@
 import uuid
-from typing import List
-from fastapi import APIRouter, Depends, status
+from typing import List, Optional
+from decimal import Decimal
+from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import AuthUser, require_provider
+from app.models.customer import Booking
 from app.services.provider.provider_service import ProviderServiceDomain
 from app.schemas.provider import (
     ProviderProfileResponse,
@@ -15,6 +17,7 @@ from app.schemas.provider import (
     AvailabilityResponse,
     CertificateCreate,
     CertificateResponse,
+    ProviderBookingResponse,
 )
 
 router = APIRouter(tags=["Providers & Verification"])
@@ -249,3 +252,88 @@ def delete_certificate(
 ):
     service.delete_certificate(current_user, id)
     return None
+
+
+# ==========================================
+# PROVIDER BOOKINGS & ASSIGNED JOBS
+# ==========================================
+
+@router.get(
+    "/providers/me/bookings",
+    response_model=List[ProviderBookingResponse],
+    summary="List all customer bookings assigned to current authenticated provider",
+)
+def get_my_assigned_bookings(
+    status_filter: Optional[str] = None,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    query = db.query(Booking).filter(Booking.provider_id == current_user.id)
+    if status_filter and status_filter.upper() != "ALL":
+        query = query.filter(Booking.status.ilike(f"%{status_filter}%"))
+    bookings = query.order_by(Booking.created_at.desc()).all()
+    results = []
+    for b in bookings:
+        results.append(
+            ProviderBookingResponse(
+                id=b.id,
+                booking_reference=b.booking_reference,
+                customer_id=b.customer_id,
+                customer_name=b.customer.full_name if b.customer else "Customer",
+                customer_phone=b.customer.phone if b.customer else None,
+                service_id=b.service_id,
+                service_name=b.service_name,
+                category=b.category,
+                status=str(b.status.value if hasattr(b.status, "value") else b.status),
+                payment_status=str(b.payment_status or "Pending"),
+                scheduled_time=b.scheduled_time,
+                scheduled_date=b.scheduled_date,
+                address=b.address or "",
+                total_price=Decimal(str(b.total_price or "0.00")),
+                otp_code=b.otp_code,
+                emergency_flag=b.emergency_flag,
+                timeline=b.timeline,
+                created_at=b.created_at,
+            )
+        )
+    return results
+
+
+@router.get(
+    "/providers/me/bookings/{booking_id}",
+    response_model=ProviderBookingResponse,
+    summary="Get single assigned booking by ID with ownership check",
+)
+def get_my_assigned_booking_detail(
+    booking_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    b = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not b:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if b.provider_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot access bookings assigned to another provider",
+        )
+    return ProviderBookingResponse(
+        id=b.id,
+        booking_reference=b.booking_reference,
+        customer_id=b.customer_id,
+        customer_name=b.customer.full_name if b.customer else "Customer",
+        customer_phone=b.customer.phone if b.customer else None,
+        service_id=b.service_id,
+        service_name=b.service_name,
+        category=b.category,
+        status=str(b.status.value if hasattr(b.status, "value") else b.status),
+        payment_status=str(b.payment_status or "Pending"),
+        scheduled_time=b.scheduled_time,
+        scheduled_date=b.scheduled_date,
+        address=b.address or "",
+        total_price=Decimal(str(b.total_price or "0.00")),
+        otp_code=b.otp_code,
+        emergency_flag=b.emergency_flag,
+        timeline=b.timeline,
+        created_at=b.created_at,
+    )
