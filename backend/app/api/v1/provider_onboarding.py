@@ -241,7 +241,7 @@ def submit_provider_onboarding(
         provider_id=user_id,
         document_url=payload.identity_kyc.aadhaar_doc_url,
         certificate_type="Identity Proof (Aadhaar)",
-        verification_status="PENDING",
+        verification_status="Pending",
         document_number=payload.identity_kyc.aadhaar_number,
         is_duplicate=False
     ))
@@ -252,7 +252,7 @@ def submit_provider_onboarding(
         provider_id=user_id,
         document_url=payload.identity_kyc.pan_doc_url,
         certificate_type="Tax Identity (PAN)",
-        verification_status="PENDING",
+        verification_status="Pending",
         document_number=payload.identity_kyc.pan_number,
         is_duplicate=False
     ))
@@ -263,7 +263,7 @@ def submit_provider_onboarding(
         provider_id=user_id,
         document_url=payload.nda_undertaking.undertaking_doc_url,
         certificate_type="Signed NDA & Code of Conduct Undertaking",
-        verification_status="PENDING",
+        verification_status="Pending",
         is_duplicate=False
     ))
 
@@ -274,10 +274,36 @@ def submit_provider_onboarding(
         document_url=payload.skill_evidence.evidence_url,
         certificate_type=payload.skill_evidence.evidence_type,
         extracted_name=payload.skill_evidence.description,
-        verification_status="PENDING",
+        verification_status="Pending",
         is_duplicate=False
     ))
 
+    db.commit()
+
+    # Perform OCR verification on uploaded certificates
+    from app.services.ai_service import analyze_provider_document
+    new_certs = db.query(Certificate).filter(Certificate.provider_id == user_id).all()
+    for cert in new_certs:
+        try:
+            result = analyze_provider_document(
+                document_url=cert.document_url,
+                certificate_type=cert.certificate_type,
+                provider_name=new_provider.full_name,
+                provider_id=str(user_id),
+                cert_id=str(cert.id),
+                db=db,
+                existing_doc_number=cert.document_number,
+                existing_extracted_name=cert.extracted_name,
+            )
+            if result.get("document_number") and not cert.document_number:
+                cert.document_number = result["document_number"]
+            if result.get("extracted_name") and not cert.extracted_name:
+                cert.extracted_name = result["extracted_name"]
+            if "is_duplicate" in result:
+                cert.is_duplicate = result["is_duplicate"]
+            db.add(cert)
+        except Exception:
+            continue
     db.commit()
 
     # Issue session JWT for provider

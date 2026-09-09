@@ -320,8 +320,8 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        <Route path="/" element={<CustomerPortalView />} />
-        <Route path="*" element={<Navigate to="/customer" replace />} />
+        <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

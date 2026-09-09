@@ -4,8 +4,16 @@ import difflib
 from datetime import datetime, date
 from typing import Dict, Any, Optional, List, Tuple
 
-import cv2
-import numpy as np
+try:
+    import cv2
+except Exception:
+    cv2 = None
+
+try:
+    import numpy as np
+except Exception:
+    np = None
+
 from sqlalchemy.orm import Session
 
 # Try importing PaddleOCR first (primary as per spec)
@@ -68,10 +76,13 @@ class OCRVerificationService:
         Detect if an image is blurry using the Laplacian variance method.
         Variance < 100.0 is standard threshold for blurred text documents.
         """
+        if cv2 is None:
+            return False, 150.0
+
         try:
             if isinstance(image_input, str) and os.path.exists(image_input):
                 img = cv2.imread(image_input)
-            elif isinstance(image_input, np.ndarray):
+            elif np is not None and isinstance(image_input, np.ndarray):
                 img = image_input
             else:
                 return False, 150.0  # Default non-blurry if not a local image

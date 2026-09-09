@@ -23,6 +23,8 @@ from app.schemas.provider import (
     ProviderServiceCatalogResponse,
     ProviderDashboardStatsResponse,
     ProviderProfileTrustResponse,
+    ProviderStatusResponse,
+    ProviderResubmitRequest,
     BookingStatusUpdatePayload,
     BookingRejectPayload,
     BookingCompletePayload,
@@ -80,6 +82,40 @@ def get_my_profile_trust(
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
     return service.get_profile_trust(current_user)
+
+
+@router.get(
+    "/providers/me/status",
+    response_model=ProviderStatusResponse,
+    summary="Get current provider's application verification status (accessible while Pending)",
+)
+def get_my_verification_status(
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    """
+    Returns the provider's verification status, document breakdown, and rejection reason.
+    This endpoint does NOT require is_verified=True — any authenticated provider can call it.
+    Used by the Application Status page after onboarding submission.
+    """
+    return service.get_my_status(current_user)
+
+
+@router.post(
+    "/providers/me/resubmit",
+    response_model=ProviderStatusResponse,
+    summary="Re-submit application with updated documents after admin requested changes",
+)
+def resubmit_my_application(
+    payload: ProviderResubmitRequest,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    """
+    Called by the provider when Admin requests document corrections or additional documents.
+    Resets verification status to 'Pending' so Admin can review again.
+    """
+    return service.resubmit_application(current_user, payload)
 
 
 @router.get(

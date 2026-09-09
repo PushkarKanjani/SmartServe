@@ -1,5 +1,21 @@
 import { apiClient } from './client';
 
+export interface AdminAIVerificationSummary {
+  recommendation: string;
+  risk_level: string;
+  risk_score: number;
+  documents_complete: boolean;
+  submitted_documents_count: number;
+  required_documents_count: number;
+  missing_documents: string[];
+  information_mismatches: string[];
+  expired_invalid_documents: string[];
+  suspicious_signals: string[];
+  positive_signals: string[];
+  reasons: string[];
+  disclaimer: string;
+}
+
 export interface ProviderItem {
   id: string;
   user_id: string;
@@ -7,10 +23,13 @@ export interface ProviderItem {
   email: string;
   phone: string;
   category: string;
+  skills?: string;
+  service_area?: string;
   experience_years: number;
   base_price: number;
   is_verified: boolean;
   is_active: boolean;
+  verification_status: string; // "Verified" | "Pending" | "Rejected" | "Correction Requested"
   reliability_score: number;
   acceptance_rate: number;
   on_time_rate: number;
@@ -20,6 +39,7 @@ export interface ProviderItem {
   composite_rank_score: number;
   rank_tier: string;
   created_at: string;
+  ai_verification_summary?: AdminAIVerificationSummary;
   documents: Array<{
     id: string;
     document_url: string;

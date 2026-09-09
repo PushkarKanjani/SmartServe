@@ -265,9 +265,19 @@ export const ProviderDetailView: React.FC = () => {
               <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
                 provider.is_verified
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : provider.verification_status === 'Rejected'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : provider.verification_status === 'Correction Requested'
+                  ? 'bg-orange-50 text-orange-700 border-orange-200'
                   : 'bg-amber-50 text-amber-700 border-amber-200'
               }`}>
-                {provider.is_verified ? 'Verified Provider' : 'Pending Verification'}
+                {provider.is_verified
+                  ? 'Verified Provider'
+                  : provider.verification_status === 'Rejected'
+                  ? 'Application Rejected'
+                  : provider.verification_status === 'Correction Requested'
+                  ? 'Correction Requested'
+                  : 'Pending Verification'}
               </span>
               <span className={`px-3 py-1 rounded-full text-xs font-bold border ${
                 provider.is_active
@@ -353,6 +363,182 @@ export const ProviderDetailView: React.FC = () => {
         </div>
       </div>
 
+      {/* AI-Assisted Verification Summary & Risk Assessment Card */}
+      {provider.ai_verification_summary && (
+        <div className={`p-6 md:p-7 rounded-3xl border shadow-sm space-y-5 ${
+          provider.ai_verification_summary.risk_level === 'LOW'
+            ? 'bg-emerald-50/50 border-emerald-200'
+            : provider.ai_verification_summary.risk_level === 'HIGH'
+            ? 'bg-rose-50/60 border-rose-200'
+            : 'bg-amber-50/60 border-amber-200'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-black/5 pb-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+                provider.ai_verification_summary.risk_level === 'LOW'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : provider.ai_verification_summary.risk_level === 'HIGH'
+                  ? 'bg-rose-100 text-rose-800'
+                  : 'bg-amber-100 text-amber-800'
+              }`}>
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-900 font-serif">
+                    AI-Assisted Verification Summary & Risk Signal
+                  </h3>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-slate-900 text-white">
+                    Assistive Engine
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Automated deterministic assessment of KYC documents, name consistency, duplicates, and qualifications.
+                </p>
+              </div>
+            </div>
+
+            {/* Overall Recommendation Pill */}
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className={`px-4 py-1.5 rounded-2xl text-xs font-bold border shadow-xs flex items-center gap-1.5 ${
+                provider.ai_verification_summary.risk_level === 'LOW'
+                  ? 'bg-emerald-600 text-white border-emerald-700'
+                  : provider.ai_verification_summary.risk_level === 'HIGH'
+                  ? 'bg-rose-600 text-white border-rose-700'
+                  : 'bg-amber-600 text-white border-amber-700'
+              }`}>
+                {provider.ai_verification_summary.risk_level === 'LOW' ? (
+                  <CheckCircle2 className="w-4 h-4" />
+                ) : (
+                  <AlertCircle className="w-4 h-4" />
+                )}
+                <span>{provider.ai_verification_summary.recommendation}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Metrics Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="p-3.5 bg-white rounded-2xl border border-black/5 shadow-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Document Completeness</span>
+              <p className={`font-bold mt-1 text-sm ${
+                provider.ai_verification_summary.documents_complete ? 'text-emerald-700' : 'text-amber-700'
+              }`}>
+                {provider.ai_verification_summary.submitted_documents_count} of {provider.ai_verification_summary.required_documents_count} Required
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-black/5 shadow-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Risk Score</span>
+              <p className={`font-bold mt-1 text-sm ${
+                provider.ai_verification_summary.risk_level === 'LOW'
+                  ? 'text-emerald-700'
+                  : provider.ai_verification_summary.risk_level === 'HIGH'
+                  ? 'text-rose-700'
+                  : 'text-amber-700'
+              }`}>
+                {Math.round(provider.ai_verification_summary.risk_score * 100)}% ({provider.ai_verification_summary.risk_level})
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-black/5 shadow-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Cross-Provider Duplicates</span>
+              <p className={`font-bold mt-1 text-sm ${
+                provider.ai_verification_summary.suspicious_signals.some(s => s.toLowerCase().includes('duplicate'))
+                  ? 'text-rose-700'
+                  : 'text-emerald-700'
+              }`}>
+                {provider.ai_verification_summary.suspicious_signals.some(s => s.toLowerCase().includes('duplicate'))
+                  ? 'Duplicate Flagged'
+                  : 'Zero Conflicts'}
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-white rounded-2xl border border-black/5 shadow-xs">
+              <span className="text-[10px] text-slate-400 font-bold uppercase block">Name & Identity Match</span>
+              <p className={`font-bold mt-1 text-sm ${
+                provider.ai_verification_summary.information_mismatches.length === 0
+                  ? 'text-emerald-700'
+                  : 'text-amber-700'
+              }`}>
+                {provider.ai_verification_summary.information_mismatches.length === 0
+                  ? 'Consistent Match'
+                  : 'Review Required'}
+              </p>
+            </div>
+          </div>
+
+          {/* Detailed Findings & Warnings */}
+          <div className="space-y-2 text-xs">
+            {/* Missing Documents Warning */}
+            {provider.ai_verification_summary.missing_documents.length > 0 && (
+              <div className="p-3 bg-amber-100/70 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Missing Required Documents: </span>
+                  <span>{provider.ai_verification_summary.missing_documents.join(', ')}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Information Mismatches Warning */}
+            {provider.ai_verification_summary.information_mismatches.length > 0 && (
+              <div className="p-3 bg-amber-100/70 border border-amber-200 rounded-xl text-amber-900 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Information Discrepancies: </span>
+                  <span>{provider.ai_verification_summary.information_mismatches.join('; ')}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Expired / Invalid Documents Warning */}
+            {provider.ai_verification_summary.expired_invalid_documents.length > 0 && (
+              <div className="p-3 bg-rose-100/70 border border-rose-200 rounded-xl text-rose-900 flex items-start gap-2.5">
+                <ShieldAlert className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Invalid or Expired Documents: </span>
+                  <span>{provider.ai_verification_summary.expired_invalid_documents.join('; ')}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Suspicious / Duplicate Signals Warning */}
+            {provider.ai_verification_summary.suspicious_signals.length > 0 && (
+              <div className="p-3 bg-rose-100/70 border border-rose-200 rounded-xl text-rose-900 flex items-start gap-2.5">
+                <ShieldAlert className="w-4 h-4 text-rose-700 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">High Risk / Suspicious Signals: </span>
+                  <span>{provider.ai_verification_summary.suspicious_signals.join('; ')}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Positive Verified Facts */}
+            {provider.ai_verification_summary.positive_signals.length > 0 && (
+              <div className="p-3 bg-white rounded-xl border border-emerald-200 text-emerald-900 flex items-start gap-2.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Verified Highlights: </span>
+                  <span>{provider.ai_verification_summary.positive_signals.join(' · ')}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Rationale and Disclaimer Footer */}
+          <div className="pt-2 border-t border-black/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-500">
+            <div className="space-y-0.5">
+              <span className="font-semibold text-slate-700">Rationale: </span>
+              {provider.ai_verification_summary.reasons.join(' ')}
+            </div>
+            <span className="italic shrink-0 font-medium text-slate-400">
+              {provider.ai_verification_summary.disclaimer}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Grid Layout of Details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Profile & Account Information */}
@@ -383,10 +569,23 @@ export const ProviderDetailView: React.FC = () => {
               </div>
 
               <div className="pt-2">
+                <span className="text-slate-400 font-semibold block">Service Area</span>
+                <p className="font-bold text-slate-900 mt-0.5">{provider.service_area || 'Citywide (All Sectors)'}</p>
+              </div>
+
+              <div className="pt-2">
                 <span className="text-slate-400 font-semibold block">Member Since</span>
                 <p className="font-medium text-slate-700 mt-0.5">
                   {provider.created_at ? new Date(provider.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '15 Jan 2026'}
                 </p>
+              </div>
+
+              {/* Genuine Skills & Professional Description */}
+              <div className="pt-3 border-t border-[#E5DEC9]/60">
+                <span className="text-slate-400 font-semibold block mb-1">Skills & Professional Description</span>
+                <div className="p-3 bg-[#FAF7F0] rounded-xl border border-[#E5DEC9] text-slate-800 leading-relaxed font-medium">
+                  {provider.skills || 'No professional description provided.'}
+                </div>
               </div>
             </div>
           </div>
@@ -1037,7 +1236,7 @@ export const ProviderDetailView: React.FC = () => {
             <div className="flex items-center justify-between border-b border-[#E5DEC9]/60 pb-3">
               <h3 className="text-base font-bold font-serif text-[#1F2A1E] flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-amber-600" />
-                <span>Request Document Correction</span>
+                <span>Request Re-submission & Corrections</span>
               </h3>
               <button type="button" onClick={() => setReplacementModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -1045,15 +1244,15 @@ export const ProviderDetailView: React.FC = () => {
             </div>
 
             <p className="text-xs text-slate-600 font-medium">
-              Specify correction details for <strong>{provider.full_name}</strong>. Their account will remain intact with status <em>Correction Requested</em> rather than being deleted.
+              Enter specific instructions explaining what documents or information are required for <strong>{provider.full_name}</strong>. These exact instructions will appear on their provider dashboard and status page.
             </p>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Correction Instructions / Reason *</label>
+              <label className="block text-xs font-bold text-slate-700 mb-1">Admin Instructions for Provider *</label>
               <textarea
                 value={replacementReason}
                 onChange={(e) => setReplacementReason(e.target.value)}
-                placeholder="e.g. Identity document is blurry or unreadable. Please re-upload a clear copy of your Aadhaar/PAN..."
+                placeholder="e.g. Identity Proof (Aadhaar) image is blurry or unreadable. Please re-upload a clear copy showing your full legal name and 12-digit number..."
                 className="w-full bg-[#FAF7F0] border border-[#E5DEC9] rounded-xl p-3 text-xs focus:outline-none focus:ring-2 focus:ring-amber-400"
                 rows={3}
                 required
@@ -1073,7 +1272,7 @@ export const ProviderDetailView: React.FC = () => {
                 disabled={replacementLoading}
                 className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow-sm"
               >
-                {replacementLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit Correction Request'}
+                {replacementLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send Instructions & Request Re-submission'}
               </button>
             </div>
           </form>

@@ -13,6 +13,21 @@ try:
 except Exception:
     pass
 
+try:
+    from app.seed_providers import seed_initial_providers
+    seed_initial_providers()
+except Exception:
+    pass
+
+try:
+    from app.seed_bookings import seed_operational_bookings
+    seed_operational_bookings()
+except Exception:
+    pass
+
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="SmartServe - AI-powered multi-service booking & marketplace API",
@@ -20,6 +35,20 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
 )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc: RequestValidationError):
+    errors = []
+    for err in exc.errors():
+        field = ".".join(str(loc) for loc in err.get("loc", []) if loc != "body")
+        msg = err.get("msg", "Invalid value")
+        errors.append(f"{field}: {msg}" if field else msg)
+    detail_str = "; ".join(errors)
+    print(f"[ValidationError] {request.method} {request.url.path}: {detail_str}")
+    return JSONResponse(
+        status_code=422,
+        content={"detail": detail_str, "errors": exc.errors()}
+    )
 
 # CORS Configuration
 app.add_middleware(

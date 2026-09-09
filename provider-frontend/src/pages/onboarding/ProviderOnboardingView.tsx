@@ -11,7 +11,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Check,
-  Clock,
   Sparkles,
   Lock,
 } from 'lucide-react';
@@ -33,7 +32,6 @@ export const ProviderOnboardingView: React.FC = () => {
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [submittedResult, setSubmittedResult] = useState<any | null>(null);
 
   // Available categories & requirements
   const [categoryList, setCategoryList] = useState<CategoryRequirement[]>([]);
@@ -132,8 +130,10 @@ export const ProviderOnboardingView: React.FC = () => {
         return;
       }
     } else if (step === 2) {
-      if (!aadhaarNumber.trim() || !aadhaarDocUrl.trim() || !panNumber.trim() || !panDocUrl.trim()) {
-        setErrorMsg('Please provide valid Aadhaar and PAN documents for verification.');
+      const cleanAadhaar = aadhaarNumber.replace(/[\s-]/g, '').trim();
+      const cleanPan = panNumber.replace(/[\s-]/g, '').trim().toUpperCase();
+      if (!cleanAadhaar || cleanAadhaar.length < 12 || !aadhaarDocUrl.trim() || !cleanPan || cleanPan.length !== 10 || !panDocUrl.trim()) {
+        setErrorMsg('Please provide a valid 12-digit Aadhaar number, 10-character PAN number, and their respective document URLs.');
         return;
       }
     } else if (step === 3) {
@@ -164,10 +164,13 @@ export const ProviderOnboardingView: React.FC = () => {
     setErrorMsg(null);
     setLoading(true);
 
+    const cleanAadhaar = aadhaarNumber.replace(/[\s-]/g, '').trim();
+    const cleanPan = panNumber.replace(/[\s-]/g, '').trim().toUpperCase();
+
     const payload: OnboardingPayload = {
       personal_info: {
         full_name: fullName.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         phone: phone.trim(),
         password: password,
         photo_url: photoUrl.trim() || 'https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400',
@@ -176,9 +179,9 @@ export const ProviderOnboardingView: React.FC = () => {
         service_area: serviceArea.trim(),
       },
       identity_kyc: {
-        aadhaar_number: aadhaarNumber.trim(),
+        aadhaar_number: cleanAadhaar,
         aadhaar_doc_url: aadhaarDocUrl.trim(),
-        pan_number: panNumber.trim().toUpperCase(),
+        pan_number: cleanPan,
         pan_doc_url: panDocUrl.trim(),
       },
       nda_undertaking: {
@@ -198,7 +201,6 @@ export const ProviderOnboardingView: React.FC = () => {
 
     try {
       const res = await submitOnboarding(payload);
-      setSubmittedResult(res);
       // Initialize provider session
       setAuthSession(res.access_token, {
         user_id: res.provider_id,
@@ -208,76 +210,26 @@ export const ProviderOnboardingView: React.FC = () => {
         permissions: ['provider:profile'],
         is_active: true,
       });
+      // Redirect to dedicated application-status screen
+      navigate('/application-status');
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to submit onboarding application. Please verify all fields.';
+      console.error('Onboarding submission error:', err);
+      const detail = err.response?.data?.detail;
+      let msg = 'Failed to submit onboarding application. Please verify all fields.';
+      if (typeof detail === 'string') {
+        msg = detail;
+      } else if (Array.isArray(detail)) {
+        msg = detail
+          .map((d: any) => (typeof d === 'string' ? d : d.msg || `${d.loc ? d.loc.slice(1).join('.') : 'Field'}: ${d.type}`))
+          .join('; ');
+      } else if (detail && typeof detail === 'object') {
+        msg = detail.message || detail.msg || JSON.stringify(detail);
+      }
       setErrorMsg(msg);
     } finally {
       setLoading(false);
     }
   };
-
-  // -------------------------------------------------------------
-  // SUCCESS / PENDING STATE
-  // -------------------------------------------------------------
-  if (submittedResult) {
-    return (
-      <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center p-6">
-        <div className="max-w-xl w-full bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-[#2F5233]/15 text-center">
-          <div className="w-20 h-20 mx-auto rounded-full bg-[#FAF7F0] flex items-center justify-center border-2 border-[#C9A15A] mb-6">
-            <Clock className="w-10 h-10 text-[#C9A15A] animate-pulse" />
-          </div>
-
-          <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-[#FAF7F0] text-[#C9A15A] border border-[#C9A15A]/30 mb-4">
-            <span className="w-2 h-2 rounded-full bg-[#C9A15A]"></span>
-            Application Status: Pending Verification
-          </span>
-
-          <h2 className="font-serif-display text-3xl font-bold text-[#1F2A1E] mb-3">
-            Application Received, {submittedResult.full_name}!
-          </h2>
-
-          <p className="text-sm text-[#1F2A1E]/70 leading-relaxed mb-6">
-            Your partner onboarding application has been submitted to SmartServe Operations.
-            Per platform governance policy, new service providers cannot operate or self-approve until our admin team verifies your KYC credentials, NDA undertaking, and category skill evidence.
-          </p>
-
-          <div className="bg-[#FAF7F0] rounded-2xl p-5 text-left text-xs space-y-2 mb-8 border border-[#2F5233]/10">
-            <div className="flex justify-between py-1 border-b border-[#2F5233]/10">
-              <span className="text-[#1F2A1E]/60">Provider ID:</span>
-              <span className="font-mono font-semibold text-[#1F2A1E]">{submittedResult.provider_id}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-[#2F5233]/10">
-              <span className="text-[#1F2A1E]/60">Primary Category:</span>
-              <span className="font-semibold text-[#2F5233]">{submittedResult.category}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-[#2F5233]/10">
-              <span className="text-[#1F2A1E]/60">Selected Catalog Services:</span>
-              <span className="font-semibold text-[#1F2A1E]">{submittedResult.selected_services_count} Service(s)</span>
-            </div>
-            <div className="flex justify-between py-1">
-              <span className="text-[#1F2A1E]/60">Uploaded Documents:</span>
-              <span className="font-semibold text-[#1F2A1E]">{submittedResult.documents_submitted_count} files (Pending Review)</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-6 py-3 rounded-full bg-[#2F5233] hover:bg-[#3D6B42] text-white font-semibold text-sm transition-all shadow-md shadow-[#2F5233]/20"
-            >
-              Go to Partner Dashboard
-            </button>
-            <Link
-              to="/login"
-              className="px-6 py-3 rounded-full border border-[#2F5233]/20 text-[#1F2A1E] hover:bg-[#FAF7F0] font-semibold text-sm transition-all"
-            >
-              Sign In to Existing Account
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // -------------------------------------------------------------
   // MULTI-STEP WIZARD
@@ -296,25 +248,51 @@ export const ProviderOnboardingView: React.FC = () => {
       <div className="max-w-4xl mx-auto">
         {/* Brand Header */}
         <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#2F5233] text-white flex items-center justify-center font-bold text-xl shadow-md">
-              S
+          <Link to="/login" className="flex items-center gap-3 group">
+            <div className="w-11 h-11 rounded-xl border border-[#E5DEC9] bg-[#FAF7F0] flex items-center justify-center shadow-xs p-1 flex-shrink-0 group-hover:scale-105 transition-transform">
+              <svg className="w-full h-full" viewBox="0 0 96 96" fill="none">
+                <path
+                  d="M 48 6 L 72 6 A 18 18 0 0 1 90 24 L 90 72 A 18 18 0 0 1 72 90 L 24 90 A 18 18 0 0 1 6 72 L 6 24 A 18 18 0 0 1 24 6 L 48 6 Z"
+                  stroke="#C9A15A"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                <path
+                  d="M 62 30 C 62 23, 34 22, 34 38 C 34 54, 62 48, 62 64 C 62 80, 34 78, 34 70"
+                  stroke="#2F5233"
+                  strokeWidth={7}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </svg>
             </div>
             <div>
-              <h1 className="font-serif-display text-2xl font-bold text-[#1F2A1E]">SmartServe</h1>
-              <p className="text-xs text-[#7A9E6E] font-medium tracking-wide uppercase">Partner Onboarding Portal</p>
+              <div className="flex items-baseline font-serif">
+                <span className="text-xl font-bold text-[#2F5233] tracking-tight">Smart</span>
+                <span className="text-xl font-bold text-[#C9A15A] tracking-tight ml-0.5">Serve</span>
+                <span className="ml-2 px-2 py-0.5 rounded-full bg-[#FAF7F0] text-[#7A9E6E] text-[10px] font-sans font-bold border border-[#E5DEC9]">
+                  PARTNER
+                </span>
+              </div>
+              <p className="text-[10px] text-[#7A9E6E] font-semibold tracking-wider uppercase -mt-0.5">
+                Onboarding & Verification Portal
+              </p>
             </div>
-          </div>
+          </Link>
           <Link
             to="/login"
-            className="text-xs font-semibold text-[#2F5233] hover:underline flex items-center gap-1"
+            className="text-xs font-semibold text-[#2F5233] hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[#E5DEC9] bg-white hover:bg-[#F2EDE1] transition-colors"
           >
-            Already a partner? Sign in <ArrowRight className="w-3.5 h-3.5" />
+            <span>Already registered? Sign in</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
         {/* Wizard Progress Bar */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-[#2F5233]/10 mb-8">
+        <div className="bg-white rounded-3xl p-5 shadow-xs border border-[#E5DEC9] mb-8">
           <div className="grid grid-cols-6 gap-2">
             {steps.map((s) => {
               const Icon = s.icon;
@@ -325,16 +303,16 @@ export const ProviderOnboardingView: React.FC = () => {
                   <div
                     className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                       isCompleted
-                        ? 'bg-[#2F5233] text-white'
+                        ? 'bg-[#2F5233] text-white shadow-xs'
                         : isCurrent
-                        ? 'bg-[#2F5233] text-white ring-4 ring-[#2F5233]/20 font-bold'
-                        : 'bg-[#FAF7F0] text-[#1F2A1E]/40 border border-[#2F5233]/15'
+                        ? 'bg-[#2F5233] text-white ring-4 ring-[#2F5233]/20 font-bold shadow-xs'
+                        : 'bg-[#FAF7F0] text-[#1F2A1E]/40 border border-[#E5DEC9]'
                     }`}
                   >
                     {isCompleted ? <Check className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                   </div>
                   <span
-                    className={`text-[11px] mt-1.5 font-medium hidden sm:block ${
+                    className={`text-[11px] mt-1.5 font-semibold hidden sm:block ${
                       isCurrent ? 'text-[#2F5233] font-bold' : isCompleted ? 'text-[#1F2A1E]' : 'text-[#1F2A1E]/40'
                     }`}
                   >
@@ -347,7 +325,7 @@ export const ProviderOnboardingView: React.FC = () => {
         </div>
 
         {/* Step Card */}
-        <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-lg border border-[#2F5233]/10">
+        <div className="bg-white rounded-3xl p-6 sm:p-10 shadow-xs border border-[#E5DEC9]">
           {errorMsg && (
             <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm flex items-start gap-3">
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
@@ -830,7 +808,7 @@ export const ProviderOnboardingView: React.FC = () => {
                 disabled={loading}
                 className="px-8 py-3 rounded-full bg-[#2F5233] hover:bg-[#3D6B42] disabled:opacity-50 text-white text-sm font-semibold transition-all shadow-md shadow-[#2F5233]/20 flex items-center gap-2"
               >
-                {loading ? 'Submitting Application...' : 'Submit Onboarding Application'}
+                {loading ? 'Submitting Application...' : 'Send Your Documents for Approval'}
                 <Sparkles className="w-4 h-4" />
               </button>
             )}

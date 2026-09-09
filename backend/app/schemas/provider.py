@@ -191,6 +191,53 @@ class ProviderProfileTrustResponse(BaseModel):
 
 
 # ==========================================
+# PROVIDER APPLICATION STATUS SCHEMA
+# ==========================================
+
+class DocumentStatusItem(BaseModel):
+    certificate_type: str
+    verification_status: str  # PENDING, Verified, Rejected, Correction Requested
+    document_number: Optional[str] = None
+    uploaded_at: Optional[datetime] = None
+    verified_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProviderStatusResponse(BaseModel):
+    """Returned by GET /providers/me/status — accessible to ALL authenticated providers."""
+    provider_id: uuid.UUID
+    full_name: str
+    email: str
+    category: Optional[str] = None
+    is_verified: bool
+    # Overall status string: "Pending", "Verified", "Rejected", "Correction Requested"
+    verification_status: str
+    documents_submitted: int
+    documents_verified: int
+    documents_rejected: int
+    documents: List[DocumentStatusItem]
+    rejection_reason: Optional[str] = None
+    correction_instructions: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    verified_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProviderResubmitDocumentItem(BaseModel):
+    certificate_type: str
+    document_url: str
+    document_number: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ProviderResubmitRequest(BaseModel):
+    updated_documents: Optional[List[ProviderResubmitDocumentItem]] = []
+    notes: Optional[str] = None
+
+
+# ==========================================
 # PROVIDER BOOKING SCHEMAS
 # ==========================================
 

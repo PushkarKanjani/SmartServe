@@ -23,6 +23,7 @@ from app.schemas.admin_provider import (
     AdminSlotOccupiedBooking,
     AdminProviderSlotItem,
     AdminProviderBookingItem,
+    AdminAIVerificationSummary,
     ProviderVerifyRequest,
     ProviderReplacementRequest,
     AccountStatusRequest,
@@ -70,7 +71,12 @@ def _build_provider_item(
                 document_number=c.document_number,
                 extracted_name=c.extracted_name or p.full_name,
                 is_duplicate=c.is_duplicate or False,
-                verification_status=c.verification_status,
+                verification_status=(
+                    "Pending" if (c.verification_status or "").strip().lower() == "pending"
+                    else "Verified" if (c.verification_status or "").strip().lower() == "verified"
+                    else "Rejected" if (c.verification_status or "").strip().lower() == "rejected"
+                    else (c.verification_status or "Pending")
+                ),
                 uploaded_at=c.uploaded_at.isoformat() if c.uploaded_at else None,
                 verified_at=c.verified_at.isoformat() if c.verified_at else None,
                 ai_scan_signal=ai_signal,
@@ -203,6 +209,25 @@ def _build_provider_item(
 
     p_rank = rank_map.get(str(p.user_id), {})
 
+    # Compute overall verification_status
+    if p.is_verified:
+        v_status = "Verified"
+    elif any(c.verification_status == "Correction Requested" for c in certs):
+        v_status = "Correction Requested"
+    elif any(c.verification_status in ("Rejected", "REJECTED") for c in certs):
+        v_status = "Rejected"
+    else:
+        v_status = "Pending"
+
+    ai_summary_raw = ai_service.generate_provider_verification_summary(
+        provider=p,
+        user=user,
+        certs=certs,
+        p_services=provider_services,
+        db=db,
+    )
+    ai_summary_obj = AdminAIVerificationSummary(**ai_summary_raw) if ai_summary_raw else None
+
     return AdminProviderItem(
         id=str(p.user_id),
         user_id=str(p.user_id),
@@ -210,10 +235,13 @@ def _build_provider_item(
         email=user.email if user else "provider@smartserve.com",
         phone=getattr(p, "phone", "+91 98765 12345"),
         category=p.category or "General",
+        skills=p.skills or "",
+        service_area=p.service_area or "",
         experience_years=p.experience_years or 0,
         base_price=float(p.base_price or 0.0),
         is_verified=bool(p.is_verified),
         is_active=user.is_active if user else True,
+        verification_status=v_status,
         reliability_score=float(p.reliability_score or 98.0),
         acceptance_rate=float(p.acceptance_rate or 95.0),
         on_time_rate=float(p.on_time_rate or 99.0),
@@ -228,6 +256,7 @@ def _build_provider_item(
         audit_logs=log_list,
         slots=slot_items,
         bookings=booking_items,
+        ai_verification_summary=ai_summary_obj,
     )
 
 
@@ -251,12 +280,39 @@ def list_admin_providers(
             (Provider.full_name.ilike(s_term)) | (Provider.category.ilike(s_term))
         )
     if verification_status is not None:
-        if verification_status.lower() == "verified":
+        v_low = verification_status.strip().lower()
+        if v_low == "verified":
             query = query.filter(Provider.is_verified == True)
-        elif verification_status.lower() == "pending":
+        elif v_low in ("pending", "pending review"):
             query = query.filter(Provider.is_verified == False)
-
     providers = query.all()
+
+    # Additional certificate-level filtering if needed
+    if verification_status is not None:
+        v_low = verification_status.strip().lower()
+        if v_low in ("pending", "pending review"):
+            filtered = []
+            for p in providers:
+                if not p.is_verified:
+                    certs = db.query(Certificate).filter(Certificate.provider_id == p.user_id).all()
+                    # Include if any certificate is pending or if unverified and no rejection
+                    if not certs or any(c.verification_status and c.verification_status.strip().lower() == "pending" for c in certs):
+                        filtered.append(p)
+            providers = filtered
+        elif v_low in ("rejected", "reject"):
+            filtered = []
+            for p in providers:
+                certs = db.query(Certificate).filter(Certificate.provider_id == p.user_id).all()
+                if any(c.verification_status and c.verification_status.strip().lower() == "rejected" for c in certs):
+                    filtered.append(p)
+            providers = filtered
+        elif v_low in ("correction requested", "correction"):
+            filtered = []
+            for p in providers:
+                certs = db.query(Certificate).filter(Certificate.provider_id == p.user_id).all()
+                if any(c.verification_status and "correction" in c.verification_status.strip().lower() for c in certs):
+                    filtered.append(p)
+            providers = filtered
 
     # Precompute rankings
     rankings = calculate_provider_rankings(db)

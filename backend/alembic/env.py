@@ -9,7 +9,12 @@ from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / ".env")
+backend_env = Path(__file__).resolve().parents[1] / ".env"
+root_env = Path(__file__).resolve().parents[2] / ".env"
+if backend_env.exists():
+    load_dotenv(dotenv_path=backend_env)
+else:
+    load_dotenv(dotenv_path=root_env)
 
 config = context.config
 if config.config_file_name is not None:

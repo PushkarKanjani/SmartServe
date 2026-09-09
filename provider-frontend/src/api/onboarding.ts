@@ -83,3 +83,53 @@ export const submitOnboarding = async (payload: OnboardingPayload): Promise<Onbo
   const res = await apiClient.post<OnboardingSubmitResponse>('/provider/onboarding/submit', payload);
   return res.data;
 };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Provider Application Status (accessible while Pending)
+// ──────────────────────────────────────────────────────────────────────────────
+
+export interface DocumentStatusItem {
+  certificate_type: string;
+  verification_status: string;
+  document_number?: string | null;
+  uploaded_at?: string | null;
+  verified_at?: string | null;
+}
+
+export interface ProviderStatusResponse {
+  provider_id: string;
+  full_name: string;
+  email: string;
+  category?: string | null;
+  is_verified: boolean;
+  verification_status: string; // "Pending" | "Verified" | "Rejected" | "Correction Requested"
+  documents_submitted: number;
+  documents_verified: number;
+  documents_rejected: number;
+  documents: DocumentStatusItem[];
+  rejection_reason?: string | null;
+  correction_instructions?: string | null;
+  submitted_at?: string | null;
+  verified_at?: string | null;
+}
+
+export interface ResubmitPayload {
+  updated_documents?: Array<{
+    certificate_type: string;
+    document_url: string;
+    document_number?: string;
+    description?: string;
+  }>;
+  notes?: string;
+}
+
+export const getProviderStatus = async (): Promise<ProviderStatusResponse> => {
+  const res = await apiClient.get<ProviderStatusResponse>('/providers/me/status');
+  return res.data;
+};
+
+export const resubmitApplication = async (payload: ResubmitPayload): Promise<ProviderStatusResponse> => {
+  const res = await apiClient.post<ProviderStatusResponse>('/providers/me/resubmit', payload);
+  return res.data;
+};
+

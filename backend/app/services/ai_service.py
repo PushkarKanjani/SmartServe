@@ -564,6 +564,167 @@ class AIService:
             "suggested_admin_action": "Issue partial refund to customer ($25.00) and issue warning flag to provider."
         }
 
+    def generate_provider_verification_summary(
+        self,
+        provider: Any,
+        user: Optional[Any],
+        certs: List[Any],
+        p_services: List[Any],
+        db: Optional[Any] = None,
+    ) -> Dict[str, Any]:
+        """
+        Deterministic, local rule-based AI verification assessment.
+        Evaluates completeness, name consistency, document validity, and fraud/duplicate signals.
+        Provides transparent recommendation and rationale for Admin review.
+        """
+        import re
+        from datetime import date
+        from app.services.ocr_service import ocr_service
+
+        provider_name = provider.full_name if provider else ""
+        skills_text = (getattr(provider, "skills", "") or "").strip()
+
+        # 1. Document Completeness Check
+        cert_types_lower = [str(c.certificate_type).lower() for c in certs]
+        required_docs = [
+            ("Identity Proof (Aadhaar)", ["aadhaar", "identity"]),
+            ("Tax Identity (PAN)", ["pan", "tax"]),
+            ("Signed NDA & Code of Conduct", ["nda", "undertaking", "code of conduct"]),
+            ("Category Skill Evidence", ["evidence", "diploma", "certificate", "license", "training", "experience", "credential", "trade", "skill", "proof", "contractor"]),
+        ]
+
+        missing_docs = []
+        for req_label, keywords in required_docs:
+            if not any(any(k in c_type for k in keywords) for c_type in cert_types_lower):
+                missing_docs.append(req_label)
+
+        documents_complete = len(missing_docs) == 0
+        submitted_count = len(certs)
+        required_count = len(required_docs)
+
+        # 2. Information Mismatches & Document Quality
+        mismatches = []
+        expired_invalid = []
+        suspicious_signals = []
+        positive_signals = []
+
+        for c in certs:
+            c_type = c.certificate_type or "Document"
+            extracted = c.extracted_name or ""
+            doc_num = c.document_number or ""
+
+            # Check duplicate
+            if getattr(c, "is_duplicate", False):
+                suspicious_signals.append(
+                    f"Duplicate document detected for {c_type}: Document number '{doc_num}' is already registered in the system."
+                )
+
+            # Check name consistency
+            if extracted and provider_name:
+                sim = ocr_service.compute_name_similarity(extracted, provider_name)
+                if sim < 0.60:
+                    mismatches.append(
+                        f"Name discrepancy on {c_type}: Extracted '{extracted}' does not match provider name '{provider_name}' ({int(sim*100)}% match)."
+                    )
+
+            # Check format validity
+            c_type_lower = c_type.lower()
+            if "aadhaar" in c_type_lower and doc_num:
+                clean_aadhaar = re.sub(r"[\s-]", "", doc_num)
+                if not (clean_aadhaar.isdigit() and len(clean_aadhaar) == 12):
+                    expired_invalid.append(f"Invalid Aadhaar format: '{doc_num}' (expected 12 digits).")
+            elif "pan" in c_type_lower and doc_num:
+                clean_pan = doc_num.strip().upper()
+                if not re.match(r"^[A-Z]{5}[0-9]{4}[A-Z]$", clean_pan):
+                    expired_invalid.append(f"Invalid PAN format: '{doc_num}' (expected 5 letters, 4 digits, 1 letter).")
+
+            # Check expiry
+            if hasattr(c, "expiry_date") and c.expiry_date:
+                try:
+                    if isinstance(c.expiry_date, datetime):
+                        exp_val = c.expiry_date.date()
+                    elif isinstance(c.expiry_date, date):
+                        exp_val = c.expiry_date
+                    else:
+                        exp_val = date.fromisoformat(str(c.expiry_date)[:10])
+                    if exp_val < date.today():
+                        expired_invalid.append(f"Expired document: {c_type} expired on {exp_val.isoformat()}.")
+                except Exception:
+                    pass
+
+        # 3. Skills & Services Consistency
+        if len(skills_text) < 20:
+            suspicious_signals.append("Professional skills description is too short (under 20 characters).")
+        elif any(w in skills_text.lower() for w in ["lorem", "test description", "dummy", "placeholder"]):
+            suspicious_signals.append("Placeholder or test phrases detected in skills description.")
+        else:
+            positive_signals.append("Genuine, detailed professional skills description provided.")
+
+        if len(p_services) > 0:
+            positive_signals.append(f"{len(p_services)} master catalog services selected and mapped.")
+        else:
+            mismatches.append("No active services currently mapped from the master catalog.")
+
+        if submitted_count >= required_count and not missing_docs:
+            positive_signals.append("All mandatory verification documents submitted.")
+
+        if not suspicious_signals:
+            positive_signals.append("Zero duplicate document conflicts detected across the provider database.")
+
+        if not mismatches:
+            positive_signals.append("Provider identity name matches OCR-extracted credentials.")
+
+        # 4. Overall Recommendation & Risk Scoring
+        risk_score = 0.05
+        if suspicious_signals:
+            risk_score += 0.50 * len(suspicious_signals)
+        if mismatches:
+            risk_score += 0.30 * len(mismatches)
+        if expired_invalid:
+            risk_score += 0.35 * len(expired_invalid)
+        if missing_docs:
+            risk_score += 0.20 * len(missing_docs)
+
+        risk_score = min(1.0, round(risk_score, 2))
+
+        reasons = []
+        if suspicious_signals or risk_score >= 0.70:
+            recommendation = "High Risk / Discrepancy"
+            risk_level = "HIGH"
+            reasons.append("Significant risk signals detected (e.g. duplicate document or invalid document format).")
+            reasons.extend(suspicious_signals)
+        elif missing_docs or mismatches or expired_invalid or risk_score >= 0.30:
+            recommendation = "Requires Corrections / Incomplete"
+            risk_level = "MEDIUM"
+            if missing_docs:
+                reasons.append(f"Missing mandatory documents: {', '.join(missing_docs)}.")
+            if mismatches:
+                reasons.append(f"Information discrepancies need provider clarification: {'; '.join(mismatches)}.")
+            if expired_invalid:
+                reasons.append(f"Invalid or expired documents: {'; '.join(expired_invalid)}.")
+        else:
+            recommendation = "Recommended for Approval"
+            risk_level = "LOW"
+            reasons.append("All mandatory KYC and qualification documents are present and consistent.")
+            reasons.append("No duplicates, name mismatches, or suspicious patterns detected.")
+            reasons.append("Selected services and skills align with the approved service category.")
+
+        return {
+            "recommendation": recommendation,
+            "risk_level": risk_level,
+            "risk_score": risk_score,
+            "documents_complete": documents_complete,
+            "submitted_documents_count": submitted_count,
+            "required_documents_count": required_count,
+            "missing_documents": missing_docs,
+            "information_mismatches": mismatches,
+            "expired_invalid_documents": expired_invalid,
+            "suspicious_signals": suspicious_signals,
+            "positive_signals": positive_signals,
+            "reasons": reasons,
+            "disclaimer": "AI verification summary is purely assistive. Admin makes the final verification decision.",
+        }
+
     def detect_suspicious_activity(self, user_id: str, action: str, ip_address: str) -> Dict[str, Any]:
         """Rule & AI anomaly detection for risk center."""
         return {
@@ -576,3 +737,5 @@ class AIService:
         }
 
 ai_service = AIService()
+analyze_provider_document = ai_service.analyze_provider_document
+

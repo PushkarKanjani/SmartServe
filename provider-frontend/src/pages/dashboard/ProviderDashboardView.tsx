@@ -4,7 +4,6 @@ import {
   Clock,
   ShieldCheck,
   Briefcase,
-  LogOut,
   FileCheck,
   Calendar,
   MapPin,
@@ -13,16 +12,15 @@ import {
   Play,
   CheckCircle2,
   AlertCircle,
-  TrendingUp,
   IndianRupee,
   Zap,
   ChevronRight,
   Bell,
   Star,
-  Activity,
-  Package,
+  Award,
+  ArrowRight,
+  LifeBuoy,
 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../api/client';
 
 interface DashboardStats {
@@ -65,22 +63,22 @@ interface ProfileTrust {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  Requested: 'bg-amber-50 text-amber-700 border-amber-200',
-  Accepted: 'bg-blue-50 text-blue-700 border-blue-200',
-  Started: 'bg-violet-50 text-violet-700 border-violet-200',
+  Requested: 'bg-amber-50 text-amber-800 border-amber-300',
+  Assigned: 'bg-[#F2EDE1] text-[#2F5233] border-[#E5DEC9]',
+  Accepted: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  Started: 'bg-purple-50 text-purple-700 border-purple-200',
   Completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Cancelled: 'bg-slate-100 text-slate-500 border-slate-200',
+  Rejected: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
 export const ProviderDashboardView: React.FC = () => {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [trust, setTrust] = useState<ProfileTrust | null>(null);
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statsLoading, setStatsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
@@ -99,16 +97,14 @@ export const ProviderDashboardView: React.FC = () => {
       console.error('Dashboard load error:', err);
     } finally {
       setLoading(false);
-      setStatsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchAll();
-    // Auto-refresh every 60 seconds for live pipeline
     const interval = setInterval(() => {
-      apiClient.get('/providers/me/dashboard-stats').then(r => setStats(r.data)).catch(() => {});
-      apiClient.get('/providers/me/bookings').then(r => setBookings(r.data)).catch(() => {});
+      apiClient.get('/providers/me/dashboard-stats').then((r) => setStats(r.data)).catch(() => {});
+      apiClient.get('/providers/me/bookings').then((r) => setBookings(r.data)).catch(() => {});
     }, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -139,291 +135,368 @@ export const ProviderDashboardView: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#2F5233] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-xs text-[#1F2A1E]/60 font-medium">Loading partner workspace...</p>
-        </div>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
+        <div className="w-10 h-10 border-4 border-[#2F5233] border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm font-semibold text-[#1F2A1E]">Loading SmartServe Partner Workspace...</p>
       </div>
     );
   }
 
   const isVerified = trust?.is_verified;
+  const partnerFirstName = trust?.full_name ? trust.full_name.split(' ')[0] : 'Partner';
 
   const filteredBookings = bookings.filter((b) => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'pending') return b.status === 'Requested';
+    if (activeTab === 'pending') return b.status === 'Requested' || b.status === 'Assigned';
     if (activeTab === 'active') return ['Accepted', 'Started'].includes(b.status);
     if (activeTab === 'completed') return b.status === 'Completed';
     return true;
   });
 
-  return (
-    <div className="max-w-6xl mx-auto py-8 px-4 sm:px-6 space-y-8">
+  const metricCards = [
+    {
+      title: "Today's Bookings",
+      value: stats ? stats.today_bookings_count : 0,
+      subtext: 'Manage schedule',
+      link: '/availability',
+      icon: Calendar,
+      iconBg: 'bg-[#F2EDE1] text-[#2F5233]',
+    },
+    {
+      title: 'Active Jobs',
+      value: stats ? stats.active_jobs_count : 0,
+      subtext: 'View active pipeline',
+      link: '/dashboard',
+      icon: Zap,
+      iconBg: 'bg-purple-50 text-purple-700',
+    },
+    {
+      title: 'Completed Jobs',
+      value: stats ? stats.completed_jobs_count : 0,
+      subtext: 'View history & ratings',
+      link: '/profile',
+      icon: CheckCircle2,
+      iconBg: 'bg-emerald-50 text-emerald-700',
+    },
+    {
+      title: 'Gross Earnings',
+      value: stats ? `₹${parseFloat(stats.total_earnings || '0').toLocaleString('en-IN')}` : '₹0',
+      subtext: 'View earnings ledger',
+      link: '/profile',
+      icon: IndianRupee,
+      iconBg: 'bg-[#F2EDE1] text-[#C9A15A]',
+    },
+  ];
 
-      {/* ─── Verification Status Banner ─── */}
+  return (
+    <div className="space-y-8 font-sans">
+      {/* ══════════════════════════════════════════════════
+          1. GREETING & HERO HEADER
+          ════════════════════════════════════════════════*/}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-serif text-[#1F2A1E] tracking-tight capitalize">
+              Good morning, {partnerFirstName}!
+            </h1>
+            <span className="text-2xl">👋</span>
+          </div>
+          <p className="text-sm sm:text-base text-[#1F2A1E]/65 font-medium mt-1">
+            Here's your partner schedule, job assignments, and reliability performance today.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            onClick={fetchAll}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-[#F2EDE1] text-[#1F2A1E] font-semibold text-xs sm:text-sm rounded-xl border border-[#E5DEC9] shadow-xs transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-4 h-4 text-[#1F2A1E]/60" />
+            <span>Sync Live Pipeline</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/services')}
+            className="flex items-center gap-2 px-5 py-2.5 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors cursor-pointer"
+          >
+            <Briefcase className="w-4 h-4" />
+            <span>Manage My Services</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          2. VERIFICATION STATUS NOTIFICATION BANNER
+          ════════════════════════════════════════════════*/}
       {!isVerified ? (
-        <div className="p-5 rounded-3xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <div className="p-5 rounded-3xl bg-amber-50/90 border border-amber-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
           <div className="flex items-start gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
               <Clock className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-amber-900">Account Under Review</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-200 text-amber-900">Pending</span>
+                <h3 className="text-sm font-bold text-amber-900 font-serif">Account Under Verification Review</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-200 text-amber-900 border border-amber-300">
+                  Pending Review
+                </span>
               </div>
               <p className="text-xs text-amber-800/80 mt-1 max-w-xl leading-relaxed">
-                Credentials are pending admin review. Booking acceptance is suspended until approved.
-              </p>
-            </div>
-          </div>
-          <div className="text-xs text-amber-800 font-semibold bg-white/80 px-4 py-2 rounded-xl border border-amber-200 shrink-0">
-            Admin Review SLA: ~24 hrs
-          </div>
-        </div>
-      ) : (
-        <div className="p-5 rounded-3xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
-          <div className="flex items-center gap-4">
-            <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-emerald-900">Verified Service Partner</h3>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-200 text-emerald-900">Active & Eligible</span>
-                {stats && stats.urgent_alerts_count > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 border border-red-200 flex items-center gap-1">
-                    <Bell className="w-3 h-3" />
-                    {stats.urgent_alerts_count} Urgent
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-emerald-800/80 mt-1">
-                Your catalog and schedule are live. Customers can book your services.
+                Your credentials are under manual review by the administrative verification team. You will receive booking notifications once approved.
               </p>
             </div>
           </div>
           <button
-            onClick={fetchAll}
-            className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-white/80 px-4 py-2 rounded-xl border border-emerald-200 hover:bg-emerald-50 transition-colors shrink-0"
+            onClick={() => navigate('/application-status')}
+            className="px-4 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs shadow-xs transition-colors shrink-0"
           >
-            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+            View Application Status →
           </button>
         </div>
-      )}
-
-      {/* ─── Live Stats Cards ─── */}
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            {
-              label: "Today's Jobs",
-              value: stats.today_bookings_count,
-              icon: Calendar,
-              color: 'bg-blue-50 text-blue-700',
-              iconColor: 'text-blue-500',
-            },
-            {
-              label: 'Active Jobs',
-              value: stats.active_jobs_count,
-              icon: Activity,
-              color: 'bg-violet-50 text-violet-700',
-              iconColor: 'text-violet-500',
-            },
-            {
-              label: 'Completed',
-              value: stats.completed_jobs_count,
-              icon: CheckCircle2,
-              color: 'bg-emerald-50 text-emerald-700',
-              iconColor: 'text-emerald-500',
-            },
-            {
-              label: 'Total Earnings',
-              value: `₹${parseFloat(stats.total_earnings || '0').toLocaleString('en-IN')}`,
-              icon: IndianRupee,
-              color: 'bg-amber-50 text-amber-700',
-              iconColor: 'text-amber-500',
-              wide: true,
-            },
-          ].map((card) => (
-            <div key={card.label} className="bg-white rounded-2xl p-5 border border-[#2F5233]/10 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-[#1F2A1E]/60 uppercase tracking-wider">
-                  {card.label}
-                </span>
-                <div className={`p-1.5 rounded-lg ${card.color}`}>
-                  <card.icon className={`w-4 h-4 ${card.iconColor}`} />
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-[#1F2A1E]">{card.value}</div>
+      ) : (
+        <div className="p-5 rounded-3xl bg-emerald-50/80 border border-emerald-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+          <div className="flex items-center gap-4">
+            <div className="w-11 h-11 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-          ))}
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-emerald-950 font-serif">Verified Partner Account</h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  Active & Booking-Eligible
+                </span>
+                {stats && stats.urgent_alerts_count > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
+                    <Bell className="w-3 h-3" />
+                    {stats.urgent_alerts_count} Urgent Request
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-emerald-800/80 mt-1">
+                Your portfolio, availability schedule, and pricing are published in the customer marketplace.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-xs font-semibold text-emerald-800 bg-white px-3 py-1.5 rounded-xl border border-emerald-200">
+              Auto-Dispatch: Enabled
+            </span>
+          </div>
         </div>
       )}
 
-      {/* ─── Main Content: Bookings + Sidebar ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* Bookings Column (2/3 width) */}
-        <div className="lg:col-span-2 space-y-6">
-
-          {/* Bookings Table */}
-          <div className="bg-white rounded-3xl border border-[#2F5233]/10 shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#2F5233]/10 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Calendar className="w-4 h-4 text-[#2F5233]" />
-                <h3 className="text-sm font-bold text-[#2F5233] uppercase tracking-wider">
-                  Assigned Bookings
-                </h3>
-                <span className="text-xs text-[#1F2A1E]/50">({bookings.length} total)</span>
+      {/* ══════════════════════════════════════════════════
+          3. METRIC CARDS
+          ════════════════════════════════════════════════*/}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        {metricCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <div
+              key={card.title}
+              onClick={() => navigate(card.link)}
+              className="group bg-white p-5 sm:p-6 rounded-3xl border border-[#E5DEC9] shadow-xs hover:shadow-md hover:border-[#2F5233]/40 transition-all cursor-pointer flex flex-col justify-between"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#1F2A1E]/50 block mb-1">
+                    {card.title}
+                  </span>
+                  <p className="text-2xl sm:text-3xl font-extrabold text-[#1F2A1E] tracking-tight font-serif">
+                    {card.value}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-2xl ${card.iconBg} flex-shrink-0 border border-[#E5DEC9]/40`}>
+                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
+                </div>
               </div>
-              <button
-                onClick={() => apiClient.get('/providers/me/bookings').then(r => setBookings(r.data))}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-[#2F5233] hover:bg-[#FAF7F0] transition-colors"
-                title="Refresh"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
+
+              <div className="mt-4 pt-3 border-t border-[#E5DEC9]/60 flex items-center justify-between text-xs font-bold text-[#2F5233] group-hover:translate-x-0.5 transition-transform">
+                <span>{card.subtext}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          4. PARTNER EXCELLENCE & INCENTIVES BANNER
+          ════════════════════════════════════════════════*/}
+      <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#1F2A1E] via-[#243523] to-[#2F5233] text-white p-6 sm:p-8 lg:p-10 shadow-sm border border-[#1F2A1E]">
+        <div className="relative z-10 max-w-xl space-y-3">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C9A15A]/20 text-[#C9A15A] border border-[#C9A15A]/30 text-xs font-bold uppercase tracking-wider">
+            <Award className="w-3.5 h-3.5" />
+            Partner Excellence Program
+          </span>
+          <h3 className="text-2xl sm:text-3xl font-serif tracking-tight leading-tight">
+            Tier 1 Elite Matching Guarantee
+          </h3>
+          <p className="text-sm text-white/80 font-medium leading-relaxed">
+            Maintain a 98%+ reliability score and under-15-minute response time to receive automated top-rank job routing and 0% cancellation penalty buffers.
+          </p>
+          <div className="pt-2 flex items-center gap-3">
+            <button
+              onClick={() => navigate('/profile')}
+              className="px-5 py-2.5 bg-[#C9A15A] hover:bg-[#b58f4a] text-[#1F2A1E] font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+            >
+              View Trust Score Breakdown
+            </button>
+            <span className="text-xs text-white/60">Updated hourly from verified customer ratings</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          5. MAIN WORKSPACE: BOOKINGS + SIDEBAR
+          ════════════════════════════════════════════════*/}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Columns: Bookings Pipeline */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-3xl border border-[#E5DEC9] shadow-xs overflow-hidden">
+            {/* Header with Title & Action */}
+            <div className="p-6 border-b border-[#E5DEC9] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-bold font-serif text-[#1F2A1E] flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-[#2F5233]" />
+                  <span>Assigned Job Pipeline</span>
+                </h3>
+                <p className="text-xs text-[#1F2A1E]/60 mt-0.5">
+                  Accept incoming requests, verify completion OTP codes, and monitor job progress.
+                </p>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex gap-1 bg-[#FAF7F0] p-1 rounded-2xl border border-[#E5DEC9]">
+                {(['all', 'pending', 'active', 'completed'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-xl capitalize transition-all ${
+                      activeTab === tab
+                        ? 'bg-[#2F5233] text-white shadow-xs'
+                        : 'text-[#1F2A1E]/60 hover:text-[#1F2A1E]'
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex gap-1 px-6 pt-4 pb-0 border-b border-[#2F5233]/5">
-              {(['all', 'pending', 'active', 'completed'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 text-xs font-bold rounded-t-lg capitalize transition-all ${
-                    activeTab === tab
-                      ? 'bg-[#2F5233] text-white shadow-sm'
-                      : 'text-[#1F2A1E]/50 hover:text-[#2F5233]'
-                  }`}
-                >
-                  {tab}
-                  {tab !== 'all' && (() => {
-                    const count = bookings.filter(b => {
-                      if (tab === 'pending') return b.status === 'Requested';
-                      if (tab === 'active') return ['Accepted', 'Started'].includes(b.status);
-                      if (tab === 'completed') return b.status === 'Completed';
-                      return false;
-                    }).length;
-                    return count > 0 ? (
-                      <span className="ml-1.5 px-1.5 py-0.5 bg-white/20 rounded-full text-[10px]">
-                        {count}
-                      </span>
-                    ) : null;
-                  })()}
-                </button>
-              ))}
-            </div>
-
+            {/* Error Notification */}
             {actionError && (
-              <div className="mx-6 mt-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
+              <div className="mx-6 mt-4 p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-800 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                {actionError}
+                <span>{actionError}</span>
               </div>
             )}
 
+            {/* Bookings List */}
             <div className="p-6">
               {filteredBookings.length === 0 ? (
-                <div className="text-center py-10 rounded-2xl bg-[#FAF7F0]/60 border border-dashed border-[#2F5233]/20">
-                  <Calendar className="w-8 h-8 text-[#2F5233]/30 mx-auto mb-2" />
-                  <p className="text-xs font-semibold text-[#1F2A1E]/60">No bookings in this view</p>
-                  <p className="text-[10px] text-[#1F2A1E]/40 mt-1">
-                    Bookings matching your schedule and services will appear here.
+                <div className="text-center py-12 rounded-2xl bg-[#FAF7F0] border border-dashed border-[#E5DEC9] space-y-2">
+                  <Calendar className="w-8 h-8 text-[#1F2A1E]/30 mx-auto" />
+                  <p className="text-sm font-bold text-[#1F2A1E]">No bookings in this filter</p>
+                  <p className="text-xs text-[#1F2A1E]/50 max-w-sm mx-auto">
+                    New customer bookings matched to your category and schedule will automatically appear here.
                   </p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {filteredBookings.map((booking) => (
                     <div
                       key={booking.id}
-                      className={`p-4 rounded-2xl border transition-all ${
+                      className={`p-5 rounded-2xl border transition-all ${
                         booking.emergency_flag === 'EMERGENCY'
-                          ? 'bg-red-50/40 border-red-200/60 hover:border-red-300'
-                          : 'bg-[#FAF7F0] border-[#2F5233]/15 hover:border-[#2F5233]/30'
+                          ? 'bg-rose-50/40 border-rose-200 hover:border-rose-300'
+                          : 'bg-[#FAF7F0] border-[#E5DEC9] hover:border-[#2F5233]/40'
                       }`}
                     >
-                      {/* Header Row */}
+                      {/* Booking Top Info */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono text-xs font-bold text-[#2F5233]">
+                          <span className="font-mono text-xs font-bold text-[#2F5233] bg-white px-2.5 py-1 rounded-lg border border-[#E5DEC9]">
                             {booking.booking_reference}
                           </span>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                            STATUS_STYLES[booking.status] || 'bg-gray-50 text-gray-700 border-gray-200'
-                          }`}>
+                          <span
+                            className={`text-[11px] font-bold px-3 py-0.5 rounded-full border ${
+                              STATUS_STYLES[booking.status] || 'bg-slate-50 text-slate-700 border-slate-200'
+                            }`}
+                          >
                             {booking.status}
                           </span>
                           {booking.emergency_flag === 'EMERGENCY' && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 flex items-center gap-1">
-                              <Zap className="w-3 h-3" />
-                              Emergency
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
+                              <Zap className="w-3 h-3 text-rose-600" />
+                              Emergency Dispatch
                             </span>
                           )}
                         </div>
-                        <span className="text-xs font-bold text-[#2F5233]">
+                        <span className="text-sm font-extrabold text-[#1F2A1E] font-serif">
                           ₹{parseFloat(booking.total_price || 0).toLocaleString('en-IN')}
                         </span>
                       </div>
 
-                      {/* Details */}
-                      <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                      {/* Booking Details Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mb-4">
                         <div>
-                          <span className="text-[#1F2A1E]/50 block">Service</span>
-                          <span className="font-semibold text-[#1F2A1E]">{booking.service_name}</span>
+                          <span className="text-[#1F2A1E]/50 block font-medium">Service</span>
+                          <span className="font-bold text-[#1F2A1E] block truncate">{booking.service_name}</span>
                         </div>
                         <div>
-                          <span className="text-[#1F2A1E]/50 block">Customer</span>
-                          <span className="font-semibold text-[#1F2A1E]">{booking.customer_name}</span>
+                          <span className="text-[#1F2A1E]/50 block font-medium">Customer</span>
+                          <span className="font-bold text-[#1F2A1E] block truncate">{booking.customer_name}</span>
                         </div>
                         <div>
-                          <span className="text-[#1F2A1E]/50 block">Scheduled</span>
+                          <span className="text-[#1F2A1E]/50 block font-medium">Scheduled Time</span>
                           <span className="font-semibold text-[#1F2A1E]">
                             {booking.scheduled_time
                               ? new Date(booking.scheduled_time).toLocaleString('en-IN', {
-                                  day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
                                 })
                               : 'TBD'}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[#1F2A1E]/50 block">Address</span>
-                          <span className="font-semibold text-[#1F2A1E] truncate block max-w-[140px]">{booking.address || 'On file'}</span>
+                          <span className="text-[#1F2A1E]/50 block font-medium">Location</span>
+                          <span className="font-semibold text-[#1F2A1E] truncate block">
+                            {booking.address || 'Address on file'}
+                          </span>
                         </div>
                       </div>
 
-                      {/* OTP (if started) */}
+                      {/* OTP completion display */}
                       {booking.otp_code && booking.status === 'Started' && (
-                        <div className="mb-3 flex items-center gap-2 bg-violet-50 border border-violet-200 px-3 py-2 rounded-xl">
-                          <span className="text-[10px] font-bold text-violet-600 uppercase tracking-wider">Completion OTP</span>
-                          <span className="font-mono text-sm font-bold text-violet-800 ml-auto tracking-widest">{booking.otp_code}</span>
+                        <div className="mb-4 flex items-center justify-between bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-xl text-xs">
+                          <span className="font-bold text-purple-900">Customer Completion OTP:</span>
+                          <span className="font-mono text-sm font-extrabold text-purple-950 tracking-widest">
+                            {booking.otp_code}
+                          </span>
                         </div>
                       )}
 
                       {/* Action Buttons */}
-                      <div className="flex gap-2 flex-wrap">
-                        {booking.status === 'Requested' && (
+                      <div className="flex gap-2 flex-wrap pt-2 border-t border-[#E5DEC9]/60">
+                        {(booking.status === 'Requested' || booking.status === 'Assigned') && (
                           <>
                             <button
                               onClick={() => handleBookingAction(booking.id, 'accept')}
                               disabled={actionLoading === booking.id}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                              className="flex items-center gap-1.5 px-4 py-2 bg-[#2F5233] text-white text-xs font-bold rounded-xl hover:bg-[#3D6B42] transition-colors disabled:opacity-50"
                             >
                               <CheckCircle2 className="w-3.5 h-3.5" />
-                              {actionLoading === booking.id ? 'Accepting...' : 'Accept'}
+                              <span>{actionLoading === booking.id ? 'Accepting...' : 'Accept Job'}</span>
                             </button>
                             <button
                               onClick={() => handleBookingAction(booking.id, 'reject')}
                               disabled={actionLoading === booking.id}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 text-xs font-bold rounded-xl hover:bg-red-200 transition-colors disabled:opacity-50"
+                              className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50"
                             >
                               Decline
                             </button>
@@ -433,20 +506,20 @@ export const ProviderDashboardView: React.FC = () => {
                           <button
                             onClick={() => handleBookingAction(booking.id, 'start')}
                             disabled={actionLoading === booking.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-500 text-white text-xs font-bold rounded-xl hover:bg-violet-600 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-purple-700 text-white text-xs font-bold rounded-xl hover:bg-purple-800 transition-colors disabled:opacity-50"
                           >
                             <Play className="w-3.5 h-3.5" />
-                            {actionLoading === booking.id ? 'Starting...' : 'Start Job'}
+                            <span>{actionLoading === booking.id ? 'Starting...' : 'Start Service'}</span>
                           </button>
                         )}
                         {booking.status === 'Started' && (
                           <button
                             onClick={() => handleBookingAction(booking.id, 'complete')}
                             disabled={actionLoading === booking.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            {actionLoading === booking.id ? 'Completing...' : 'Mark Complete'}
+                            <span>{actionLoading === booking.id ? 'Completing...' : 'Mark Complete'}</span>
                           </button>
                         )}
                       </div>
@@ -456,179 +529,116 @@ export const ProviderDashboardView: React.FC = () => {
               )}
             </div>
           </div>
-
-          {/* Recent Activity Feed */}
-          {stats && stats.recent_activity.length > 0 && (
-            <div className="bg-white rounded-3xl border border-[#2F5233]/10 shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Activity className="w-4 h-4 text-[#2F5233]" />
-                <h3 className="text-sm font-bold text-[#2F5233] uppercase tracking-wider">Recent Activity</h3>
-              </div>
-              <div className="space-y-2">
-                {stats.recent_activity.slice(0, 6).map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 py-2.5 border-b border-[#2F5233]/5 last:border-0">
-                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                      item.status === 'Completed' ? 'bg-emerald-50' :
-                      item.status === 'Cancelled' ? 'bg-slate-100' :
-                      item.is_emergency ? 'bg-red-50' : 'bg-blue-50'
-                    }`}>
-                      {item.is_emergency ? (
-                        <Zap className="w-4 h-4 text-red-500" />
-                      ) : item.status === 'Completed' ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <Calendar className="w-4 h-4 text-blue-500" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-[#1F2A1E] truncate">{item.service_name}</span>
-                        {item.is_emergency && (
-                          <span className="text-[9px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full shrink-0">
-                            Emergency
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] text-[#1F2A1E]/50">{item.customer_name} · {item.reference}</span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-xs font-bold text-[#2F5233]">₹{item.amount.toLocaleString('en-IN')}</div>
-                      <div className={`text-[10px] font-semibold ${
-                        item.status === 'Completed' ? 'text-emerald-600' :
-                        item.status === 'Cancelled' ? 'text-slate-400' : 'text-blue-500'
-                      }`}>{item.status}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Sidebar Column (1/3 width) */}
-        <div className="space-y-5">
-
-          {/* Profile & Trust Card */}
+        {/* Right 1 Column: Profile & Trust Card */}
+        <div className="space-y-6">
           {trust && (
-            <div className="bg-white rounded-3xl border border-[#2F5233]/10 shadow-sm p-6 relative overflow-hidden">
+            <div className="bg-white rounded-3xl border border-[#E5DEC9] shadow-xs p-6 relative">
               {trust.is_verified && (
-                <div className="absolute top-0 right-0 bg-[#2F5233] text-white px-3 py-1 text-[10px] font-bold uppercase rounded-bl-xl">
-                  Verified
+                <div className="absolute top-4 right-4 bg-[#2F5233] text-white px-3 py-1 text-[10px] font-bold uppercase rounded-full shadow-2xs flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Verified</span>
                 </div>
               )}
 
-              {/* Avatar */}
-              <div className="flex flex-col items-center text-center mb-5">
-                <div className="w-20 h-20 rounded-full border-4 border-[#2F5233]/20 shadow-sm overflow-hidden mb-3 bg-[#FAF7F0]">
+              {/* Avatar & Bio */}
+              <div className="flex flex-col items-center text-center mb-6 pt-2">
+                <div className="w-20 h-20 rounded-2xl border border-[#E5DEC9] shadow-xs overflow-hidden mb-3 bg-[#FAF7F0] flex items-center justify-center text-2xl font-serif font-bold text-[#2F5233]">
                   {trust.photo_url ? (
                     <img src={trust.photo_url} alt="Profile" className="w-full h-full object-cover" />
                   ) : (
-                    <User className="w-full h-full p-4 text-[#1F2A1E]/30" />
+                    <span>{trust.full_name.charAt(0)}</span>
                   )}
                 </div>
-                <h3 className="font-bold text-[#1F2A1E] text-base">{trust.full_name}</h3>
-                <p className="text-xs text-[#1F2A1E]/60 mt-0.5">{trust.category?.replace(/^\d+\.\s*/, '') || 'Service Partner'}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <MapPin className="w-3 h-3 text-[#1F2A1E]/40" />
-                  <span className="text-[11px] text-[#1F2A1E]/50">{trust.service_area || 'Location on file'}</span>
+                <h3 className="font-bold text-[#1F2A1E] text-base font-serif">{trust.full_name}</h3>
+                <p className="text-xs text-[#7A9E6E] font-semibold mt-0.5">
+                  {trust.category?.replace(/^\d+\.\s*/, '') || 'Service Partner'}
+                </p>
+                <div className="flex items-center gap-1 mt-1 text-[11px] text-[#1F2A1E]/60">
+                  <MapPin className="w-3.5 h-3.5 text-[#C9A15A]" />
+                  <span>{trust.service_area || 'Bengaluru, India'}</span>
                 </div>
               </div>
 
               {/* Trust Metrics */}
-              <div className="space-y-2 text-xs border-t border-[#2F5233]/10 pt-4">
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-[#1F2A1E]/60 flex items-center gap-1.5">
-                    <Star className="w-3.5 h-3.5 text-amber-400" /> Reliability
+              <div className="space-y-2 text-xs border-t border-[#E5DEC9] pt-4">
+                <div className="flex justify-between py-2 border-b border-slate-50">
+                  <span className="text-[#1F2A1E]/70 flex items-center gap-1.5 font-medium">
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                    <span>Reliability Score</span>
                   </span>
-                  <span className="font-bold text-emerald-600">{trust.reliability_score}%</span>
+                  <span className="font-bold text-emerald-700">{trust.reliability_score}%</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-[#1F2A1E]/60">Acceptance Rate</span>
+                <div className="flex justify-between py-2 border-b border-slate-50">
+                  <span className="text-[#1F2A1E]/70 font-medium">Acceptance Rate</span>
                   <span className="font-bold text-[#1F2A1E]">{trust.acceptance_rate}%</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-[#1F2A1E]/60">On-Time Rate</span>
+                <div className="flex justify-between py-2 border-b border-slate-50">
+                  <span className="text-[#1F2A1E]/70 font-medium">On-Time Arrival</span>
                   <span className="font-bold text-[#1F2A1E]">{trust.on_time_rate}%</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-[#1F2A1E]/60">Cancellation Rate</span>
+                <div className="flex justify-between py-2 border-b border-slate-50">
+                  <span className="text-[#1F2A1E]/70 font-medium">Cancellation Rate</span>
                   <span className="font-bold text-slate-500">{trust.cancellation_rate}%</span>
                 </div>
-                <div className="flex justify-between py-1.5 border-b border-slate-50">
-                  <span className="text-[#1F2A1E]/60 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Completed Jobs
+                <div className="flex justify-between py-2 border-b border-slate-50">
+                  <span className="text-[#1F2A1E]/70 flex items-center gap-1.5 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Completed Jobs</span>
                   </span>
                   <span className="font-bold text-[#1F2A1E]">{trust.completed_jobs_count}</span>
                 </div>
-                <div className="flex justify-between py-1.5">
-                  <span className="text-[#1F2A1E]/60 flex items-center gap-1.5">
-                    <FileCheck className="w-3.5 h-3.5 text-blue-500" /> Certificates
+                <div className="flex justify-between py-2">
+                  <span className="text-[#1F2A1E]/70 flex items-center gap-1.5 font-medium">
+                    <FileCheck className="w-3.5 h-3.5 text-[#2F5233]" />
+                    <span>Verified Documents</span>
                   </span>
-                  <span className="font-bold text-[#1F2A1E]">{trust.certificates_count}</span>
+                  <span className="font-bold text-[#2F5233]">{trust.certificates_count} on file</span>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Pipeline Counter */}
-          {stats && stats.pipeline_count > 0 && (
-            <div className="bg-[#2F5233] text-white rounded-3xl p-5 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <TrendingUp className="w-4 h-4 text-white/70" />
-                <span className="text-xs font-bold uppercase tracking-wider text-white/70">Upcoming Pipeline</span>
+              {/* Action Link */}
+              <div className="mt-5 pt-3 border-t border-[#E5DEC9]">
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="w-full py-2.5 rounded-xl bg-[#FAF7F0] hover:bg-[#F2EDE1] text-[#1F2A1E] font-bold text-xs border border-[#E5DEC9] transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <span>View Complete Partner Profile</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <div className="text-3xl font-bold">{stats.pipeline_count}</div>
-              <p className="text-xs text-white/60 mt-1">confirmed jobs in next 7 days</p>
             </div>
           )}
 
-          {/* Pending Requests Alert */}
-          {stats && stats.pending_requests_count > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5">
-              <div className="flex items-center gap-2 mb-1">
-                <Bell className="w-4 h-4 text-amber-600" />
-                <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">New Requests</span>
-              </div>
-              <div className="text-2xl font-bold text-amber-900">{stats.pending_requests_count}</div>
-              <p className="text-xs text-amber-700 mt-1">pending your acceptance</p>
-            </div>
-          )}
-
-          {/* Quick Links */}
-          <div className="bg-white rounded-3xl border border-[#2F5233]/10 shadow-sm overflow-hidden">
-            <div className="px-5 py-3 border-b border-[#2F5233]/10">
-              <span className="text-[10px] font-bold text-[#1F2A1E]/40 uppercase tracking-wider">Quick Links</span>
-            </div>
+          {/* Quick Links Card */}
+          <div className="bg-white rounded-3xl border border-[#E5DEC9] shadow-xs p-5 space-y-1">
+            <span className="text-[10px] font-bold text-[#1F2A1E]/40 uppercase tracking-wider block px-2 mb-2">
+              Partner Utilities
+            </span>
             {[
-              { label: 'My Services', path: '/services', icon: Briefcase },
-              { label: 'Availability', path: '/availability', icon: Calendar },
-              { label: 'Profile & Trust', path: '/profile', icon: User },
-              { label: 'Support', path: '/support', icon: Package },
+              { label: 'My Offered Services', path: '/services', icon: Briefcase },
+              { label: 'Calendar & Available Hours', path: '/availability', icon: Calendar },
+              { label: 'Trust & Verification Dossier', path: '/profile', icon: User },
+              { label: 'Support & Help Desk', path: '/support', icon: LifeBuoy },
             ].map((item) => (
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className="w-full flex items-center justify-between px-5 py-3 border-b border-[#2F5233]/5 last:border-0 text-xs font-semibold text-[#1F2A1E]/70 hover:bg-[#FAF7F0] hover:text-[#2F5233] transition-colors group"
+                className="w-full flex items-center justify-between p-3 rounded-2xl text-xs font-semibold text-[#1F2A1E]/75 hover:bg-[#FAF7F0] hover:text-[#2F5233] transition-colors group text-left"
               >
                 <div className="flex items-center gap-2.5">
-                  <item.icon className="w-4 h-4 text-[#2F5233]/60" />
-                  {item.label}
+                  <item.icon className="w-4 h-4 text-[#2F5233]" />
+                  <span>{item.label}</span>
                 </div>
-                <ChevronRight className="w-3.5 h-3.5 text-[#1F2A1E]/30 group-hover:text-[#2F5233]" />
+                <ChevronRight className="w-3.5 h-3.5 text-[#1F2A1E]/30 group-hover:text-[#2F5233] group-hover:translate-x-0.5 transition-transform" />
               </button>
             ))}
           </div>
-
-          {/* Sign Out */}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 text-xs font-bold text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors rounded-2xl border border-slate-200"
-          >
-            <LogOut className="w-4 h-4" />
-            Sign Out
-          </button>
         </div>
       </div>
     </div>
   );
 };
+
+export default ProviderDashboardView;

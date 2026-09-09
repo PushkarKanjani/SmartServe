@@ -38,6 +38,13 @@ def get_allowed_next(status_val):
             return [st.value for st in VALID_TRANSITIONS[k]]
     return []
 
+def safe_timeline(raw_timeline):
+    if isinstance(raw_timeline, list):
+        return raw_timeline
+    if isinstance(raw_timeline, dict):
+        return [raw_timeline]
+    return []
+
 @router.get("/", response_model=List[BookingDetailResponse])
 def list_admin_bookings(
     status_filter: Optional[str] = None,
@@ -87,7 +94,7 @@ def list_admin_bookings(
                     address=b.address,
                     total_price=b.total_price,
                     otp_code=b.otp_code,
-                    timeline=b.timeline or [],
+                    timeline=safe_timeline(b.timeline),
                     allowed_next_statuses=allowed_next,
                     emergency_flag=b.emergency_flag,
                     created_at=b.created_at.isoformat() if b.created_at else ""
@@ -134,7 +141,7 @@ def get_admin_booking_detail(
         address=b.address,
         total_price=b.total_price,
         otp_code=b.otp_code,
-        timeline=b.timeline or [],
+        timeline=safe_timeline(b.timeline),
         allowed_next_statuses=allowed_next,
         emergency_flag=b.emergency_flag,
         created_at=b.created_at.isoformat() if b.created_at else ""
@@ -192,7 +199,7 @@ def create_admin_booking(
         address=booking.address,
         total_price=booking.total_price,
         otp_code=booking.otp_code,
-        timeline=booking.timeline or [],
+        timeline=safe_timeline(booking.timeline),
         allowed_next_statuses=allowed_next,
         emergency_flag=booking.emergency_flag,
         created_at=booking.created_at.isoformat() if booking.created_at else ""
@@ -267,7 +274,7 @@ def transition_booking_status(
         address=updated.address,
         total_price=updated.total_price,
         otp_code=updated.otp_code,
-        timeline=updated.timeline or [],
+        timeline=safe_timeline(updated.timeline),
         allowed_next_statuses=fresh_allowed_next,
         emergency_flag=updated.emergency_flag,
         created_at=updated.created_at.isoformat() if updated.created_at else ""
@@ -381,19 +388,124 @@ def create_customer_mobile_booking(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db),
 ):
-    ref = f"BK-{uuid.uuid4().hex[:8].upper()}"
+    """
+    Create a real booking persisted to DB. Auto-assigns a verified provider
+    matching the requested service category.
+    """
+    from app.models.service import Service
+    from app.models.provider import Provider, ProviderService
+    from app.models.user import User
+    from datetime import datetime, timezone, timedelta
+
+    # 1. Resolve service from DB
+    service = None
+    if req.service_id:
+        try:
+            s_uuid = uuid.UUID(req.service_id)
+            service = db.query(Service).filter(Service.id == s_uuid).first()
+        except ValueError:
+            pass
+    if not service and req.service_name:
+        service = db.query(Service).filter(
+            Service.name.ilike(f"%{req.service_name.strip()}%")
+        ).first()
+    if not service and req.category:
+        service = db.query(Service).filter(
+            Service.category.ilike(f"%{req.category.strip()}%"),
+            Service.is_active == True,
+        ).first()
+
+    if not service:
+        # Fallback: pick any active service
+        service = db.query(Service).filter(Service.is_active == True).first()
+
+    if not service:
+        raise HTTPException(status_code=400, detail="No matching service found in catalog.")
+
+    # 2. Auto-assign a verified provider who offers this service category
+    category = service.category
+    matched_provider = None
+
+    # Find providers in matching category that are verified and active
+    candidate_providers = (
+        db.query(Provider)
+        .filter(Provider.is_verified == True, Provider.category == category)
+        .all()
+    )
+    for p in candidate_providers:
+        p_user = db.query(User).filter(User.id == p.user_id, User.is_active == True).first()
+        if p_user:
+            matched_provider = p
+            break
+
+    # If none found for exact category, pick any verified+active provider
+    if not matched_provider:
+        all_verified = (
+            db.query(Provider)
+            .filter(Provider.is_verified == True)
+            .all()
+        )
+        for p in all_verified:
+            p_user = db.query(User).filter(User.id == p.user_id, User.is_active == True).first()
+            if p_user:
+                matched_provider = p
+                break
+
+    # 3. Build scheduled datetime
+    try:
+        date_part = req.scheduled_date or ""
+        time_part = req.scheduled_time or "10:00"
+        sched_dt = datetime.fromisoformat(f"{date_part}T{time_part}:00") if date_part else (
+            datetime.now(timezone.utc) + timedelta(hours=24)
+        )
+    except (ValueError, TypeError):
+        sched_dt = datetime.now(timezone.utc) + timedelta(hours=24)
+
+    # 4. Persist booking
+    new_booking = Booking(
+        id=uuid.uuid4(),
+        customer_id=current_customer.id,
+        service_id=service.id,
+        provider_id=matched_provider.user_id if matched_provider else None,
+        status="Assigned" if matched_provider else "Requested",
+        payment_status="Pending",
+        scheduled_time=sched_dt,
+        address=req.service_address or "Address on File",
+        total_price=req.total_amount or float(service.base_price or 499.0),
+        otp_code=str(uuid.uuid4().int)[:4],
+        emergency_flag=None,
+        timeline=[{
+            "event": "Booking Requested by Customer",
+            "reason": "Customer Booking via App",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }] + ([{
+            "event": f"Assigned to Provider {matched_provider.full_name}",
+            "reason": "Smart Matching — Verified Provider",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }] if matched_provider else []),
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(new_booking)
+    db.commit()
+    db.refresh(new_booking)
+
     return {
-        "id": str(uuid.uuid4()),
-        "booking_reference": ref,
-        "customer_name": current_customer.full_name or req.customer_name or "Customer",
-        "service_name": req.service_name or "SmartServe Service",
-        "category": req.category or "General",
-        "status": "confirmed",
-        "scheduled_date": req.scheduled_date or "Tomorrow",
-        "scheduled_time": req.scheduled_time or "10:00 AM",
-        "total_amount": req.total_amount or 499.0,
-        "service_address": req.service_address or "Bangalore",
-        "message": "Booking scheduled successfully."
+        "id": str(new_booking.id),
+        "booking_reference": f"BK-{str(new_booking.id)[:8].upper()}",
+        "customer_name": current_customer.full_name or "Customer",
+        "service_name": service.name,
+        "category": service.category,
+        "subcategory": service.subcategory or "",
+        "provider_name": matched_provider.full_name if matched_provider else "Being Assigned",
+        "status": str(new_booking.status),
+        "scheduled_date": sched_dt.strftime("%d %b %Y"),
+        "scheduled_time": sched_dt.strftime("%I:%M %p"),
+        "total_amount": float(new_booking.total_price),
+        "service_address": new_booking.address,
+        "message": (
+            f"Booking confirmed and assigned to {matched_provider.full_name}."
+            if matched_provider else "Booking received. Finding best provider."
+        ),
     }
 
 

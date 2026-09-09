@@ -49,10 +49,18 @@ export const ProviderListView: React.FC = () => {
         p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.id.toLowerCase().includes(searchTerm.toLowerCase());
 
+      const pStatus = (p.verification_status || '').toLowerCase();
       const matchesVerification = !verificationFilter ||
         (verificationFilter === 'verified' && p.is_verified) ||
-        (verificationFilter === 'pending' && !p.is_verified && p.documents.some((d) => d.verification_status === 'Pending')) ||
-        (verificationFilter === 'rejected' && !p.is_verified && p.documents.some((d) => d.verification_status === 'Rejected'));
+        (verificationFilter === 'pending' && !p.is_verified && (
+          pStatus.includes('pending') ||
+          p.documents.length === 0 ||
+          p.documents.some((d) => (d.verification_status || '').toLowerCase().includes('pending'))
+        )) ||
+        (verificationFilter === 'rejected' && !p.is_verified && (
+          pStatus.includes('reject') ||
+          p.documents.some((d) => (d.verification_status || '').toLowerCase().includes('reject'))
+        ));
 
       const matchesStatus = !statusFilter ||
         (statusFilter === 'active' && p.is_active) ||
@@ -65,7 +73,13 @@ export const ProviderListView: React.FC = () => {
   }, [providers, searchTerm, verificationFilter, statusFilter, categoryFilter]);
 
   const verifiedCount = providers.filter((p) => p.is_verified).length;
-  const pendingCount = providers.filter((p) => !p.is_verified && p.documents.some((d) => d.verification_status === 'Pending')).length;
+  const pendingCount = providers.filter((p) => 
+    !p.is_verified && (
+      (p.verification_status || '').toLowerCase().includes('pending') ||
+      p.documents.length === 0 ||
+      p.documents.some((d) => (d.verification_status || '').toLowerCase().includes('pending'))
+    )
+  ).length;
 
   if (loading) {
     return (
@@ -173,6 +187,31 @@ export const ProviderListView: React.FC = () => {
         </div>
       </div>
 
+      {/* Pending Verification Alert Banner */}
+      {pendingCount > 0 && !verificationFilter && (
+        <div className="flex items-center justify-between gap-4 bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-amber-900">
+                {pendingCount} Provider{pendingCount > 1 ? 's' : ''} Awaiting Verification
+              </div>
+              <div className="text-xs text-amber-700 font-medium mt-0.5">
+                New applications submitted and pending your review. Approve or reject to let providers begin operating.
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setVerificationFilter('pending')}
+            className="shrink-0 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-colors"
+          >
+            Review Pending
+          </button>
+        </div>
+      )}
+
       {/* Directory Render */}
       {filteredProviders.length === 0 ? (
         <div className="py-12 p-6 text-center bg-white rounded-2xl border border-[#E5DEC9] shadow-sm space-y-2">
@@ -239,14 +278,26 @@ export const ProviderListView: React.FC = () => {
                 <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl font-bold border ${
                   provider.is_verified
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : provider.verification_status === 'Rejected'
+                    ? 'bg-red-50 text-red-700 border-red-200'
+                    : provider.verification_status === 'Correction Requested'
+                    ? 'bg-orange-50 text-orange-700 border-orange-200'
                     : 'bg-amber-50 text-amber-700 border-amber-200'
                 }`}>
-                  {provider.is_verified ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" /> : <Clock className="w-3.5 h-3.5 text-amber-500" />}
-                  <span>{provider.is_verified ? 'Verified Provider' : 'Pending Review'}</span>
+                  {provider.is_verified
+                    ? <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                    : <Clock className="w-3.5 h-3.5 text-amber-500" />}
+                  <span>
+                    {provider.is_verified
+                      ? 'Verified'
+                      : provider.verification_status || 'Pending Review'}
+                  </span>
                 </span>
 
-                <span className="font-bold text-[#2F5233] group-hover:translate-x-0.5 transition-transform flex items-center gap-1">
-                  <span>View Profile</span>
+                <span className={`font-bold transition-transform flex items-center gap-1 ${
+                  provider.is_verified ? 'text-[#2F5233] group-hover:translate-x-0.5' : 'text-amber-700'
+                }`}>
+                  <span>{provider.is_verified ? 'View Profile' : 'Check & Review'}</span>
                   <ChevronRight className="w-4 h-4" />
                 </span>
               </div>
@@ -320,9 +371,13 @@ export const ProviderListView: React.FC = () => {
                           e.stopPropagation();
                           navigate(`/admin/providers/${provider.id}`);
                         }}
-                        className="px-3.5 py-1.5 bg-[#F2EDE1] hover:bg-[#2F5233] hover:text-white text-slate-700 font-bold rounded-xl transition-colors text-xs"
+                        className={`px-3.5 py-1.5 font-bold rounded-xl transition-colors text-xs ${
+                          provider.is_verified
+                            ? 'bg-[#F2EDE1] hover:bg-[#2F5233] hover:text-white text-slate-700'
+                            : 'bg-amber-100 hover:bg-amber-600 hover:text-white text-amber-900 border border-amber-300'
+                        }`}
                       >
-                        View Profile
+                        {provider.is_verified ? 'View Profile' : 'Check & Review'}
                       </button>
                     </td>
                   </tr>

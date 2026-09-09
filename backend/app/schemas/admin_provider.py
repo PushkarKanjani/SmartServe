@@ -80,6 +80,22 @@ class AdminProviderBookingItem(BaseModel):
     created_at: str
 
 
+class AdminAIVerificationSummary(BaseModel):
+    recommendation: str  # "Recommended for Approval", "Requires Corrections / Incomplete", "High Risk / Discrepancy"
+    risk_level: str  # "LOW", "MEDIUM", "HIGH"
+    risk_score: float  # 0.0 to 1.0
+    documents_complete: bool
+    submitted_documents_count: int
+    required_documents_count: int
+    missing_documents: List[str] = []
+    information_mismatches: List[str] = []
+    expired_invalid_documents: List[str] = []
+    suspicious_signals: List[str] = []
+    positive_signals: List[str] = []
+    reasons: List[str] = []
+    disclaimer: str = "AI verification summary is purely assistive. Admin makes the final verification decision."
+
+
 class AdminProviderItem(BaseModel):
     id: str
     user_id: str
@@ -87,10 +103,14 @@ class AdminProviderItem(BaseModel):
     email: str
     phone: str
     category: str
+    skills: Optional[str] = ""
+    service_area: Optional[str] = ""
     experience_years: int
     base_price: float
     is_verified: bool
     is_active: bool
+    # Computed overall status string
+    verification_status: str = "Pending"  # "Verified", "Pending", "Rejected", "Correction Requested"
     reliability_score: float
     acceptance_rate: float
     on_time_rate: float
@@ -105,6 +125,7 @@ class AdminProviderItem(BaseModel):
     audit_logs: List[AdminProviderAuditLogItem] = []
     slots: List[AdminProviderSlotItem] = []
     bookings: List[AdminProviderBookingItem] = []
+    ai_verification_summary: Optional[AdminAIVerificationSummary] = None
 
 
 class ProviderVerifyRequest(BaseModel):

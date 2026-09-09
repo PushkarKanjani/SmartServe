@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import List
+from typing import List, Any, Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.dependencies import AuthUser
@@ -83,6 +83,193 @@ class ProviderServiceDomain:
             created_at=provider.created_at,
             updated_at=provider.updated_at,
         )
+
+    def get_my_status(self, user: AuthUser):
+        """Return the provider's verification status and document breakdown.
+        Accessible to any authenticated provider — pending OR verified.
+        """
+        from app.schemas.provider import ProviderStatusResponse, DocumentStatusItem
+        provider = self.repo.get_or_create(user_id=user.id, default_name=user.full_name)
+        user_record = self.repo.db.query(User).filter(User.id == user.id).first()
+        certs = (
+            self.repo.db.query(Certificate)
+            .filter(Certificate.provider_id == user.id)
+            .all()
+        )
+
+        doc_items = [
+            DocumentStatusItem(
+                certificate_type=c.certificate_type,
+                verification_status=c.verification_status,
+                document_number=c.document_number,
+                uploaded_at=c.uploaded_at,
+                verified_at=c.verified_at,
+            )
+            for c in certs
+        ]
+
+        docs_verified = sum(1 for c in certs if c.verification_status in ("Verified", "VERIFIED"))
+        docs_rejected = sum(1 for c in certs if c.verification_status in ("Rejected", "REJECTED"))
+        docs_correction = sum(1 for c in certs if c.verification_status == "Correction Requested")
+
+        # Derive overall verification_status string
+        if provider.is_verified:
+            overall = "Verified"
+        elif docs_rejected > 0 and not docs_correction:
+            overall = "Rejected"
+        elif docs_correction > 0:
+            overall = "Correction Requested"
+        else:
+            overall = "Pending"
+
+        # Attempt to find rejection_reason or correction_instructions from latest audit log
+        rejection_reason = None
+        correction_instructions = None
+        if overall in ("Rejected", "Correction Requested"):
+            from app.models.security import AuditLog
+            from sqlalchemy import desc
+            last_audit = (
+                self.repo.db.query(AuditLog)
+                .filter(
+                    (AuditLog.target_resource == str(user.id)) |
+                    (AuditLog.target_resource == f"provider:{user.id}")
+                )
+                .order_by(desc(AuditLog.created_at))
+                .first()
+            )
+            if last_audit and last_audit.metadata_json and isinstance(last_audit.metadata_json, dict):
+                msg = last_audit.metadata_json.get("reason")
+                if overall == "Correction Requested":
+                    correction_instructions = msg
+                else:
+                    rejection_reason = msg
+
+        # Verified_at: latest cert verified_at
+        verified_at_val = None
+        if provider.is_verified and certs:
+            verified_ats = [c.verified_at for c in certs if c.verified_at]
+            if verified_ats:
+                verified_at_val = max(verified_ats)
+
+        return ProviderStatusResponse(
+            provider_id=provider.user_id,
+            full_name=provider.full_name,
+            email=user_record.email if user_record else user.email,
+            category=provider.category,
+            is_verified=provider.is_verified,
+            verification_status=overall,
+            documents_submitted=len(certs),
+            documents_verified=docs_verified,
+            documents_rejected=docs_rejected,
+            documents=doc_items,
+            rejection_reason=rejection_reason,
+            correction_instructions=correction_instructions,
+            submitted_at=provider.created_at,
+            verified_at=verified_at_val,
+        )
+
+    def resubmit_application(self, user: AuthUser, data: Any) -> Any:
+        """
+        Allows provider to re-submit updated documents after admin requests corrections.
+        Resets status of affected documents to 'PENDING' so they appear for admin review.
+        """
+        from datetime import datetime, timezone
+        from app.models.provider import Certificate
+        from app.repositories import audit_repository
+        from app.services.ai_service import ai_service
+
+        provider = self.repo.get_by_user_id(user.id)
+        if not provider:
+            raise HTTPException(status_code=404, detail="Provider profile not found")
+
+        now = datetime.now(timezone.utc)
+
+        # 1. Update or create submitted documents
+        if data.updated_documents:
+            for doc in data.updated_documents:
+                existing_cert = (
+                    self.repo.db.query(Certificate)
+                    .filter(
+                        Certificate.provider_id == user.id,
+                        Certificate.certificate_type.ilike(f"%{doc.certificate_type.strip()}%"),
+                    )
+                    .first()
+                )
+                if existing_cert:
+                    existing_cert.document_url = doc.document_url
+                    if doc.document_number:
+                        existing_cert.document_number = doc.document_number
+                    if doc.description:
+                        existing_cert.extracted_name = doc.description
+                    existing_cert.verification_status = "PENDING"
+                    existing_cert.uploaded_at = now
+                    self.repo.db.add(existing_cert)
+                else:
+                    new_c = Certificate(
+                        id=uuid.uuid4(),
+                        provider_id=user.id,
+                        document_url=doc.document_url,
+                        certificate_type=doc.certificate_type,
+                        document_number=doc.document_number,
+                        extracted_name=doc.description or provider.full_name,
+                        verification_status="PENDING",
+                        uploaded_at=now,
+                        is_duplicate=False,
+                    )
+                    self.repo.db.add(new_c)
+
+        # 2. Reset any remaining 'Correction Requested' certs to 'PENDING'
+        correction_certs = (
+            self.repo.db.query(Certificate)
+            .filter(
+                Certificate.provider_id == user.id,
+                Certificate.verification_status == "Correction Requested",
+            )
+            .all()
+        )
+        for cc in correction_certs:
+            cc.verification_status = "PENDING"
+            self.repo.db.add(cc)
+
+        self.repo.db.commit()
+
+        # Run OCR scan on newly updated/pending certificates
+        all_certs = (
+            self.repo.db.query(Certificate)
+            .filter(Certificate.provider_id == user.id)
+            .all()
+        )
+        for cert in all_certs:
+            try:
+                ai_service.analyze_provider_document(
+                    document_url=cert.document_url,
+                    certificate_type=cert.certificate_type,
+                    provider_name=provider.full_name,
+                    provider_id=str(user.id),
+                    cert_id=str(cert.id),
+                    db=self.repo.db,
+                    existing_doc_number=cert.document_number,
+                    existing_extracted_name=cert.extracted_name,
+                )
+            except Exception:
+                pass
+
+        # 3. Log audit trail
+        audit_repository.create_audit_log(
+            self.repo.db,
+            actor_id=user.id,
+            actor_email=user.email,
+            actor_role="provider",
+            action=f"Provider Re-submitted Documents for Approval ({provider.full_name})",
+            target_resource=str(user.id),
+            metadata_json={
+                "action": "resubmit_application",
+                "notes": getattr(data, "notes", None) or "Documents re-submitted by provider",
+                "timestamp": now.isoformat(),
+            },
+        )
+
+        return self.get_my_status(user)
 
     def get_provider_profile(self, user: AuthUser, provider_id: uuid.UUID) -> Provider:
         # Cross-provider ownership check: a provider can only access their own profile
