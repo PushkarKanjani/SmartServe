@@ -96,6 +96,16 @@ export interface ServiceItem {
   updated_at?: string;
 }
 
+export interface ProviderSlotDetail {
+  slot_id: string;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  display_time: string;
+  is_available: boolean;
+  available_times: string[];
+}
+
 export interface EligibleProvider {
   provider_id: string;
   full_name: string;
@@ -106,6 +116,7 @@ export interface EligibleProvider {
   acceptance_rate: number;
   service_area?: string;
   available_slots: string[];
+  structured_slots?: ProviderSlotDetail[];
   is_available: boolean;
 }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getServiceDetail, getServiceEligibleProviders, ServiceItem, EligibleProvider } from '../api/catalog';
+import { getServiceDetail, getServiceEligibleProviders, ServiceItem, EligibleProvider, ProviderSlotDetail } from '../api/catalog';
 import { createBooking } from '../api/bookings';
 import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
@@ -49,10 +49,8 @@ export const CustomerServiceDetail: React.FC = () => {
 
   // Booking Modal State
   const [showBookingModal, setShowBookingModal] = useState<boolean>(false);
-  const [bookingDate, setBookingDate] = useState<string>(
-    new Date(Date.now() + 86400000).toISOString().split('T')[0] || ''
-  );
-  const [bookingTime, setBookingTime] = useState<string>('10:00 AM');
+  const [bookingDate, setBookingDate] = useState<string>('');
+  const [bookingTime, setBookingTime] = useState<string>('');
   const [address, setAddress] = useState<string>('Flat 402, Sunshine Apartments, Sector 62');
   const [city, setCity] = useState<string>('Noida');
   const [pincode, setPincode] = useState<string>('201301');
@@ -70,14 +68,11 @@ export const CustomerServiceDetail: React.FC = () => {
         setService(data);
         if (data) {
           document.title = data.seo_title || `${data.name} | SmartServe`;
-          const isEmerg = Boolean(data.is_emergency || data.is_emergency_eligible);
-          if (!isEmerg) {
-            setProvidersLoading(true);
-            getServiceEligibleProviders(serviceId)
-              .then((provs) => setEligibleProviders(provs))
-              .catch((err) => console.error('Error fetching eligible providers', err))
-              .finally(() => setProvidersLoading(false));
-          }
+          setProvidersLoading(true);
+          getServiceEligibleProviders(serviceId)
+            .then((provs) => setEligibleProviders(provs))
+            .catch((err) => console.error('Error fetching eligible providers', err))
+            .finally(() => setProvidersLoading(false));
         }
       } catch (err: any) {
         setError(err.response?.data?.detail || 'Failed to load service details from backend.');
@@ -87,6 +82,91 @@ export const CustomerServiceDetail: React.FC = () => {
     };
     fetchDetail();
   }, [serviceId]);
+
+  const isEmergency = Boolean(service?.is_emergency || service?.is_emergency_eligible);
+
+  // Selected Provider & Real Available Slots Computation
+  const selectedProvider = eligibleProviders.find((p) => p.provider_id === selectedProviderId);
+
+  const allRelevantSlots = React.useMemo(() => {
+    if (selectedProvider) {
+      return selectedProvider.structured_slots || [];
+    }
+    // Combine across all providers
+    const map = new Map<string, ProviderSlotDetail>();
+    eligibleProviders.forEach((p) => {
+      (p.structured_slots || []).forEach((slot) => {
+        if (!map.has(slot.slot_date)) {
+          map.set(slot.slot_date, { ...slot, available_times: [...slot.available_times] });
+        } else {
+          const existing = map.get(slot.slot_date)!;
+          const combined = Array.from(new Set([...existing.available_times, ...slot.available_times])).sort();
+          map.set(slot.slot_date, { ...existing, available_times: combined });
+        }
+      });
+    });
+    return Array.from(map.values()).sort((a, b) => a.slot_date.localeCompare(b.slot_date));
+  }, [selectedProvider, eligibleProviders]);
+
+  const availableDates = React.useMemo(() => {
+    return allRelevantSlots
+      .filter((s) => s.available_times && s.available_times.length > 0)
+      .map((s) => s.slot_date);
+  }, [allRelevantSlots]);
+
+  // For the selected bookingDate, determine available times
+  const availableTimeOptions = React.useMemo(() => {
+    if (!bookingDate) return [];
+    const slotForDate = allRelevantSlots.find((s) => s.slot_date === bookingDate);
+    return slotForDate?.available_times || [];
+  }, [allRelevantSlots, bookingDate]);
+
+  // Earliest emergency slot across all verified providers
+  const earliestEmergencySlot = React.useMemo(() => {
+    for (const prov of eligibleProviders) {
+      if (prov.structured_slots && prov.structured_slots.length > 0) {
+        for (const s of prov.structured_slots) {
+          if (s.available_times && s.available_times.length > 0) {
+            return {
+              provider_name: prov.full_name,
+              provider_id: prov.provider_id,
+              date: s.slot_date,
+              time: s.available_times[0],
+            };
+          }
+        }
+      }
+    }
+    return null;
+  }, [eligibleProviders]);
+
+  // Auto-sync date and time selections when slots or selected provider change
+  useEffect(() => {
+    if (isEmergency) {
+      if (earliestEmergencySlot) {
+        setBookingDate(earliestEmergencySlot.date || '');
+        setBookingTime(earliestEmergencySlot.time || '');
+      }
+    } else {
+      if (availableDates.length > 0) {
+        if (!bookingDate || !availableDates.includes(bookingDate)) {
+          setBookingDate(availableDates[0] || '');
+        }
+      } else {
+        setBookingDate('');
+      }
+    }
+  }, [availableDates, earliestEmergencySlot, isEmergency, selectedProviderId]);
+
+  useEffect(() => {
+    if (!isEmergency && availableTimeOptions.length > 0) {
+      if (!bookingTime || !availableTimeOptions.includes(bookingTime)) {
+        setBookingTime(availableTimeOptions[0] || '');
+      }
+    } else if (!isEmergency && availableTimeOptions.length === 0) {
+      setBookingTime('');
+    }
+  }, [availableTimeOptions, isEmergency]);
 
   const toggleAddon = (addonId: string) => {
     if (selectedAddons.includes(addonId)) {
@@ -109,8 +189,6 @@ export const CustomerServiceDetail: React.FC = () => {
     return total;
   };
 
-  const isEmergency = Boolean(service?.is_emergency || service?.is_emergency_eligible);
-
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -123,6 +201,11 @@ export const CustomerServiceDetail: React.FC = () => {
 
     if (!service.is_active) {
       showToast('This service is currently inactive and cannot be booked.', 'error');
+      return;
+    }
+
+    if (!bookingDate || !bookingTime) {
+      showToast('Please select a valid upcoming date and time slot.', 'error');
       return;
     }
 
@@ -797,14 +880,27 @@ export const CustomerServiceDetail: React.FC = () => {
             <form onSubmit={handleConfirmBooking} className="space-y-4">
               {/* Emergency Callout vs Customer Provider Selection */}
               {isEmergency ? (
-                <div className="p-4 bg-amber-50/95 border border-amber-300 rounded-2xl space-y-1.5 shadow-xs">
-                  <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase tracking-wider">
-                    <Zap className="w-4 h-4 text-amber-600" />
-                    <span>Emergency Priority Auto-Dispatch</span>
+                <div className="p-4 bg-amber-50/95 border border-amber-300 rounded-2xl space-y-2.5 shadow-xs">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase tracking-wider">
+                      <Zap className="w-4 h-4 text-amber-600 animate-pulse" />
+                      <span>Emergency Priority Auto-Dispatch</span>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-200 text-amber-900 uppercase">
+                      Fastest Available
+                    </span>
                   </div>
                   <p className="text-xs text-amber-800 leading-relaxed">
-                    Customer provider selection is bypassed for emergency hazard & safety services. SmartServe will automatically allocate and dispatch the nearest verified, background-checked professional to your location.
+                    Customer provider selection is bypassed for emergency hazard & safety services. SmartServe automatically pairs and dispatches the nearest verified, background-checked professional to your location based on real-time availability.
                   </p>
+                  {earliestEmergencySlot && (
+                    <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between text-xs">
+                      <span className="text-amber-900 font-medium">Earliest Dispatch Window:</span>
+                      <span className="font-bold text-amber-950 bg-white px-2.5 py-1 rounded-lg border border-amber-300 shadow-xs">
+                        📅 {earliestEmergencySlot.date} at ⏰ {earliestEmergencySlot.time}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -819,7 +915,7 @@ export const CustomerServiceDetail: React.FC = () => {
                   {providersLoading ? (
                     <div className="flex items-center justify-center p-4 bg-white rounded-xl border border-[#E5DEC9]">
                       <Loader2 className="w-4 h-4 animate-spin text-[#2F5233]" />
-                      <span className="ml-2 text-xs text-[#1F2A1E]/60">Checking available providers...</span>
+                      <span className="ml-2 text-xs text-[#1F2A1E]/60">Checking verified provider availability...</span>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -866,6 +962,15 @@ export const CustomerServiceDetail: React.FC = () => {
                               <span className="text-[10px] text-[#1F2A1E]/50 font-medium">
                                 {prov.experience_years}y exp
                               </span>
+                              {prov.is_available ? (
+                                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                  Slots Open
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
+                                  Fully Booked
+                                </span>
+                              )}
                             </div>
                             {prov.skills && (
                               <p className="text-[11px] text-[#1F2A1E]/70 line-clamp-1">
@@ -887,29 +992,88 @@ export const CustomerServiceDetail: React.FC = () => {
                 </div>
               )}
 
+              {/* Dynamic Availability-Constrained Date Selector */}
               <div>
-                <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">Preferred Date</label>
-                <input
-                  type="date"
-                  value={bookingDate}
-                  onChange={(e) => setBookingDate(e.target.value)}
-                  className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl px-4 text-sm font-medium text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
-                  required
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider">
+                    Preferred Date
+                  </label>
+                  {availableDates.length > 0 ? (
+                    <span className="text-[11px] text-[#2F5233] font-semibold flex items-center gap-1">
+                      <CalendarIcon className="w-3 h-3 text-[#2F5233]" />
+                      {availableDates.length} date{availableDates.length > 1 ? 's' : ''} with open slots
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-rose-600 font-semibold flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      No open dates
+                    </span>
+                  )}
+                </div>
+
+                {availableDates.length > 0 ? (
+                  <select
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl px-4 text-sm font-medium text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
+                    required
+                  >
+                    {availableDates.map((d) => (
+                      <option key={d} value={d}>
+                        {new Date(d + 'T00:00:00').toLocaleDateString('en-US', {
+                          weekday: 'short',
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600" />
+                      <span>No Availability Slots</span>
+                    </p>
+                    <p className="text-rose-700/80">
+                      The selected professional has no upcoming open slots. Please choose another professional or select Auto-Match.
+                    </p>
+                  </div>
+                )}
               </div>
 
+              {/* Dynamic Availability-Constrained Time Slot Selector */}
               <div>
-                <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">Preferred Time Slot</label>
-                <select
-                  value={bookingTime}
-                  onChange={(e) => setBookingTime(e.target.value)}
-                  className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl px-4 text-sm font-medium text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
-                >
-                  <option value="09:00 AM">09:00 AM - 11:00 AM</option>
-                  <option value="10:00 AM">10:00 AM - 12:00 PM</option>
-                  <option value="02:00 PM">02:00 PM - 04:00 PM</option>
-                  <option value="05:00 PM">05:00 PM - 07:00 PM</option>
-                </select>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider">
+                    Preferred Time Slot
+                  </label>
+                  {availableTimeOptions.length > 0 && (
+                    <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3 text-emerald-600" />
+                      {availableTimeOptions.length} slot{availableTimeOptions.length > 1 ? 's' : ''} available
+                    </span>
+                  )}
+                </div>
+
+                {availableTimeOptions.length > 0 ? (
+                  <select
+                    value={bookingTime}
+                    onChange={(e) => setBookingTime(e.target.value)}
+                    className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl px-4 text-sm font-medium text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
+                    required
+                  >
+                    {availableTimeOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 font-medium">
+                    No non-conflicting time slots available on this date.
+                  </div>
+                )}
               </div>
 
               <div>

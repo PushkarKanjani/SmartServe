@@ -162,6 +162,16 @@ class ServiceItem(BaseModel):
     updated_at: Optional[datetime] = None
 
 
+class ProviderSlotDetail(BaseModel):
+    slot_id: str
+    slot_date: str
+    start_time: str
+    end_time: str
+    display_time: str
+    is_available: bool = True
+    available_times: List[str] = []
+
+
 class EligibleProviderResponse(BaseModel):
     provider_id: str
     full_name: str
@@ -172,6 +182,7 @@ class EligibleProviderResponse(BaseModel):
     acceptance_rate: float = 100.0
     service_area: Optional[str] = None
     available_slots: List[str] = []
+    structured_slots: List[ProviderSlotDetail] = []
     is_available: bool = True
 
 
