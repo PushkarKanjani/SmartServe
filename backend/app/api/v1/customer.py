@@ -43,6 +43,7 @@ from app.schemas.customer_schemas import (
     SupportTicketDetail,
     MessageItem,
     SessionListItem,
+    EligibleProviderResponse,
 )
 
 router = APIRouter(prefix="/customer", tags=["Customer API"])
@@ -541,7 +542,8 @@ def parse_service_details(s) -> ServiceItem:
         duration_minutes=duration_minutes,
         rating=4.8,
         review_count=120,
-        is_emergency=False,
+        is_emergency=bool(getattr(s, "is_emergency_eligible", False)),
+        is_emergency_eligible=bool(getattr(s, "is_emergency_eligible", False)),
         is_active=s.is_active,
         image_url=resolved_image,
         suggested_addons=addons,
@@ -616,6 +618,19 @@ def get_catalog_service_by_id(service_id: str, db: Session = Depends(get_db)):
 
     print(f"[DEBUG GET SERVICE] service_id={service_id}, db={db.bind.url}, found={s.name}, price={s.base_price}")
     return parse_service_details(s)
+
+
+# 13b. GET /customer/catalog/services/{service_id}/eligible-providers
+@router.get("/catalog/services/{service_id}/eligible-providers", response_model=List[EligibleProviderResponse])
+def get_service_eligible_providers(service_id: str, db: Session = Depends(get_db)):
+    from app.services.booking.eligibility_service import get_eligible_providers
+    try:
+        s_uuid = uuid.UUID(service_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid service ID format")
+
+    providers_data = get_eligible_providers(db, s_uuid)
+    return [EligibleProviderResponse(**p) for p in providers_data]
 
 
 
@@ -699,8 +714,19 @@ def create_customer_booking(
 
     parsed_sched_time = parse_scheduled_datetime(payload.scheduled_date, payload.scheduled_time)
 
+    is_emergency = bool(getattr(db_service, "is_emergency_eligible", False))
+
+    requested_prov_uuid = None
+    if not is_emergency and payload.provider_id:
+        try:
+            requested_prov_uuid = uuid.UUID(payload.provider_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid provider ID format")
+
     # Determine eligible provider based on approved status, service association, availability, and requested slot
-    eligible_provider, matched_slot, eligibility_msg = find_eligible_provider(db, srv_id, parsed_sched_time)
+    eligible_provider, matched_slot, eligibility_msg = find_eligible_provider(
+        db, srv_id, parsed_sched_time, requested_provider_id=requested_prov_uuid
+    )
 
     if not eligible_provider:
         raise HTTPException(
@@ -709,8 +735,9 @@ def create_customer_booking(
         )
 
     otp_code = str(uuid.uuid4().int)[:4]
+    event_title = "Emergency Fast-Track Dispatch" if is_emergency else "Booking Requested"
     initial_event = {
-        "event": "Booking Requested",
+        "event": event_title,
         "status": "Requested",
         "provider_assigned": eligible_provider.full_name,
         "provider_id": str(eligible_provider.user_id),
@@ -737,7 +764,7 @@ def create_customer_booking(
         notes=payload.notes,
         otp_code=otp_code,
         timeline=[initial_event],
-        emergency_flag=None,
+        emergency_flag="EMERGENCY" if is_emergency else None,
         created_at=datetime.utcnow(),
     )
     if matched_slot:

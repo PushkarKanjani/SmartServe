@@ -138,6 +138,7 @@ class ServiceItem(BaseModel):
     rating: float = 4.8
     review_count: int = 120
     is_emergency: bool = False
+    is_emergency_eligible: bool = False
     is_active: bool = True
     image_url: Optional[str] = None
     suggested_addons: List[AddonItem] = []
@@ -161,6 +162,19 @@ class ServiceItem(BaseModel):
     updated_at: Optional[datetime] = None
 
 
+class EligibleProviderResponse(BaseModel):
+    provider_id: str
+    full_name: str
+    category: Optional[str] = None
+    skills: Optional[str] = None
+    experience_years: int = 0
+    reliability_score: float = 100.0
+    acceptance_rate: float = 100.0
+    service_area: Optional[str] = None
+    available_slots: List[str] = []
+    is_available: bool = True
+
+
 # Booking Schemas
 class CreateBookingPayload(BaseModel):
     service_id: str
@@ -173,6 +187,7 @@ class CreateBookingPayload(BaseModel):
     notes: Optional[str] = None
     addon_ids: List[str] = []
     payment_method: str = "COD"
+    provider_id: Optional[str] = None
 
 
 class CancelBookingPayload(BaseModel):

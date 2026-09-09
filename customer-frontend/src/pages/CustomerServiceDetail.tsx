@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getServiceDetail, ServiceItem } from '../api/catalog';
+import { getServiceDetail, getServiceEligibleProviders, ServiceItem, EligibleProvider } from '../api/catalog';
 import { createBooking } from '../api/bookings';
 import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
@@ -27,7 +27,9 @@ import {
   BadgeCheck,
   Ban,
   Camera,
-  Tag
+  Tag,
+  Zap,
+  UserCheck
 } from 'lucide-react';
 
 export const CustomerServiceDetail: React.FC = () => {
@@ -39,6 +41,11 @@ export const CustomerServiceDetail: React.FC = () => {
   const [service, setService] = useState<ServiceItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Eligible Providers State
+  const [eligibleProviders, setEligibleProviders] = useState<EligibleProvider[]>([]);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>('');
+  const [providersLoading, setProvidersLoading] = useState<boolean>(false);
 
   // Booking Modal State
   const [showBookingModal, setShowBookingModal] = useState<boolean>(false);
@@ -63,6 +70,14 @@ export const CustomerServiceDetail: React.FC = () => {
         setService(data);
         if (data) {
           document.title = data.seo_title || `${data.name} | SmartServe`;
+          const isEmerg = Boolean(data.is_emergency || data.is_emergency_eligible);
+          if (!isEmerg) {
+            setProvidersLoading(true);
+            getServiceEligibleProviders(serviceId)
+              .then((provs) => setEligibleProviders(provs))
+              .catch((err) => console.error('Error fetching eligible providers', err))
+              .finally(() => setProvidersLoading(false));
+          }
         }
       } catch (err: any) {
         setError(err.response?.data?.detail || 'Failed to load service details from backend.');
@@ -94,6 +109,8 @@ export const CustomerServiceDetail: React.FC = () => {
     return total;
   };
 
+  const isEmergency = Boolean(service?.is_emergency || service?.is_emergency_eligible);
+
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -120,7 +137,8 @@ export const CustomerServiceDetail: React.FC = () => {
         address_line1: `${address}, ${city} - ${pincode}`,
         city,
         pincode,
-        notes: notes || 'Standard booking requested via Customer Web',
+        notes: notes || (isEmergency ? 'Emergency fast-track dispatch requested' : 'Standard booking requested via Customer Web'),
+        provider_id: !isEmergency && selectedProviderId ? selectedProviderId : undefined,
       });
 
       showToast(`Booking ${newBooking.booking_reference} confirmed!`, 'success');
@@ -716,10 +734,23 @@ export const CustomerServiceDetail: React.FC = () => {
             {service.is_active ? (
               <button
                 onClick={() => setShowBookingModal(true)}
-                className="w-full py-4 bg-[#2F5233] hover:bg-[#3D6B42] text-[#FAF7F0] font-bold rounded-full text-sm shadow-[0_4px_16px_rgba(47,82,51,0.2)] hover:shadow-md transition-all flex items-center justify-center gap-2"
+                className={`w-full py-4 font-bold rounded-full text-sm shadow-[0_4px_16px_rgba(47,82,51,0.2)] hover:shadow-md transition-all flex items-center justify-center gap-2 ${
+                  isEmergency
+                    ? 'bg-rose-700 hover:bg-rose-800 text-white'
+                    : 'bg-[#2F5233] hover:bg-[#3D6B42] text-[#FAF7F0]'
+                }`}
               >
-                <CalendarIcon className="w-4 h-4 text-[#C9A15A]" />
-                <span>Book This Service</span>
+                {isEmergency ? (
+                  <>
+                    <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
+                    <span>Request Emergency Dispatch</span>
+                  </>
+                ) : (
+                  <>
+                    <CalendarIcon className="w-4 h-4 text-[#C9A15A]" />
+                    <span>Book This Service</span>
+                  </>
+                )}
               </button>
             ) : (
               <button
@@ -749,7 +780,10 @@ export const CustomerServiceDetail: React.FC = () => {
             
             <div className="flex items-center justify-between border-b border-[#E5DEC9] pb-4">
               <div>
-                <h3 className="text-xl font-bold font-serif-display text-[#1F2A1E]">Schedule Service Booking</h3>
+                <h3 className="text-xl font-bold font-serif-display text-[#1F2A1E] flex items-center gap-2">
+                  {isEmergency && <Zap className="w-5 h-5 text-amber-600 animate-pulse" />}
+                  <span>{isEmergency ? 'Emergency Dispatch Booking' : 'Schedule Service Booking'}</span>
+                </h3>
                 <p className="text-xs text-[#1F2A1E]/60 font-medium">{service.name}</p>
               </div>
               <button
@@ -761,6 +795,98 @@ export const CustomerServiceDetail: React.FC = () => {
             </div>
 
             <form onSubmit={handleConfirmBooking} className="space-y-4">
+              {/* Emergency Callout vs Customer Provider Selection */}
+              {isEmergency ? (
+                <div className="p-4 bg-amber-50/95 border border-amber-300 rounded-2xl space-y-1.5 shadow-xs">
+                  <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase tracking-wider">
+                    <Zap className="w-4 h-4 text-amber-600" />
+                    <span>Emergency Priority Auto-Dispatch</span>
+                  </div>
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    Customer provider selection is bypassed for emergency hazard & safety services. SmartServe will automatically allocate and dispatch the nearest verified, background-checked professional to your location.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider flex items-center gap-1.5">
+                      <UserCheck className="w-3.5 h-3.5 text-[#2F5233]" />
+                      <span>Select Service Professional (Optional)</span>
+                    </label>
+                    <span className="text-[11px] text-[#1F2A1E]/60 font-medium">Customer Choice</span>
+                  </div>
+                  
+                  {providersLoading ? (
+                    <div className="flex items-center justify-center p-4 bg-white rounded-xl border border-[#E5DEC9]">
+                      <Loader2 className="w-4 h-4 animate-spin text-[#2F5233]" />
+                      <span className="ml-2 text-xs text-[#1F2A1E]/60">Checking available providers...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      <div 
+                        onClick={() => setSelectedProviderId('')}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                          selectedProviderId === '' 
+                            ? 'bg-[#2F5233]/10 border-[#2F5233] text-[#2F5233]' 
+                            : 'bg-white border-[#E5DEC9] hover:border-[#2F5233]/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Sparkles className="w-4 h-4 text-[#C9A15A]" />
+                          <div>
+                            <p className="text-xs font-bold text-[#1F2A1E]">SmartServe Auto-Match (Recommended)</p>
+                            <p className="text-[11px] text-[#1F2A1E]/60">Dispatch highest-rated available verified expert</p>
+                          </div>
+                        </div>
+                        <input 
+                          type="radio" 
+                          name="provider_choice" 
+                          checked={selectedProviderId === ''} 
+                          onChange={() => setSelectedProviderId('')}
+                          className="text-[#2F5233] focus:ring-[#2F5233]"
+                        />
+                      </div>
+
+                      {eligibleProviders.map((prov) => (
+                        <div
+                          key={prov.provider_id}
+                          onClick={() => setSelectedProviderId(prov.provider_id)}
+                          className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                            selectedProviderId === prov.provider_id
+                              ? 'bg-[#2F5233]/10 border-[#2F5233] text-[#2F5233]'
+                              : 'bg-white border-[#E5DEC9] hover:border-[#2F5233]/40'
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-bold text-[#1F2A1E]">{prov.full_name}</p>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                ⭐ {prov.reliability_score}% Reliability
+                              </span>
+                              <span className="text-[10px] text-[#1F2A1E]/50 font-medium">
+                                {prov.experience_years}y exp
+                              </span>
+                            </div>
+                            {prov.skills && (
+                              <p className="text-[11px] text-[#1F2A1E]/70 line-clamp-1">
+                                Skills: {prov.skills}
+                              </p>
+                            )}
+                          </div>
+                          <input
+                            type="radio"
+                            name="provider_choice"
+                            checked={selectedProviderId === prov.provider_id}
+                            onChange={() => setSelectedProviderId(prov.provider_id)}
+                            className="text-[#2F5233] focus:ring-[#2F5233]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">Preferred Date</label>
                 <input
@@ -848,12 +974,21 @@ export const CustomerServiceDetail: React.FC = () => {
                 <button
                   type="submit"
                   disabled={bookingLoading}
-                  className="w-1/2 py-3.5 bg-[#2F5233] hover:bg-[#3D6B42] text-[#FAF7F0] font-bold rounded-full text-xs uppercase tracking-wider shadow-sm transition-all disabled:opacity-70 flex items-center justify-center gap-2"
+                  className={`w-1/2 py-3.5 font-bold text-[#FAF7F0] rounded-full text-xs uppercase tracking-wider shadow-sm transition-all disabled:opacity-70 flex items-center justify-center gap-2 ${
+                    isEmergency 
+                      ? 'bg-rose-700 hover:bg-rose-800' 
+                      : 'bg-[#2F5233] hover:bg-[#3D6B42]'
+                  }`}
                 >
                   {bookingLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Booking...</span>
+                    </>
+                  ) : isEmergency ? (
+                    <>
+                      <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
+                      <span>Confirm Emergency Dispatch</span>
                     </>
                   ) : (
                     <span>Confirm Booking</span>

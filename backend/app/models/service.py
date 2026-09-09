@@ -36,6 +36,9 @@ class Service(Base):
     suggested_addons: Mapped[Optional[List[Dict[str, Any]]]] = mapped_column(
         JSONB, nullable=True
     )
+    is_emergency_eligible: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     is_active: Mapped[bool] = mapped_column(
         Boolean, default=True, nullable=False
     )

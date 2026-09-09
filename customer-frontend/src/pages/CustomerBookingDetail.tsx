@@ -12,7 +12,8 @@ import {
   Loader2, 
   UserCheck, 
   XCircle,
-  HelpCircle
+  HelpCircle,
+  Zap
 } from 'lucide-react';
 
 export const CustomerBookingDetail: React.FC = () => {
@@ -134,6 +135,24 @@ export const CustomerBookingDetail: React.FC = () => {
         {/* Content Body */}
         <div className="p-6 sm:p-8 space-y-8">
           
+          {/* Emergency Alert Banner */}
+          {Boolean(booking.emergency_flag) && (
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold flex-shrink-0">
+                  <Zap className="w-5 h-5 text-white animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-amber-950 text-sm">Emergency Fast-Track Service</h4>
+                  <p className="text-xs text-amber-800">Priority safety dispatch auto-assigned per SmartServe safety protocols.</p>
+                </div>
+              </div>
+              <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 bg-amber-500 text-white rounded-lg shadow-2xs">
+                Emergency Dispatch
+              </span>
+            </div>
+          )}
+
           {/* OTP Code Box */}
           {booking.otp_code && stLower !== 'completed' && stLower !== 'cancelled' && (
             <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-between gap-4">
