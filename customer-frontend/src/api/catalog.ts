@@ -72,6 +72,7 @@ export interface ServiceItem {
   rating?: number;
   review_count?: number;
   is_emergency?: boolean;
+  is_emergency_eligible?: boolean;
   image_url?: string;
   suggested_addons?: AddonItem[];
   process_steps?: ServiceProcessStep[];
@@ -95,6 +96,30 @@ export interface ServiceItem {
   updated_at?: string;
 }
 
+export interface ProviderSlotDetail {
+  slot_id: string;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  display_time: string;
+  is_available: boolean;
+  available_times: string[];
+}
+
+export interface EligibleProvider {
+  provider_id: string;
+  full_name: string;
+  category?: string;
+  skills?: string;
+  experience_years: number;
+  reliability_score: number;
+  acceptance_rate: number;
+  service_area?: string;
+  available_slots: string[];
+  structured_slots?: ProviderSlotDetail[];
+  is_available: boolean;
+}
+
 export const getCatalogCategories = async (): Promise<CategoryItem[]> => {
   const res = await apiClient.get<CategoryItem[]>('/customer/catalog/categories');
   return res.data;
@@ -112,5 +137,10 @@ export const getCatalogServices = async (params?: {
 
 export const getServiceDetail = async (serviceId: string): Promise<ServiceItem> => {
   const res = await apiClient.get<ServiceItem>(`/customer/catalog/services/${serviceId}`);
+  return res.data;
+};
+
+export const getServiceEligibleProviders = async (serviceId: string): Promise<EligibleProvider[]> => {
+  const res = await apiClient.get<EligibleProvider[]>(`/customer/catalog/services/${serviceId}/eligible-providers`);
   return res.data;
 };

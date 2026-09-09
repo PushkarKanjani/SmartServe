@@ -185,8 +185,9 @@ export const BookingDetailView: React.FC = () => {
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl md:text-3xl font-bold font-serif text-[#1F2A1E] tracking-tight font-mono">
-                Booking #{bookingData.id.substring(0, 8)}
+                BK-{bookingData.id.substring(0, 8).toUpperCase()}
               </h1>
+              <span className="text-[11px] font-mono text-slate-400">({bookingData.id})</span>
               <span className="px-3.5 py-1 bg-[#F2EDE1] text-[#2F5233] rounded-full text-xs font-bold border border-[#E5DEC9]">
                 {bookingData.status}
               </span>

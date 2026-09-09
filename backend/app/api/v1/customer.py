@@ -43,6 +43,7 @@ from app.schemas.customer_schemas import (
     SupportTicketDetail,
     MessageItem,
     SessionListItem,
+    EligibleProviderResponse,
 )
 
 router = APIRouter(prefix="/customer", tags=["Customer API"])
@@ -541,7 +542,8 @@ def parse_service_details(s) -> ServiceItem:
         duration_minutes=duration_minutes,
         rating=4.8,
         review_count=120,
-        is_emergency=False,
+        is_emergency=bool(getattr(s, "is_emergency_eligible", False)),
+        is_emergency_eligible=bool(getattr(s, "is_emergency_eligible", False)),
         is_active=s.is_active,
         image_url=resolved_image,
         suggested_addons=addons,
@@ -618,6 +620,19 @@ def get_catalog_service_by_id(service_id: str, db: Session = Depends(get_db)):
     return parse_service_details(s)
 
 
+# 13b. GET /customer/catalog/services/{service_id}/eligible-providers
+@router.get("/catalog/services/{service_id}/eligible-providers", response_model=List[EligibleProviderResponse])
+def get_service_eligible_providers(service_id: str, db: Session = Depends(get_db)):
+    from app.services.booking.eligibility_service import get_eligible_providers
+    try:
+        s_uuid = uuid.UUID(service_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid service ID format")
+
+    providers_data = get_eligible_providers(db, s_uuid)
+    return [EligibleProviderResponse(**p) for p in providers_data]
+
+
 
 # 14. GET /customer/bookings
 @router.get("/bookings", response_model=List[BookingDetail])
@@ -654,6 +669,11 @@ def get_customer_bookings(
             payment_method=b.payment_method,
             cancellation_reason=b.cancellation_reason,
             notes=b.notes,
+            provider_id=str(b.provider_id) if b.provider_id else None,
+            provider_name=b.provider.full_name if b.provider else None,
+            otp_code=b.otp_code,
+            emergency_flag=b.emergency_flag,
+            timeline=b.timeline,
             created_at=b.created_at,
         )
         for b in records
@@ -668,6 +688,8 @@ def create_customer_booking(
     db: Session = Depends(get_db),
 ):
     from app.models.service import Service
+    from app.services.booking.eligibility_service import find_eligible_provider, parse_scheduled_datetime
+
     db_service = None
     try:
         s_uuid = uuid.UUID(payload.service_id)
@@ -690,16 +712,43 @@ def create_customer_booking(
     total_price = base_price + addons_sum
     ref_code = f"BK-{uuid.uuid4().hex[:6].upper()}"
 
-    try:
-        combined_str = f"{payload.scheduled_date}T{payload.scheduled_time}".strip()
-        parsed_sched_time = datetime.fromisoformat(combined_str)
-    except Exception:
-        parsed_sched_time = datetime.utcnow()
+    parsed_sched_time = parse_scheduled_datetime(payload.scheduled_date, payload.scheduled_time)
+
+    is_emergency = bool(getattr(db_service, "is_emergency_eligible", False))
+
+    requested_prov_uuid = None
+    if not is_emergency and payload.provider_id:
+        try:
+            requested_prov_uuid = uuid.UUID(payload.provider_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid provider ID format")
+
+    # Determine eligible provider based on approved status, service association, availability, and requested slot
+    eligible_provider, matched_slot, eligibility_msg = find_eligible_provider(
+        db, srv_id, parsed_sched_time, requested_provider_id=requested_prov_uuid
+    )
+
+    if not eligible_provider:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unable to book service: {eligibility_msg}. Please select another date or time slot when a verified provider is available."
+        )
+
+    otp_code = str(uuid.uuid4().int)[:4]
+    event_title = "Emergency Fast-Track Dispatch" if is_emergency else "Booking Requested"
+    initial_event = {
+        "event": event_title,
+        "status": "Requested",
+        "provider_assigned": eligible_provider.full_name,
+        "provider_id": str(eligible_provider.user_id),
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 
     new_booking = Booking(
         id=uuid.uuid4(),
         booking_reference=ref_code,
         customer_id=current_customer.id,
+        provider_id=eligible_provider.user_id,
         service_id=srv_id,
         service_name=srv_name,
         category=srv_category,
@@ -713,8 +762,15 @@ def create_customer_booking(
         total_price=total_price,
         payment_method=payload.payment_method,
         notes=payload.notes,
+        otp_code=otp_code,
+        timeline=[initial_event],
+        emergency_flag="EMERGENCY" if is_emergency else None,
         created_at=datetime.utcnow(),
     )
+    if matched_slot:
+        matched_slot.status = "RESERVED"
+        db.add(matched_slot)
+
     current_customer.total_bookings = (current_customer.total_bookings or 0) + 1
     current_customer.lifetime_spent = (current_customer.lifetime_spent or Decimal("0.00")) + Decimal(str(total_price))
 
@@ -733,6 +789,8 @@ def create_customer_booking(
         id=str(new_booking.id),
         booking_reference=new_booking.booking_reference,
         customer_id=str(new_booking.customer_id),
+        provider_id=str(new_booking.provider_id) if new_booking.provider_id else None,
+        provider_name=eligible_provider.full_name if eligible_provider else None,
         service_id=str(new_booking.service_id),
         service_name=new_booking.service_name,
         category=new_booking.category,
@@ -746,6 +804,9 @@ def create_customer_booking(
         total_price=float(new_booking.total_price),
         payment_method=new_booking.payment_method,
         notes=new_booking.notes,
+        otp_code=new_booking.otp_code,
+        emergency_flag=new_booking.emergency_flag,
+        timeline=new_booking.timeline,
         created_at=new_booking.created_at,
     )
 
@@ -757,41 +818,28 @@ def get_booking_by_id(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db),
 ):
+    # Strict lookup: check if booking exists in DB first
     record = (
         db.query(Booking)
         .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
-        .filter(Booking.customer_id == current_customer.id)
         .first()
     )
     if not record:
-        record = (
-            db.query(Booking)
-            .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
-            .first()
-        )
-    if not record:
-        return BookingDetail(
-            id=booking_id,
-            booking_reference="BK-1001",
-            customer_id=str(current_customer.id),
-            service_id="srv-ac-101",
-            service_name="Split AC Foam Jet Deep Service",
-            category="AC & Appliance Repair",
-            status="CONFIRMED",
-            scheduled_date="2026-09-02",
-            scheduled_time="14:00",
-            address_line1="Flat 402, Green Valley Heights, Sector 62, Noida",
-            city="Noida",
-            pincode="201301",
-            total_price=699.0,
-            payment_method="COD",
-            created_at=datetime.utcnow(),
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    # Strict RBAC: Ensure requesting customer owns this booking
+    if record.customer_id != current_customer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot access bookings belonging to another customer",
         )
 
     return BookingDetail(
         id=str(record.id),
         booking_reference=record.booking_reference,
         customer_id=str(record.customer_id),
+        provider_id=str(record.provider_id) if record.provider_id else None,
+        provider_name=record.provider.full_name if record.provider else None,
         service_id=str(record.service_id),
         service_name=record.service_name,
         category=record.category,
@@ -806,6 +854,9 @@ def get_booking_by_id(
         payment_method=record.payment_method,
         cancellation_reason=record.cancellation_reason,
         notes=record.notes,
+        otp_code=record.otp_code,
+        emergency_flag=record.emergency_flag,
+        timeline=record.timeline,
         created_at=record.created_at,
     )
 
@@ -822,63 +873,52 @@ def cancel_booking(
     record = (
         db.query(Booking)
         .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
-        .filter(Booking.customer_id == current_customer.id)
         .first()
     )
     if not record:
-        record = (
-            db.query(Booking)
-            .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
-            .first()
-        )
-    if record:
-        record.status = "CANCELLED"
-        record.cancellation_reason = effective_reason
-        db.commit()
-        db.refresh(record)
-        
-        sched_time_str = (
-            record.scheduled_time.strftime("%H:%M:%S")
-            if hasattr(record.scheduled_time, "strftime")
-            else str(record.scheduled_time)
-        )
-        
-        return BookingDetail(
-            id=str(record.id),
-            booking_reference=record.booking_reference,
-            customer_id=str(record.customer_id),
-            service_id=str(record.service_id),
-            service_name=record.service_name,
-            category=record.category,
-            status=str(record.status.value if hasattr(record.status, "value") else record.status),
-            scheduled_date=record.scheduled_date,
-            scheduled_time=sched_time_str,
-            address_line1=record.address_line1,
-            city=record.city,
-            pincode=record.pincode,
-            total_price=float(record.total_price),
-            payment_method=record.payment_method,
-            cancellation_reason=effective_reason,
-            created_at=record.created_at,
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if record.customer_id != current_customer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot cancel a booking belonging to another customer",
         )
 
+    record.status = "CANCELLED"
+    record.cancellation_reason = effective_reason
+    db.commit()
+    db.refresh(record)
+    
+    sched_time_str = (
+        record.scheduled_time.strftime("%H:%M:%S")
+        if hasattr(record.scheduled_time, "strftime")
+        else str(record.scheduled_time)
+    )
+    
     return BookingDetail(
-        id=booking_id,
-        booking_reference="BK-1001",
-        customer_id=str(current_customer.id),
-        service_id="srv-ac-101",
-        service_name="Split AC Foam Jet Deep Service",
-        category="AC & Appliance Repair",
-        status="CANCELLED",
-        scheduled_date="2026-09-02",
-        scheduled_time="14:00",
-        address_line1="Flat 402, Green Valley Heights",
-        city="Noida",
-        pincode="201301",
-        total_price=699.0,
-        payment_method="COD",
-        cancellation_reason=payload.reason,
-        created_at=datetime.utcnow(),
+        id=str(record.id),
+        booking_reference=record.booking_reference,
+        customer_id=str(record.customer_id),
+        provider_id=str(record.provider_id) if record.provider_id else None,
+        provider_name=record.provider.full_name if record.provider else None,
+        service_id=str(record.service_id),
+        service_name=record.service_name,
+        category=record.category,
+        status=str(record.status.value if hasattr(record.status, "value") else record.status),
+        scheduled_date=record.scheduled_date,
+        scheduled_time=sched_time_str,
+        address_line1=record.address_line1,
+        landmark=record.landmark,
+        city=record.city,
+        pincode=record.pincode,
+        total_price=float(record.total_price),
+        payment_method=record.payment_method,
+        cancellation_reason=effective_reason,
+        notes=record.notes,
+        otp_code=record.otp_code,
+        emergency_flag=record.emergency_flag,
+        timeline=record.timeline,
+        created_at=record.created_at,
     )
 
 
@@ -890,9 +930,30 @@ def submit_booking_feedback(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db),
 ):
+    record = (
+        db.query(Booking)
+        .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
+        .first()
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if record.customer_id != current_customer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot submit feedback for a booking belonging to another customer",
+        )
+
+    b_status = str(record.status.value if hasattr(record.status, "value") else record.status).upper()
+    if b_status != "COMPLETED":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot submit feedback for booking in '{b_status}' status. Service must be Completed.",
+        )
+
     fb = BookingFeedback(
         id=uuid.uuid4(),
-        booking_id=uuid.UUID(booking_id) if len(booking_id) == 36 else uuid.uuid4(),
+        booking_id=record.id,
         customer_id=current_customer.id,
         rating=payload.rating,
         review_text=payload.review_text,
@@ -1125,13 +1186,18 @@ def get_customer_sessions(current_customer: Customer = Depends(get_current_custo
 
 # 25. POST /customer/sessions/{id}/revoke
 @router.post("/sessions/{session_id}/revoke")
-def revoke_session(session_id: str):
+def revoke_session(
+    session_id: str,
+    current_customer: Customer = Depends(get_current_customer),
+):
     return {"status": "ok", "message": f"Session {session_id} revoked"}
 
 
 # 26. POST /customer/sessions/revoke-all
 @router.post("/sessions/revoke-all")
-def revoke_all_sessions():
+def revoke_all_sessions(
+    current_customer: Customer = Depends(get_current_customer),
+):
     return {"status": "ok", "message": "All other sessions revoked"}
 
 

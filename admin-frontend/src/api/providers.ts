@@ -28,8 +28,75 @@ export interface ProviderItem {
     extracted_name?: string;
     is_duplicate: boolean;
     verification_status: string;
+    uploaded_at?: string;
+    verified_at?: string;
     ai_scan_signal?: any;
   }>;
+  services?: Array<{
+    id: string;
+    name: string;
+    category: string;
+    subcategory?: string;
+    base_price: number;
+    is_active: boolean;
+  }>;
+  audit_logs?: Array<{
+    id: string;
+    action: string;
+    actor_email: string;
+    actor_role: string;
+    created_at: string;
+    metadata_json?: any;
+  }>;
+  slots?: AdminProviderSlotItem[];
+  bookings?: AdminProviderBookingItem[];
+}
+
+export interface AdminSlotOccupiedBooking {
+  booking_id: string;
+  booking_reference: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone?: string;
+  service_id: string;
+  service_name: string;
+  status: string;
+  emergency_flag?: string | null;
+  scheduled_time: string;
+  total_price: number;
+}
+
+export interface AdminProviderSlotItem {
+  id: string;
+  provider_id: string;
+  provider_name: string;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  is_occupied: boolean;
+  occupied_booking?: AdminSlotOccupiedBooking | null;
+  created_at?: string | null;
+}
+
+export interface AdminProviderBookingItem {
+  id: string;
+  booking_reference: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone?: string;
+  provider_id?: string;
+  provider_name?: string;
+  service_id: string;
+  service_name: string;
+  status: string;
+  emergency_flag?: string | null;
+  scheduled_time: string;
+  requested_slot?: string;
+  address: string;
+  total_price: number;
+  payment_status: string;
+  created_at: string;
 }
 
 export interface ProviderRanking {
@@ -87,6 +154,18 @@ export const verifyProviderDocuments = async (
   return response.data;
 };
 
+export const requestDocumentReplacement = async (
+  providerUserId: string,
+  reason: string,
+  documentId?: string
+): Promise<{ status: string; verification_status: string; message: string }> => {
+  const response = await apiClient.post(`/admin/providers/${providerUserId}/request-replacement`, {
+    reason,
+    document_id: documentId,
+  });
+  return response.data;
+};
+
 export const updateProviderAccountStatus = async (
   providerUserId: string,
   isActive: boolean,
@@ -113,5 +192,15 @@ export const estimateProviderEta = async (
   query.append('distance_km', String(distanceKm));
 
   const response = await apiClient.get<ProviderEtaEstimate>(`/admin/providers/eta-estimate?${query.toString()}`);
+  return response.data;
+};
+
+export const getProviderSlots = async (providerUserId: string): Promise<AdminProviderSlotItem[]> => {
+  const response = await apiClient.get<AdminProviderSlotItem[]>(`/admin/providers/${providerUserId}/slots`);
+  return response.data;
+};
+
+export const getProviderBookings = async (providerUserId: string): Promise<AdminProviderBookingItem[]> => {
+  const response = await apiClient.get<AdminProviderBookingItem[]>(`/admin/providers/${providerUserId}/bookings`);
   return response.data;
 };

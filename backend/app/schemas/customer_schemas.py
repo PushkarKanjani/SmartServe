@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -138,6 +138,7 @@ class ServiceItem(BaseModel):
     rating: float = 4.8
     review_count: int = 120
     is_emergency: bool = False
+    is_emergency_eligible: bool = False
     is_active: bool = True
     image_url: Optional[str] = None
     suggested_addons: List[AddonItem] = []
@@ -161,6 +162,30 @@ class ServiceItem(BaseModel):
     updated_at: Optional[datetime] = None
 
 
+class ProviderSlotDetail(BaseModel):
+    slot_id: str
+    slot_date: str
+    start_time: str
+    end_time: str
+    display_time: str
+    is_available: bool = True
+    available_times: List[str] = []
+
+
+class EligibleProviderResponse(BaseModel):
+    provider_id: str
+    full_name: str
+    category: Optional[str] = None
+    skills: Optional[str] = None
+    experience_years: int = 0
+    reliability_score: float = 100.0
+    acceptance_rate: float = 100.0
+    service_area: Optional[str] = None
+    available_slots: List[str] = []
+    structured_slots: List[ProviderSlotDetail] = []
+    is_available: bool = True
+
+
 # Booking Schemas
 class CreateBookingPayload(BaseModel):
     service_id: str
@@ -173,6 +198,7 @@ class CreateBookingPayload(BaseModel):
     notes: Optional[str] = None
     addon_ids: List[str] = []
     payment_method: str = "COD"
+    provider_id: Optional[str] = None
 
 
 class CancelBookingPayload(BaseModel):
@@ -204,6 +230,11 @@ class BookingDetail(BaseModel):
     payment_method: str
     cancellation_reason: Optional[str] = None
     notes: Optional[str] = None
+    provider_id: Optional[str] = None
+    provider_name: Optional[str] = None
+    otp_code: Optional[str] = None
+    emergency_flag: Optional[str] = None
+    timeline: Optional[List[Dict[str, Any]]] = None
     created_at: datetime
 
 

@@ -4,6 +4,7 @@ import { CustomerLoginPayload, CustomerSessionResponse, loginCustomer, getCurren
 interface AuthContextType {
   user: CustomerSessionResponse | null;
   token: string | null;
+  isAuthenticated: boolean;
   loading: boolean;
   login: (credentials: CustomerLoginPayload) => Promise<void>;
   logout: () => Promise<void>;
@@ -73,7 +74,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, loading, login, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

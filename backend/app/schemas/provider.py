@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, date, time
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field, ConfigDict
 
 
@@ -99,6 +99,11 @@ class AvailabilityResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class AvailabilityUpdate(BaseModel):
+    status: Optional[str] = Field(None, description="Updated status: FREE or UNAVAILABLE")
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+
 
 # ==========================================
 # PROVIDER SERVICE SCHEMAS
@@ -127,3 +132,111 @@ class ProviderServiceResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProviderServiceCatalogResponse(BaseModel):
+    id: uuid.UUID
+    provider_id: uuid.UUID
+    service_id: uuid.UUID
+    price: Decimal
+    duration_minutes: int
+    active: bool
+    service_name: str
+    category: str
+    subcategory: str
+    base_price: Decimal
+    is_emergency_eligible: bool
+    distinct_features: Optional[Any] = None
+    suggested_addons: Optional[Any] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProviderDashboardStatsResponse(BaseModel):
+    today_bookings_count: int
+    active_jobs_count: int
+    completed_jobs_count: int
+    pending_requests_count: int
+    total_earnings: Decimal
+    pipeline_count: int
+    urgent_alerts_count: int
+    recent_activity: List[Dict[str, Any]]
+
+
+class ProviderProfileTrustResponse(BaseModel):
+    user_id: uuid.UUID
+    full_name: str
+    email: str
+    phone: Optional[str] = None
+    photo_url: Optional[str] = None
+    category: Optional[str] = None
+    skills: Optional[str] = None
+    experience_years: int
+    base_price: Decimal
+    service_area: Optional[str] = None
+    is_verified: bool
+    reliability_score: Decimal
+    acceptance_rate: Decimal
+    cancellation_rate: Decimal
+    no_show_rate: Decimal
+    on_time_rate: Decimal
+    response_time_score: Decimal
+    completed_jobs_count: int
+    certificates_count: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ==========================================
+# PROVIDER BOOKING SCHEMAS
+# ==========================================
+
+class ProviderBookingResponse(BaseModel):
+    id: uuid.UUID
+    booking_reference: str
+    customer_id: uuid.UUID
+    customer_name: str
+    customer_phone: Optional[str] = None
+    service_id: uuid.UUID
+    service_name: str
+    category: str
+    status: str
+    payment_status: str
+    scheduled_time: datetime
+    scheduled_date: str
+    address: str
+    total_price: Decimal
+    otp_code: Optional[str] = None
+    emergency_flag: Optional[str] = None
+    timeline: Optional[List[Dict[str, Any]]] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class BookingStatusUpdatePayload(BaseModel):
+    status: str = Field(..., description="Target booking status (Accepted, Rejected, Started, Completed)")
+    reason: Optional[str] = Field(None, description="Reason for status change")
+    otp_code: Optional[str] = Field(None, description="Customer OTP verification code")
+
+
+class BookingRejectPayload(BaseModel):
+    reason: Optional[str] = Field(None, description="Reason for declining the booking request")
+
+
+from app.schemas.support import TicketMessageResponse
+
+class ProviderTicketCreateRequest(BaseModel):
+    subject: str
+    description: str
+    booking_id: Optional[str] = None
+    category: Optional[str] = "General Inquiry"
+    priority: str = "Medium"
+    image_evidence_url: Optional[str] = None
+
+
+class BookingCompletePayload(BaseModel):
+    otp_code: Optional[str] = Field(None, description="Customer OTP verification code")

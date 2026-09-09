@@ -16,7 +16,7 @@ class ServiceBase(BaseModel):
     base_price: float
     max_demand_increase: float = 0.0
     max_discount: float = 0.0
-    distinct_features: Optional[List[str]] = None
+    distinct_features: Optional[Any] = None
     suggested_addons: Optional[List[Any]] = None
     is_active: bool = True
 
@@ -32,7 +32,7 @@ class ServiceUpdate(BaseModel):
     base_price: Optional[float] = None
     max_demand_increase: Optional[float] = None
     max_discount: Optional[float] = None
-    distinct_features: Optional[List[str]] = None
+    distinct_features: Optional[Any] = None
     suggested_addons: Optional[List[Any]] = None
     is_active: Optional[bool] = None
 
