@@ -147,7 +147,8 @@ class SupportTicket(Base):
     __tablename__ = "support_tickets"
 
     id = Column(GUID(), primary_key=True, default=uuid.uuid4)
-    customer_id = Column(GUID(), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
+    customer_id = Column(GUID(), ForeignKey("customers.id", ondelete="CASCADE"), nullable=True)
+    provider_id = Column(GUID(), ForeignKey("providers.user_id", ondelete="CASCADE"), nullable=True)
     booking_id = Column(GUID(), ForeignKey("bookings.id", ondelete="SET NULL"), nullable=True)
     assigned_admin_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     subject = Column(String(255), nullable=False)
@@ -161,6 +162,7 @@ class SupportTicket(Base):
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     customer = relationship("Customer", back_populates="tickets", foreign_keys=[customer_id])
+    provider = relationship("Provider", foreign_keys=[provider_id])
     booking = relationship("Booking", back_populates="tickets", foreign_keys=[booking_id])
     assigned_admin = relationship("User", foreign_keys=[assigned_admin_id])
     messages = relationship("TicketMessage", back_populates="ticket", cascade="all, delete-orphan")

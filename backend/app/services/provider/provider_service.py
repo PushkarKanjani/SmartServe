@@ -439,3 +439,62 @@ class ProviderServiceDomain:
             urgent_alerts_count=urgent_alerts,
             recent_activity=recent_activity,
         )
+
+    # ==========================================
+    # SUPPORT TICKETS
+    # ==========================================
+
+    def create_support_ticket(self, user: AuthUser, data: "ProviderTicketCreateRequest") -> "SupportTicket":
+        from app.models.customer import SupportTicket
+        self.repo.get_or_create(user_id=user.id, default_name=user.full_name)
+        
+        ticket = SupportTicket(
+            provider_id=user.id,
+            subject=data.subject,
+            description=data.description,
+            booking_id=data.booking_id if data.booking_id else None,
+            category=data.category,
+            priority=data.priority if data.priority else "Medium",
+            status="Open",
+            image_evidence_url=data.image_evidence_url,
+        )
+        self.repo.db.add(ticket)
+        self.repo.db.commit()
+        self.repo.db.refresh(ticket)
+        return ticket
+
+    def list_my_tickets(self, user: AuthUser) -> List["SupportTicket"]:
+        from app.models.customer import SupportTicket
+        return (
+            self.repo.db.query(SupportTicket)
+            .filter(SupportTicket.provider_id == user.id)
+            .order_by(SupportTicket.updated_at.desc())
+            .all()
+        )
+
+    def get_my_ticket(self, user: AuthUser, ticket_id: uuid.UUID) -> "SupportTicket":
+        from app.models.customer import SupportTicket
+        ticket = self.repo.db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+        if not ticket:
+            raise HTTPException(status_code=404, detail="Support ticket not found")
+        if ticket.provider_id != user.id:
+            raise HTTPException(status_code=403, detail="Forbidden: Cannot access another provider's ticket")
+        return ticket
+
+    def reply_to_ticket(self, user: AuthUser, ticket_id: uuid.UUID, message_text: str, attachment_url: str = None) -> "TicketMessage":
+        from app.models.customer import TicketMessage
+        ticket = self.get_my_ticket(user, ticket_id)
+        
+        message = TicketMessage(
+            ticket_id=ticket.id,
+            sender_id=user.id,
+            sender_role="provider",
+            sender_name=user.full_name,
+            message_text=message_text,
+            attachment_url=attachment_url
+        )
+        self.repo.db.add(message)
+        ticket.updated_at = datetime.utcnow()
+        self.repo.db.commit()
+        self.repo.db.refresh(message)
+        return message

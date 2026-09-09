@@ -22,13 +22,15 @@ class TicketMessageResponse(BaseModel):
     id: str
     sender_id: str
     sender_role: str
+    sender_name: Optional[str] = None
     message_text: str
     attachment_url: Optional[str] = None
     created_at: str
 
 class SupportTicketResponse(BaseModel):
     id: str
-    customer_id: str
+    customer_id: Optional[str] = None
+    provider_id: Optional[str] = None
     customer_name: Optional[str] = "Customer"
     customer_email: Optional[str] = "customer@example.com"
     customer_phone: Optional[str] = "+91 98765 43210"
@@ -36,6 +38,7 @@ class SupportTicketResponse(BaseModel):
     booking_id: Optional[str] = None
     subject: str
     description: str
+    category: Optional[str] = None
     priority: str
     status: str
     escalated_to_admin: bool

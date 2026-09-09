@@ -103,39 +103,8 @@ export const ProviderDashboardView: React.FC = () => {
   const isVerified = profile?.is_verified;
 
   return (
-    <div className="min-h-screen bg-[#FAF7F0]">
-      {/* Top Navbar */}
-      <header className="bg-white border-b border-[#2F5233]/10 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#2F5233] text-white flex items-center justify-center font-bold text-lg">
-            S
-          </div>
-          <div>
-            <span className="font-serif-display text-lg font-bold text-[#1F2A1E]">SmartServe</span>
-            <span className="text-[10px] ml-2 px-2 py-0.5 rounded-md bg-[#FAF7F0] text-[#7A9E6E] font-semibold uppercase">
-              Partner Workspace
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <div className="text-xs font-bold text-[#1F2A1E]">{profile?.full_name || user?.email}</div>
-            <div className="text-[11px] text-[#1F2A1E]/60">{profile?.category || 'Service Partner'}</div>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 rounded-xl text-slate-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-            title="Sign Out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="max-w-5xl mx-auto py-8 px-4 sm:px-6">
-        {/* Verification Status Banner */}
+    <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6">
+      {/* Verification Status Banner */}
         {!isVerified ? (
           <div className="mb-8 p-6 rounded-3xl bg-amber-50/80 border border-amber-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
             <div className="flex items-start gap-4">
@@ -483,7 +452,6 @@ export const ProviderDashboardView: React.FC = () => {
             )}
           </div>
         </div>
-      </main>
     </div>
   );
 };

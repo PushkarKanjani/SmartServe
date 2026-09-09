@@ -26,6 +26,12 @@ from app.schemas.provider import (
     BookingStatusUpdatePayload,
     BookingRejectPayload,
     BookingCompletePayload,
+    ProviderTicketCreateRequest,
+)
+from app.schemas.support import (
+    SupportTicketResponse,
+    TicketReplyRequest,
+    TicketMessageResponse,
 )
 
 router = APIRouter(tags=["Providers & Verification"])
@@ -510,3 +516,105 @@ def update_booking_status(
         otp_code=payload.otp_code,
     )
     return _serialize_booking_response(updated)
+
+
+# ==========================================
+# SUPPORT TICKETS
+# ==========================================
+
+def _serialize_ticket_response(t) -> SupportTicketResponse:
+    from app.schemas.support import TicketMessageResponse
+    msgs = [
+        TicketMessageResponse(
+            id=str(m.id),
+            sender_id=str(m.sender_id),
+            sender_role=m.sender_role,
+            sender_name=getattr(m, "sender_name", None),
+            message_text=m.message_text,
+            attachment_url=m.attachment_url,
+            created_at=m.created_at.isoformat() if m.created_at else ""
+        ) for m in getattr(t, "messages", [])
+    ]
+    msgs.sort(key=lambda m: m.created_at)
+    
+    return SupportTicketResponse(
+        id=str(t.id),
+        customer_id=str(t.customer_id) if getattr(t, "customer_id", None) else None,
+        provider_id=str(t.provider_id) if getattr(t, "provider_id", None) else None,
+        customer_name="Provider" if getattr(t, "provider_id", None) else "Customer",
+        subject=t.subject,
+        description=t.description,
+        category=getattr(t, "category", None),
+        priority=t.priority.value if hasattr(t.priority, "value") else str(t.priority),
+        status=t.status.value if hasattr(t.status, "value") else str(t.status),
+        escalated_to_admin=t.escalated_to_admin,
+        booking_id=str(t.booking_id) if t.booking_id else None,
+        image_evidence_url=t.image_evidence_url,
+        created_at=t.created_at.isoformat() if t.created_at else "",
+        updated_at=t.updated_at.isoformat() if t.updated_at else "",
+        messages=msgs
+    )
+
+@router.post(
+    "/providers/me/tickets",
+    response_model=SupportTicketResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a support ticket as a provider",
+)
+def create_my_ticket(
+    data: ProviderTicketCreateRequest,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    ticket = service.create_support_ticket(current_user, data)
+    return _serialize_ticket_response(ticket)
+
+
+@router.get(
+    "/providers/me/tickets",
+    response_model=List[SupportTicketResponse],
+    summary="List all support tickets created by the current provider",
+)
+def list_my_tickets(
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    tickets = service.list_my_tickets(current_user)
+    return [_serialize_ticket_response(t) for t in tickets]
+
+
+@router.get(
+    "/providers/me/tickets/{ticket_id}",
+    response_model=SupportTicketResponse,
+    summary="Get single support ticket with messages",
+)
+def get_my_ticket(
+    ticket_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    ticket = service.get_my_ticket(current_user, ticket_id)
+    return _serialize_ticket_response(ticket)
+
+
+@router.post(
+    "/providers/me/tickets/{ticket_id}/reply",
+    response_model=TicketMessageResponse,
+    summary="Reply to an existing support ticket",
+)
+def reply_my_ticket(
+    ticket_id: uuid.UUID,
+    payload: TicketReplyRequest,
+    current_user: AuthUser = Depends(require_provider),
+    service: ProviderServiceDomain = Depends(get_service_domain),
+):
+    msg = service.reply_to_ticket(current_user, ticket_id, payload.message_text, payload.attachment_url)
+    return TicketMessageResponse(
+        id=str(msg.id),
+        sender_id=str(msg.sender_id),
+        sender_role=msg.sender_role,
+        message_text=msg.message_text,
+        attachment_url=msg.attachment_url,
+        created_at=msg.created_at.isoformat() if msg.created_at else ""
+    )
+
