@@ -16,8 +16,11 @@ import {
   X,
   RefreshCw,
   AlertTriangle,
-  Zap
+  Zap,
+  MessageCircle
 } from 'lucide-react';
+import { getBookingConversation } from '../../../api/support';
+import type { SupportTicketItem } from '../../../api/support';
 import { 
   getBookingDetail, 
   updateBookingStatus, 
@@ -51,6 +54,12 @@ export const BookingDetailView: React.FC = () => {
   const [reassignReason, setReassignReason] = useState<string>('Operational optimization dispatch');
   const [reassignLoading, setReassignLoading] = useState<boolean>(false);
 
+  // Chat Audit Modal State
+  const [auditModalOpen, setAuditModalOpen] = useState<boolean>(false);
+  const [auditLoading, setAuditLoading] = useState<boolean>(false);
+  const [auditTicket, setAuditTicket] = useState<SupportTicketItem | null>(null);
+  const [auditError, setAuditError] = useState<string | null>(null);
+
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null);
 
   const canManageBookings = hasPermission(adminSession, 'bookings:manage');
@@ -79,6 +88,9 @@ export const BookingDetailView: React.FC = () => {
 
   useEffect(() => {
     fetchBookingProfile();
+    const interval = setInterval(() => {
+      fetchBookingProfile();
+    }, 5000);
 
     getAuthenticatedAdmin().then((s) => setAdminSession(s)).catch(() => {});
 
@@ -86,6 +98,8 @@ export const BookingDetailView: React.FC = () => {
       setProviderOptions(provs.map((p) => ({ id: p.user_id, name: p.full_name })));
       if (provs.length > 0) setSelectedProviderId(provs[0].user_id);
     }).catch(() => {});
+
+    return () => clearInterval(interval);
   }, [bookingId]);
 
   const handleTransitionSubmit = async (e: React.FormEvent) => {
@@ -118,6 +132,21 @@ export const BookingDetailView: React.FC = () => {
       showToast(err.response?.data?.detail || 'Provider reassignment failed.', 'error');
     } finally {
       setReassignLoading(false);
+    }
+  };
+
+  const handleOpenAuditModal = async () => {
+    if (!bookingData) return;
+    setAuditModalOpen(true);
+    setAuditLoading(true);
+    setAuditError(null);
+    try {
+      const data = await getBookingConversation(bookingData.id);
+      setAuditTicket(data);
+    } catch (err: any) {
+      setAuditError(err.response?.data?.detail || 'No chat found or failed to load conversation.');
+    } finally {
+      setAuditLoading(false);
     }
   };
 
@@ -348,6 +377,15 @@ export const BookingDetailView: React.FC = () => {
                     Reassignment requires Operations Admin or Super Admin permission.
                   </p>
                 )}
+
+                <button
+                  type="button"
+                  onClick={handleOpenAuditModal}
+                  className="w-full mt-3 py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs rounded-xl border border-purple-200 transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <MessageCircle className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Audit Customer ↔ Provider Chat</span>
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
@@ -569,6 +607,96 @@ export const BookingDetailView: React.FC = () => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Customer ↔ Provider Chat Audit Modal */}
+      {auditModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl border border-[#E5DEC9] overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in">
+            {/* Header */}
+            <div className="p-6 border-b border-[#E5DEC9] bg-[#FAF7F0] flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-100 text-purple-800 border border-purple-200">
+                    Read-Only Audit Mode
+                  </span>
+                  <span className="text-xs text-slate-500 font-mono">#{bookingData.id.substring(0, 8)}</span>
+                </div>
+                <h3 className="text-lg font-bold font-serif text-[#1F2A1E] mt-1">Customer ↔ Provider Conversation</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Customer: <strong>{bookingData.customer_name || 'Customer'}</strong> • Provider: <strong>{bookingData.provider_name || 'Provider'}</strong>
+                </p>
+              </div>
+              <button onClick={() => setAuditModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Conversation Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+              {auditLoading ? (
+                <div className="flex items-center justify-center py-12 gap-3">
+                  <Loader2 className="w-6 h-6 animate-spin text-[#2F5233]" />
+                  <span className="text-xs font-semibold text-slate-600">Loading audit log...</span>
+                </div>
+              ) : auditError ? (
+                <div className="p-8 text-center text-xs text-slate-500">
+                  <MessageCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p>{auditError}</p>
+                </div>
+              ) : !auditTicket?.messages || auditTicket.messages.length === 0 ? (
+                <div className="p-8 text-center text-xs text-slate-400">
+                  <MessageCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p>No messages exchanged between customer and provider yet.</p>
+                </div>
+              ) : (
+                auditTicket.messages.map((msg) => {
+                  const role = (msg.sender_role || '').toLowerCase().trim();
+                  const isProvider = role === 'provider';
+                  const isCustomer = role === 'customer';
+                  return (
+                    <div
+                      key={msg.id}
+                      className={`flex flex-col max-w-md ${isProvider ? 'ml-auto items-end' : 'items-start'}`}
+                    >
+                      <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mb-1 px-1 ${
+                        isProvider ? 'text-emerald-700 flex-row-reverse' : 'text-blue-700'
+                      }`}>
+                        <span>{msg.sender_name || (isProvider ? 'Provider' : isCustomer ? 'Customer' : 'User')}</span>
+                        <span className="opacity-60 text-[9px]">({role})</span>
+                      </div>
+                      <div className={`px-4 py-3 rounded-2xl text-xs font-medium leading-relaxed shadow-2xs ${
+                        isProvider
+                          ? 'bg-[#2F5233] text-white rounded-tr-xs'
+                          : 'bg-white text-slate-900 border border-slate-200 rounded-tl-xs'
+                      }`}>
+                        {msg.message_text}
+                      </div>
+                      <span className="text-[9px] text-slate-400 mt-1 px-1 font-medium">
+                        {new Date(msg.created_at).toLocaleString('en-IN', {
+                          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-[#E5DEC9] bg-[#FAF7F0] flex items-center justify-between text-xs">
+              <span className="text-slate-500 font-medium">
+                Audited by Super Admin: <strong>{adminSession?.email || 'Admin'}</strong>
+              </span>
+              <button
+                onClick={() => setAuditModalOpen(false)}
+                className="px-4 py-2 bg-[#2F5233] text-white font-bold rounded-xl text-xs hover:bg-[#3D6B42]"
+              >
+                Close Audit View
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -311,31 +311,43 @@ export const SupportDetailView: React.FC = () => {
               ) : (
                 <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2">
                   {ticketData.messages.map((msg, idx) => {
-                    const isBot = msg.sender_role === 'AI_AGENT' || msg.sender_role === 'bot';
-                    const isAdmin = msg.sender_role === 'admin' || msg.sender_role === 'SUPER_ADMIN';
+                    const role = (msg.sender_role || '').toLowerCase().trim();
+                    const isBot = role === 'ai_agent' || role === 'bot';
+                    const isAdmin = role === 'admin' || role === 'super_admin';
+                    const isProvider = role === 'provider';
+                    const isCustomer = role === 'customer';
+                    const isBookingChat = ticketData.category === 'BOOKING_CHAT' || ticketData.category === 'Booking Chat';
 
                     return (
                       <div
                         key={msg.id || idx}
-                        className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
+                        className={`flex flex-col ${isAdmin ? 'items-end' : isProvider && isBookingChat ? 'items-end' : 'items-start'}`}
                       >
                         <div
                           className={`max-w-md p-4 rounded-3xl text-xs space-y-1 ${
                             isAdmin
                               ? 'bg-[#2F5233] text-white rounded-br-none'
+                              : isProvider
+                              ? 'bg-emerald-800 text-white rounded-br-none'
                               : isBot
                               ? 'bg-purple-50 text-purple-900 border border-purple-200 rounded-bl-none'
                               : 'bg-[#F2EDE1] text-slate-800 rounded-bl-none'
                           }`}
                         >
                           <div className="flex items-center justify-between gap-4 font-bold text-[11px]">
-                            <span>{isAdmin ? 'SmartServe Support Admin' : 'Customer'}</span>
-                            <span className="opacity-75">{msg.sender_role}</span>
+                            <span>
+                              {isAdmin
+                                ? 'SmartServe Support Admin'
+                                : isProvider
+                                ? (msg.sender_name || 'Service Provider')
+                                : (msg.sender_name || 'Customer')}
+                            </span>
+                            <span className="opacity-75 uppercase text-[10px] tracking-wider">{role}</span>
                           </div>
                           <p className="text-xs font-medium leading-relaxed mt-1">{msg.message_text}</p>
                         </div>
                         <span className="text-[10px] text-slate-400 font-semibold mt-1 px-1">
-                          {msg.created_at ? new Date(msg.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : ''}
+                          {msg.created_at ? new Date(msg.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
                     );
@@ -344,31 +356,43 @@ export const SupportDetailView: React.FC = () => {
               )}
             </div>
 
-            {/* Admin Reply Box */}
-            <form onSubmit={handleReplySubmit} className="pt-4 border-t border-[#E5DEC9]/60 space-y-3">
-              <label className="block text-xs font-bold text-slate-700">
-                Admin Response {!canManageSupport && '(Read Only Mode)'}
-              </label>
-              <div className="relative">
-                <textarea
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  disabled={!canManageSupport}
-                  placeholder={canManageSupport ? "Type official support reply to customer..." : "Replying to support tickets requires 'support:manage' permission."}
-                  className="w-full bg-[#FAF7F0] border border-[#E5DEC9] rounded-2xl p-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] font-medium disabled:opacity-75 disabled:cursor-not-allowed"
-                  rows={3}
-                  required
-                />
-                <button
-                  type="submit"
-                  disabled={!canManageSupport || replyLoading || !replyText.trim()}
-                  className="absolute right-3 bottom-3.5 p-2.5 bg-[#2F5233] hover:bg-[#3D6B42] disabled:bg-slate-300 text-white rounded-xl shadow-xs transition-colors disabled:cursor-not-allowed"
-                  title={canManageSupport ? "Send Reply" : "Replying requires 'support:manage' permission"}
-                >
-                  {replyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </button>
+            {/* Admin Reply Box OR Read-Only Audit Notice */}
+            {ticketData.category === 'BOOKING_CHAT' ? (
+              <div className="pt-4 border-t border-[#E5DEC9]/60 p-4 bg-purple-50 rounded-2xl border border-purple-200 text-purple-950 text-xs">
+                <div className="flex items-center gap-2 font-bold mb-1">
+                  <CheckCircle2 className="w-4 h-4 text-purple-600" />
+                  <span>Customer ↔ Provider Conversation Audit (Read-Only)</span>
+                </div>
+                <p className="text-[11px] text-purple-800 font-medium">
+                  This conversation is between the customer and the assigned provider for booking #{ticketData.booking_id?.substring(0, 8)}. Admins have read-only visibility for monitoring and quality compliance.
+                </p>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={handleReplySubmit} className="pt-4 border-t border-[#E5DEC9]/60 space-y-3">
+                <label className="block text-xs font-bold text-slate-700">
+                  Admin Response {!canManageSupport && '(Read Only Mode)'}
+                </label>
+                <div className="relative">
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    disabled={!canManageSupport}
+                    placeholder={canManageSupport ? "Type official support reply..." : "Replying to support tickets requires 'support:manage' permission."}
+                    className="w-full bg-[#FAF7F0] border border-[#E5DEC9] rounded-2xl p-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] font-medium disabled:opacity-75 disabled:cursor-not-allowed"
+                    rows={3}
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={!canManageSupport || replyLoading || !replyText.trim()}
+                    className="absolute right-3 bottom-3.5 p-2.5 bg-[#2F5233] hover:bg-[#3D6B42] disabled:bg-slate-300 text-white rounded-xl shadow-xs transition-colors disabled:cursor-not-allowed"
+                    title={canManageSupport ? "Send Reply" : "Replying requires 'support:manage' permission"}
+                  >
+                    {replyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
 

@@ -32,12 +32,15 @@ export const SupportListView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [escalatedFilter, setEscalatedFilter] = useState<string>('');
+  const [ticketTypeFilter, setTicketTypeFilter] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
   const fetchTicketsData = async () => {
     setLoading(true);
     try {
-      const ticketsData = await getSupportTicketsList();
+      const ticketsData = await getSupportTicketsList({
+        ticket_type: ticketTypeFilter || undefined
+      });
       setTickets(ticketsData);
       const metricsData = await getSupportDashboardMetrics();
       setMetrics(metricsData);
@@ -50,7 +53,7 @@ export const SupportListView: React.FC = () => {
 
   useEffect(() => {
     fetchTicketsData();
-  }, []);
+  }, [ticketTypeFilter]);
 
   const filteredTickets = useMemo(() => {
     return tickets.filter((t) => {
@@ -147,6 +150,28 @@ export const SupportListView: React.FC = () => {
             <span className="text-[11px] font-bold text-slate-400 block uppercase">Resolved</span>
             <span className="text-xl md:text-2xl font-extrabold text-emerald-600 mt-1 block">{metrics.resolved}</span>
           </div>
+        </div>
+
+        {/* Ticket Type Tabs */}
+        <div className="flex flex-wrap gap-2 pt-2 border-t border-[#E5DEC9]/60">
+          {[
+            { id: '', label: 'All Tickets' },
+            { id: 'customer_admin', label: 'Customer Support (C ↔ A)' },
+            { id: 'provider_admin', label: 'Provider Support (P ↔ A)' },
+            { id: 'customer_provider', label: 'Booking Chats (C ↔ P Audit)' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setTicketTypeFilter(tab.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                ticketTypeFilter === tab.id
+                  ? 'bg-[#2F5233] text-white shadow-xs'
+                  : 'bg-[#FAF7F0] text-slate-600 hover:bg-[#F2EDE1] border border-[#E5DEC9]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -255,7 +280,22 @@ export const SupportListView: React.FC = () => {
                     </td>
 
                     <td className="py-4 px-4 font-bold text-slate-800">
-                      {t.customer_name || 'Customer'}
+                      <div>
+                        <span>{t.customer_name || (t.provider_id ? 'Provider' : 'Customer')}</span>
+                        {t.category === 'BOOKING_CHAT' ? (
+                          <span className="block text-[10px] text-purple-700 font-bold uppercase tracking-wider">
+                            Booking Chat (C ↔ P)
+                          </span>
+                        ) : t.provider_id && !t.customer_id ? (
+                          <span className="block text-[10px] text-emerald-700 font-bold uppercase tracking-wider">
+                            Provider Support
+                          </span>
+                        ) : (
+                          <span className="block text-[10px] text-blue-700 font-bold uppercase tracking-wider">
+                            Customer Support
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="py-4 px-4">

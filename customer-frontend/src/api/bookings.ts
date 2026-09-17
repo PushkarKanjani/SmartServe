@@ -30,6 +30,7 @@ export interface BookingDetail {
   total_price: number;
   total_amount?: number;
   otp_code?: string;
+  provider_id?: string;
   provider_name?: string;
   emergency_flag?: string;
   created_at: string;

@@ -169,7 +169,7 @@ def find_eligible_provider(
             Availability.slot_date == req_date,
             Availability.start_time <= req_time,
             Availability.end_time >= req_time,
-            Availability.status == "FREE"
+            func.upper(Availability.status) == "FREE"
         )
         .all()
     )
@@ -276,7 +276,7 @@ def get_eligible_providers(
             db.query(Availability)
             .filter(
                 Availability.provider_id == p.user_id,
-                Availability.status == "FREE",
+                func.upper(Availability.status) == "FREE",
                 Availability.slot_date >= today,
             )
             .order_by(Availability.slot_date.asc(), Availability.start_time.asc())

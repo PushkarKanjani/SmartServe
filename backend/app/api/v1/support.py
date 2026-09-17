@@ -46,13 +46,29 @@ def list_support_tickets(
     priority_filter: Optional[str] = None,
     escalated_only: Optional[bool] = None,
     search: Optional[str] = None,
+    ticket_type: Optional[str] = None,  # "customer_admin", "provider_admin", "customer_provider"
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
-    """List support tickets filtered by status, priority, escalation, or search."""
+    """List support tickets filtered by status, priority, escalation, or search.
+    
+    ticket_type values:
+    - "customer_admin": customer tickets (customer_id set, provider_id null)
+    - "provider_admin": provider tickets (provider_id set, customer_id null)
+    - "customer_provider": booking chats (both customer_id and provider_id set)
+    - None/omitted: all tickets
+    """
     query = db.query(SupportTicket)
+
+    # Apply ticket_type filter
+    if ticket_type == "customer_admin":
+        query = query.filter(SupportTicket.customer_id != None, SupportTicket.provider_id == None)
+    elif ticket_type == "provider_admin":
+        query = query.filter(SupportTicket.provider_id != None, SupportTicket.customer_id == None)
+    elif ticket_type == "customer_provider":
+        query = query.filter(SupportTicket.customer_id != None, SupportTicket.provider_id != None)
     
     if status_filter:
         query = query.filter(SupportTicket.status == status_filter)
@@ -65,12 +81,13 @@ def list_support_tickets(
 
     res = []
     for t in tickets:
-        c_name = t.customer.full_name if t.customer else "Customer"
-        c_email = t.customer.email if t.customer else "customer@example.com"
-        c_phone = t.customer.phone if (t.customer and t.customer.phone) else "+91 98765 43210"
+        c_name = t.customer.full_name if t.customer else ("Provider" if t.provider_id else "Customer")
+        c_email = t.customer.email if t.customer else ""
+        c_phone = t.customer.phone if (t.customer and t.customer.phone) else ""
 
         assigned_admin = db.query(User).filter(User.id == t.assigned_admin_id).first() if t.assigned_admin_id else None
         assigned_email = assigned_admin.email if assigned_admin else None
+
 
         if search:
             s_lower = search.lower()
@@ -79,19 +96,25 @@ def list_support_tickets(
                 s_lower not in t.subject.lower()):
                 continue
 
+        # Resolve provider name
+        from app.models.provider import Provider as ProviderModel
+        prov_record = db.query(ProviderModel).filter(ProviderModel.user_id == t.provider_id).first() if t.provider_id else None
+        prov_name = prov_record.full_name if prov_record else None
+
         # AI-Assisted signals if available
         ai_data = None
-        if t.image_evidence_url or "Circuit" in t.subject or "Double Charge" in t.subject:
+        if t.image_evidence_url or (t.subject and ("Circuit" in t.subject or "Double Charge" in t.subject)):
             ai_data = {
-                "ocr_extracted_text": "Circuit breaker trip detected at high load (16A rating)" if "Circuit" in t.subject else "Duplicate transaction ID #UPI889201 verified",
-                "sentiment_score": 0.88 if "Trip" in t.subject or "Late" in t.subject else 0.45,
-                "complaint_category": "Electrical Installation Defect" if "Circuit" in t.subject else "Billing Gateway Duplicate"
+                "ocr_extracted_text": "Circuit breaker trip detected at high load (16A rating)" if t.subject and "Circuit" in t.subject else "Duplicate transaction ID #UPI889201 verified",
+                "sentiment_score": 0.88 if t.subject and ("Trip" in t.subject or "Late" in t.subject) else 0.45,
+                "complaint_category": "Electrical Installation Defect" if t.subject and "Circuit" in t.subject else "Billing Gateway Duplicate"
             }
 
         cust_ctx = {
-            "previous_tickets_count": db.query(SupportTicket).filter(SupportTicket.customer_id == t.customer_id).count(),
+            "previous_tickets_count": db.query(SupportTicket).filter(SupportTicket.customer_id == t.customer_id).count() if t.customer_id else 0,
             "relevant_booking_id": str(t.booking_id) if t.booking_id else None,
-            "risk_flag": "High Risk — Chargeback Flag" if "Double Charge" in t.subject else "Clean Record"
+            "risk_flag": "High Risk — Chargeback Flag" if t.subject and "Double Charge" in t.subject else "Clean Record",
+            "provider_name": prov_name,
         }
 
         msgs = [
@@ -99,16 +122,17 @@ def list_support_tickets(
                 id=str(m.id),
                 sender_id=str(m.sender_id),
                 sender_role=m.sender_role,
+                sender_name=getattr(m, 'sender_name', None) or m.sender_role.title(),
                 message_text=m.message_text,
                 attachment_url=m.attachment_url,
                 created_at=m.created_at.isoformat() if m.created_at else ""
-            ) for m in t.messages
+            ) for m in sorted(t.messages or [], key=lambda m: m.created_at)
         ]
-        msgs.sort(key=lambda m: m.created_at)
 
         res.append(SupportTicketResponse(
             id=str(t.id),
-            customer_id=str(t.customer_id),
+            customer_id=str(t.customer_id) if t.customer_id else None,
+            provider_id=str(t.provider_id) if t.provider_id else None,
             customer_name=c_name,
             customer_email=c_email,
             customer_phone=c_phone,
@@ -116,6 +140,7 @@ def list_support_tickets(
             booking_id=str(t.booking_id) if t.booking_id else None,
             subject=t.subject,
             description=t.description,
+            category=getattr(t, 'category', None),
             priority=t.priority.value if hasattr(t.priority, "value") else str(t.priority),
             status=t.status.value if hasattr(t.status, "value") else str(t.status),
             escalated_to_admin=t.escalated_to_admin,
@@ -144,7 +169,13 @@ def get_support_ticket_detail(
     if not t:
         raise HTTPException(status_code=404, detail="Support ticket not found")
 
-    c_name = t.customer.full_name if t.customer else "Customer"
+    c_name = t.customer.full_name if t.customer else None
+    if not c_name and t.provider_id:
+        p_user = db.query(User).filter(User.id == t.provider_id).first()
+        c_name = f"Provider: {p_user.full_name}" if p_user else "Service Provider"
+    elif not c_name:
+        c_name = "Customer"
+
     c_email = t.customer.email if t.customer else "customer@example.com"
     c_phone = t.customer.phone if (t.customer and t.customer.phone) else "+91 98765 43210"
 
@@ -160,7 +191,7 @@ def get_support_ticket_detail(
         }
 
     cust_ctx = {
-        "previous_tickets_count": db.query(SupportTicket).filter(SupportTicket.customer_id == t.customer_id).count(),
+        "previous_tickets_count": db.query(SupportTicket).filter(SupportTicket.customer_id == t.customer_id).count() if t.customer_id else 0,
         "relevant_booking_id": str(t.booking_id) if t.booking_id else None,
         "risk_flag": "High Risk — Chargeback Flag" if "Double Charge" in t.subject else "Clean Record"
     }
@@ -170,6 +201,7 @@ def get_support_ticket_detail(
             id=str(m.id),
             sender_id=str(m.sender_id),
             sender_role=m.sender_role,
+            sender_name=getattr(m, 'sender_name', None) or m.sender_role.title(),
             message_text=m.message_text,
             attachment_url=m.attachment_url,
             created_at=m.created_at.isoformat() if m.created_at else ""
@@ -179,7 +211,8 @@ def get_support_ticket_detail(
 
     return SupportTicketResponse(
         id=str(t.id),
-        customer_id=str(t.customer_id),
+        customer_id=str(t.customer_id) if t.customer_id else None,
+        provider_id=str(t.provider_id) if t.provider_id else None,
         customer_name=c_name,
         customer_email=c_email,
         customer_phone=c_phone,
@@ -187,6 +220,7 @@ def get_support_ticket_detail(
         booking_id=str(t.booking_id) if t.booking_id else None,
         subject=t.subject,
         description=t.description,
+        category=getattr(t, 'category', None),
         priority=t.priority.value if hasattr(t.priority, "value") else str(t.priority),
         status=t.status.value if hasattr(t.status, "value") else str(t.status),
         escalated_to_admin=t.escalated_to_admin,
@@ -335,3 +369,69 @@ def get_signed_evidence_access_url(
         "signed_url": signed_url,
         "expires_in_seconds": 900
     }
+
+
+@router.get("/conversations/booking/{booking_id}", response_model=SupportTicketResponse)
+def get_booking_conversation_for_admin(
+    booking_id: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin)
+):
+    """Super Admin / Admin: Read-only view of Customer ↔ Provider conversation for a booking."""
+    try:
+        b_uuid = uuid.UUID(booking_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid booking ID format")
+
+    ticket = db.query(SupportTicket).filter(
+        SupportTicket.booking_id == b_uuid,
+        SupportTicket.customer_id != None,
+        SupportTicket.provider_id != None,
+    ).first()
+
+    if not ticket:
+        raise HTTPException(status_code=404, detail="No Customer ↔ Provider conversation found for this booking")
+
+    c_name = ticket.customer.full_name if ticket.customer else "Customer"
+    c_email = ticket.customer.email if ticket.customer else ""
+    c_phone = ticket.customer.phone if (ticket.customer and ticket.customer.phone) else ""
+
+    # Resolve provider name from the Provider table
+    from app.models.provider import Provider
+    provider_record = db.query(Provider).filter(Provider.user_id == ticket.provider_id).first()
+    provider_name = provider_record.full_name if provider_record else "Provider"
+
+    msgs = [
+        TicketMessageResponse(
+            id=str(m.id),
+            sender_id=str(m.sender_id),
+            sender_role=m.sender_role,
+            sender_name=m.sender_name or m.sender_role.title(),
+            message_text=m.message_text,
+            attachment_url=m.attachment_url,
+            created_at=m.created_at.isoformat() if m.created_at else ""
+        ) for m in sorted(ticket.messages or [], key=lambda m: m.created_at)
+    ]
+
+    return SupportTicketResponse(
+        id=str(ticket.id),
+        customer_id=str(ticket.customer_id),
+        provider_id=str(ticket.provider_id),
+        customer_name=c_name,
+        customer_email=c_email,
+        customer_phone=c_phone,
+        assigned_admin_email=None,
+        booking_id=str(ticket.booking_id) if ticket.booking_id else None,
+        subject=ticket.subject,
+        description=ticket.description,
+        category=getattr(ticket, 'category', None),
+        priority=ticket.priority.value if hasattr(ticket.priority, 'value') else str(ticket.priority),
+        status=ticket.status.value if hasattr(ticket.status, 'value') else str(ticket.status),
+        escalated_to_admin=ticket.escalated_to_admin,
+        image_evidence_url=ticket.image_evidence_url,
+        ai_analysis=None,
+        customer_context={"provider_name": provider_name, "relevant_booking_id": booking_id},
+        created_at=ticket.created_at.isoformat() if ticket.created_at else "",
+        updated_at=ticket.updated_at.isoformat() if ticket.updated_at else "",
+        messages=msgs
+    )

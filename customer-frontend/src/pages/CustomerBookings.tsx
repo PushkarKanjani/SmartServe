@@ -33,6 +33,12 @@ export const CustomerBookings: React.FC = () => {
 
   useEffect(() => {
     fetchBookings();
+    const interval = setInterval(() => {
+      getCustomerBookings()
+        .then((data) => setBookings(data))
+        .catch(() => {});
+    }, 6000);
+    return () => clearInterval(interval);
   }, []);
 
   const filteredBookings = bookings.filter((b) => {

@@ -634,6 +634,13 @@ def get_service_eligible_providers(service_id: str, db: Session = Depends(get_db
 
 
 
+def safe_timeline(raw_timeline):
+    if isinstance(raw_timeline, list):
+        return [x if isinstance(x, dict) else {"event": str(x)} for x in raw_timeline]
+    if isinstance(raw_timeline, dict):
+        return [raw_timeline]
+    return []
+
 # 14. GET /customer/bookings
 @router.get("/bookings", response_model=List[BookingDetail])
 def get_customer_bookings(
@@ -643,14 +650,13 @@ def get_customer_bookings(
 ):
     query = db.query(Booking).filter(Booking.customer_id == current_customer.id)
     if status_filter and status_filter.upper() != "ALL":
-        query = query.filter(Booking.status == status_filter.upper())
+        query = query.filter(func.lower(Booking.status) == status_filter.lower())
 
     records = query.order_by(Booking.created_at.desc()).all()
     if not records:
         return []
 
     return [
-
         BookingDetail(
             id=str(b.id),
             booking_reference=b.booking_reference,
@@ -673,7 +679,7 @@ def get_customer_bookings(
             provider_name=b.provider.full_name if b.provider else None,
             otp_code=b.otp_code,
             emergency_flag=b.emergency_flag,
-            timeline=b.timeline,
+            timeline=safe_timeline(b.timeline),
             created_at=b.created_at,
         )
         for b in records
@@ -856,7 +862,7 @@ def get_booking_by_id(
         notes=record.notes,
         otp_code=record.otp_code,
         emergency_flag=record.emergency_flag,
-        timeline=record.timeline,
+        timeline=safe_timeline(record.timeline),
         created_at=record.created_at,
     )
 
@@ -994,7 +1000,10 @@ def get_customer_support_tickets(
                     id=str(m.id),
                     ticket_id=str(m.ticket_id),
                     sender_role=m.sender_role,
-                    sender_name=m.sender_name or ("Support Agent" if m.sender_role != "customer" else "Customer"),
+                    sender_name=m.sender_name or (
+                        "Customer" if m.sender_role.lower() == "customer"
+                        else ("Service Provider" if m.sender_role.lower() == "provider" else "SmartServe Support Operations")
+                    ),
                     message_text=m.message_text,
                     attachment_url=m.attachment_url,
                     created_at=m.created_at,
@@ -1016,9 +1025,22 @@ def create_support_ticket(
     ticket_id = uuid.uuid4()
     priority = "High" if payload.category in ["Booking issue", "Service quality"] else (payload.priority or "Normal")
 
+    b_uuid = None
+    b_prov_id = None
+    if payload.booking_id:
+        try:
+            b_uuid = uuid.UUID(payload.booking_id)
+            bk = db.query(Booking).filter(Booking.id == b_uuid).first()
+            if bk:
+                b_prov_id = bk.provider_id
+        except Exception:
+            pass
+
     new_ticket = SupportTicket(
         id=ticket_id,
         customer_id=current_customer.id,
+        provider_id=b_prov_id,
+        booking_id=b_uuid,
         subject=payload.subject,
         description=payload.description,
         category=payload.category,
@@ -1096,7 +1118,10 @@ def get_support_ticket_by_id(
                 id=str(m.id),
                 ticket_id=str(m.ticket_id),
                 sender_role=m.sender_role,
-                sender_name=m.sender_name or ("SmartServe Support Operations" if m.sender_role.lower() in ["admin", "agent"] else "Customer"),
+                sender_name=m.sender_name or (
+                    "Customer" if m.sender_role.lower() == "customer"
+                    else ("Service Provider" if m.sender_role.lower() == "provider" else "SmartServe Support Operations")
+                ),
                 message_text=m.message_text,
                 attachment_url=m.attachment_url,
                 created_at=m.created_at,
@@ -1219,3 +1244,152 @@ async def upload_image(file: UploadFile = File(...)):
         content = await file.read()
         f.write(content)
     return {"url": f"/static/uploads/{filename}"}
+
+
+# ==========================================
+# BOOKING CHAT (Customer ↔ Provider)
+# ==========================================
+
+# 29. GET /customer/bookings/{booking_id}/chat
+@router.get("/bookings/{booking_id}/chat", response_model=SupportTicketDetail)
+def get_booking_chat(
+    booking_id: str,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db),
+):
+    """Get or create the Customer ↔ Provider chat thread for a specific booking."""
+    try:
+        b_uuid = uuid.UUID(booking_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid booking ID format")
+
+    booking = db.query(Booking).filter(Booking.id == b_uuid).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking.customer_id != current_customer.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You cannot access another customer's booking chat")
+    if not booking.provider_id:
+        raise HTTPException(status_code=400, detail="No provider assigned to this booking yet")
+
+    # Find existing booking chat ticket (customer_id + provider_id + booking_id all set)
+    ticket = db.query(SupportTicket).filter(
+        SupportTicket.booking_id == b_uuid,
+        SupportTicket.customer_id == current_customer.id,
+        SupportTicket.provider_id == booking.provider_id,
+    ).first()
+
+    if not ticket:
+        # Create a new booking chat ticket
+        provider_name = booking.provider.full_name if booking.provider else "Your Provider"
+        ticket = SupportTicket(
+            id=uuid.uuid4(),
+            customer_id=current_customer.id,
+            provider_id=booking.provider_id,
+            booking_id=b_uuid,
+            subject=f"Chat: {booking.service_name} (Booking {booking.booking_reference})",
+            description=f"Booking chat thread between customer and provider for {booking.service_name}.",
+            category="Booking Chat",
+            priority="Normal",
+            status="Open",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(ticket)
+        db.commit()
+        db.refresh(ticket)
+
+    return SupportTicketDetail(
+        id=str(ticket.id),
+        customer_id=str(ticket.customer_id),
+        booking_id=str(ticket.booking_id) if ticket.booking_id else None,
+        subject=ticket.subject,
+        description=ticket.description,
+        category=ticket.category,
+        priority=ticket.priority,
+        status=ticket.status,
+        created_at=ticket.created_at,
+        messages=[
+            MessageItem(
+                id=str(m.id),
+                ticket_id=str(m.ticket_id),
+                sender_role=m.sender_role,
+                sender_name=m.sender_name or m.sender_role.title(),
+                message_text=m.message_text,
+                attachment_url=m.attachment_url,
+                created_at=m.created_at,
+            )
+            for m in sorted(ticket.messages or [], key=lambda x: x.created_at)
+        ],
+    )
+
+
+# 30. POST /customer/bookings/{booking_id}/chat/messages
+@router.post("/bookings/{booking_id}/chat/messages", response_model=MessageItem)
+def send_booking_chat_message(
+    booking_id: str,
+    payload: TicketMessagePayload,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db),
+):
+    """Customer sends a message in the Provider ↔ Customer booking chat."""
+    try:
+        b_uuid = uuid.UUID(booking_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid booking ID format")
+
+    booking = db.query(Booking).filter(Booking.id == b_uuid).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking.customer_id != current_customer.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You cannot access another customer's booking chat")
+    if not booking.provider_id:
+        raise HTTPException(status_code=400, detail="No provider assigned to this booking yet")
+
+    # Get or create ticket
+    ticket = db.query(SupportTicket).filter(
+        SupportTicket.booking_id == b_uuid,
+        SupportTicket.customer_id == current_customer.id,
+        SupportTicket.provider_id == booking.provider_id,
+    ).first()
+
+    if not ticket:
+        ticket = SupportTicket(
+            id=uuid.uuid4(),
+            customer_id=current_customer.id,
+            provider_id=booking.provider_id,
+            booking_id=b_uuid,
+            subject=f"Chat: {booking.service_name} (Booking {booking.booking_reference})",
+            description=f"Booking chat thread between customer and provider for {booking.service_name}.",
+            category="Booking Chat",
+            priority="Normal",
+            status="Open",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(ticket)
+        db.flush()
+
+    new_msg = TicketMessage(
+        id=uuid.uuid4(),
+        ticket_id=ticket.id,
+        sender_id=current_customer.user_id,
+        sender_role="customer",
+        sender_name=current_customer.full_name,
+        message_text=payload.message_text,
+        attachment_url=payload.attachment_url,
+        created_at=datetime.utcnow(),
+    )
+    db.add(new_msg)
+    ticket.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(new_msg)
+
+    return MessageItem(
+        id=str(new_msg.id),
+        ticket_id=str(ticket.id),
+        sender_role=new_msg.sender_role,
+        sender_name=new_msg.sender_name,
+        message_text=new_msg.message_text,
+        attachment_url=new_msg.attachment_url,
+        created_at=new_msg.created_at,
+    )

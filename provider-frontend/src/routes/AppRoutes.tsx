@@ -11,6 +11,7 @@ import { ProviderServicesView } from '../pages/services/ProviderServicesView';
 import { ProviderAvailabilityView } from '../pages/availability/ProviderAvailabilityView';
 import { ProviderProfileView } from '../pages/profile/ProviderProfileView';
 import { ProviderSupportView } from '../pages/support/ProviderSupportView';
+import { ProviderSupportDetail } from '../pages/support/ProviderSupportDetail';
 
 /**
  * ProtectedRoute: Requires a valid token.
@@ -103,6 +104,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/availability" element={<ProviderAvailabilityView />} />
         <Route path="/profile" element={<ProviderProfileView />} />
         <Route path="/support" element={<ProviderSupportView />} />
+        <Route path="/support/:ticketId" element={<ProviderSupportDetail />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/onboarding" replace />} />

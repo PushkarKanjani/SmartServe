@@ -130,4 +130,6 @@ backend/record_*.py
 backend/recovered_*.py
 backend/beauty_data_*.py
 backend/cleaning_data_*.py
+install.cmd
+run_*.js
 

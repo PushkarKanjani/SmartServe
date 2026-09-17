@@ -105,7 +105,7 @@ export const ProviderDashboardView: React.FC = () => {
     const interval = setInterval(() => {
       apiClient.get('/providers/me/dashboard-stats').then((r) => setStats(r.data)).catch(() => {});
       apiClient.get('/providers/me/bookings').then((r) => setBookings(r.data)).catch(() => {});
-    }, 60000);
+    }, 6000);
     return () => clearInterval(interval);
   }, []);
 

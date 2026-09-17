@@ -46,3 +46,14 @@ export const addTicketMessage = async (ticketId: string, message_text: string): 
   const res = await apiClient.post<MessageItem>(`/customer/support/tickets/${ticketId}/messages`, { message_text });
   return res.data;
 };
+
+// Booking Chat (Customer ↔ Provider)
+export const getBookingChat = async (bookingId: string): Promise<SupportTicketDetail> => {
+  const res = await apiClient.get<SupportTicketDetail>(`/customer/bookings/${bookingId}/chat`);
+  return res.data;
+};
+
+export const sendBookingChatMessage = async (bookingId: string, message_text: string): Promise<MessageItem> => {
+  const res = await apiClient.post<MessageItem>(`/customer/bookings/${bookingId}/chat/messages`, { message_text });
+  return res.data;
+};

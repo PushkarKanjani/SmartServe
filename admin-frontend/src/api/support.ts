@@ -12,6 +12,7 @@ export interface TicketMessageItem {
   id: string;
   sender_id: string;
   sender_role: string;
+  sender_name?: string;
   message_text: string;
   attachment_url?: string | null;
   created_at: string;
@@ -19,7 +20,8 @@ export interface TicketMessageItem {
 
 export interface SupportTicketItem {
   id: string;
-  customer_id: string;
+  customer_id?: string | null;
+  provider_id?: string | null;
   customer_name?: string;
   customer_email?: string;
   customer_phone?: string;
@@ -27,6 +29,7 @@ export interface SupportTicketItem {
   booking_id?: string | null;
   subject: string;
   description: string;
+  category?: string | null;
   priority: string;
   status: string;
   escalated_to_admin: boolean;
@@ -40,6 +43,7 @@ export interface SupportTicketItem {
     previous_tickets_count?: number;
     relevant_booking_id?: string;
     risk_flag?: string;
+    provider_name?: string;
   } | null;
   created_at: string;
   updated_at?: string;
@@ -56,6 +60,7 @@ export const getSupportTicketsList = async (params?: {
   priority_filter?: string;
   escalated_only?: boolean;
   search?: string;
+  ticket_type?: string;
   skip?: number;
   limit?: number;
 }): Promise<SupportTicketItem[]> => {
@@ -64,6 +69,7 @@ export const getSupportTicketsList = async (params?: {
   if (params?.priority_filter) query.append('priority_filter', params.priority_filter);
   if (params?.escalated_only !== undefined) query.append('escalated_only', String(params.escalated_only));
   if (params?.search) query.append('search', params.search);
+  if (params?.ticket_type) query.append('ticket_type', params.ticket_type);
   if (params?.skip !== undefined) query.append('skip', String(params.skip));
   if (params?.limit !== undefined) query.append('limit', String(params.limit));
 
@@ -113,5 +119,11 @@ export const getSignedEvidenceUrl = async (
 ): Promise<{ ticket_id: string; signed_url: string; expires_in_seconds: number }> => {
   const query = new URLSearchParams({ ticket_id: ticketId, file_path: filePath });
   const response = await apiClient.get(`/admin/support/evidence/signed-url?${query.toString()}`);
+  return response.data;
+};
+
+// Super Admin: Get Customer↔Provider conversation for a booking (read-only audit)
+export const getBookingConversation = async (bookingId: string): Promise<SupportTicketItem> => {
+  const response = await apiClient.get<SupportTicketItem>(`/admin/support/conversations/booking/${bookingId}`);
   return response.data;
 };

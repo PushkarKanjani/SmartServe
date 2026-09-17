@@ -104,6 +104,34 @@ def transition_booking_status(
             )
         booking.payment_status = "Completed"
 
+    # 4b. If booking is rejected or cancelled, release reserved slot back to FREE
+    if next_status in [BookingStatus.REJECTED.value, BookingStatus.CANCELLED.value]:
+        try:
+            from app.models.provider import Availability
+            if booking.provider_id and booking.scheduled_time:
+                dt = booking.scheduled_time
+                if hasattr(dt, "tzinfo") and dt.tzinfo is not None:
+                    dt = dt.replace(tzinfo=None)
+                req_date = dt.date()
+                req_time = dt.time()
+                reserved_slot = (
+                    db.query(Availability)
+                    .filter(
+                        Availability.provider_id == booking.provider_id,
+                        Availability.slot_date == req_date,
+                        Availability.start_time <= req_time,
+                        Availability.end_time >= req_time,
+                        Availability.status == "RESERVED",
+                    )
+                    .first()
+                )
+                if reserved_slot:
+                    reserved_slot.status = "FREE"
+                    db.add(reserved_slot)
+        except Exception as e:
+            # Non-blocking slot release guard
+            pass
+
     # 5. Append timeline audit event
     now_iso = datetime.now(timezone.utc).isoformat()
     timeline_event = {

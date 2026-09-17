@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getBookingDetail, cancelBooking, BookingDetail } from '../api/bookings';
+import { getBookingChat, sendBookingChatMessage, SupportTicketDetail, MessageItem } from '../api/support';
 import { formatCurrencyINR } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
 import { 
@@ -13,7 +14,11 @@ import {
   UserCheck, 
   XCircle,
   HelpCircle,
-  Zap
+  Zap,
+  MessageCircle,
+  Send,
+  User,
+  ShieldCheck,
 } from 'lucide-react';
 
 export const CustomerBookingDetail: React.FC = () => {
@@ -27,6 +32,15 @@ export const CustomerBookingDetail: React.FC = () => {
   const [cancelling, setCancelling] = useState<boolean>(false);
   const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
   const [selectedReason, setSelectedReason] = useState<string>('Change of plans / schedule conflict');
+
+  // Chat state
+  const [chatTicket, setChatTicket] = useState<SupportTicketDetail | null>(null);
+  const [chatLoading, setChatLoading] = useState<boolean>(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [chatMessage, setChatMessage] = useState<string>('');
+  const [sendingChat, setSendingChat] = useState<boolean>(false);
+  const [showChat, setShowChat] = useState<boolean>(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const fetchDetail = async () => {
     if (!bookingId) return;
@@ -44,7 +58,58 @@ export const CustomerBookingDetail: React.FC = () => {
 
   useEffect(() => {
     fetchDetail();
+    const interval = setInterval(() => {
+      if (bookingId) {
+        getBookingDetail(bookingId)
+          .then((data) => setBooking(data))
+          .catch(() => {});
+      }
+    }, 4000);
+    return () => clearInterval(interval);
   }, [bookingId]);
+
+  // Load chat when provider is assigned and chat is open
+  const fetchChat = async () => {
+    if (!bookingId) return;
+    setChatLoading(true);
+    setChatError(null);
+    try {
+      const data = await getBookingChat(bookingId);
+      setChatTicket(data);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || '';
+      if (err.response?.status === 400 && detail.includes('No provider')) {
+        setChatError('provider_not_assigned');
+      } else {
+        setChatError(err.response?.data?.detail || 'Failed to load chat.');
+      }
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showChat && bookingId) {
+      fetchChat();
+    }
+  }, [showChat, bookingId]);
+
+  const handleSendChatMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingId || !chatMessage.trim()) return;
+    setSendingChat(true);
+    try {
+      const newMsg = await sendBookingChatMessage(bookingId, chatMessage.trim());
+      setChatMessage('');
+      setChatTicket(prev => prev ? { ...prev, messages: [...prev.messages, newMsg] } : prev);
+      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+    } catch (err: any) {
+      showToast(err.response?.data?.detail || 'Failed to send message.', 'error');
+    } finally {
+      setSendingChat(false);
+    }
+  };
 
   const handleConfirmCancel = async () => {
     if (!bookingId) return;
@@ -232,6 +297,118 @@ export const CustomerBookingDetail: React.FC = () => {
         </div>
 
       </div>
+
+      {/* ============================================ */}
+      {/* PROVIDER CHAT SECTION */}
+      {/* ============================================ */}
+      {booking.provider_id && (
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md overflow-hidden">
+          {/* Chat Header Toggle */}
+          <button
+            onClick={() => setShowChat(!showChat)}
+            className="w-full flex items-center justify-between p-6 text-left group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 flex items-center justify-center">
+                <MessageCircle className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">Chat with Provider</h3>
+                <p className="text-xs text-slate-500">{booking.provider_name || 'Your assigned service expert'}</p>
+              </div>
+            </div>
+            <div className={`w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center transition-all ${showChat ? 'rotate-180' : ''}`}>
+              <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </button>
+
+          {/* Chat Panel */}
+          {showChat && (
+            <div className="border-t border-slate-100">
+              {chatLoading ? (
+                <div className="flex items-center justify-center py-12 gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                  <span className="text-xs font-semibold text-slate-500">Loading conversation...</span>
+                </div>
+              ) : chatError === 'provider_not_assigned' ? (
+                <div className="p-6 text-center">
+                  <p className="text-xs text-slate-500">Provider hasn't been assigned yet. Chat will be available once a provider accepts your booking.</p>
+                </div>
+              ) : chatError ? (
+                <div className="p-6 text-center">
+                  <p className="text-xs text-rose-600">{chatError}</p>
+                  <button onClick={fetchChat} className="mt-2 text-xs text-emerald-600 font-semibold hover:underline">Retry</button>
+                </div>
+              ) : (
+                <>
+                  {/* Messages */}
+                  <div className="max-h-96 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
+                    {(!chatTicket?.messages || chatTicket.messages.length === 0) ? (
+                      <div className="text-center py-8">
+                        <MessageCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                        <p className="text-xs text-slate-400">No messages yet. Start the conversation!</p>
+                      </div>
+                    ) : (
+                      chatTicket.messages.map((msg: MessageItem) => {
+                        const role = (msg.sender_role || '').toLowerCase().trim();
+                        const isCustomer = role === 'customer';
+                        const isProvider = role === 'provider';
+                        return (
+                          <div key={msg.id} className={`flex flex-col max-w-xs ${isCustomer ? 'ml-auto items-end' : 'items-start'}`}>
+                            <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mb-1 px-1 ${
+                              isCustomer ? 'text-slate-400 flex-row-reverse' : isProvider ? 'text-emerald-600' : 'text-blue-600'
+                            }`}>
+                              {isCustomer ? (
+                                <><User className="w-3 h-3" /><span>You (Customer)</span></>
+                              ) : isProvider ? (
+                                <><ShieldCheck className="w-3 h-3" /><span>{msg.sender_name || booking.provider_name || 'Provider'} (Provider)</span></>
+                              ) : (
+                                <><ShieldCheck className="w-3 h-3" /><span>SmartServe Support (Admin)</span></>
+                              )}
+                            </div>
+                            <div className={`px-4 py-3 rounded-2xl text-xs font-medium leading-relaxed shadow-2xs ${
+                              isCustomer
+                                ? 'bg-[#2563EB] text-white rounded-tr-xs'
+                                : 'bg-white text-slate-800 border border-slate-200 rounded-tl-xs'
+                            }`}>
+                              {msg.message_text}
+                            </div>
+                            <span className="text-[9px] text-slate-400 mt-1 px-1">
+                              {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={chatEndRef} />
+                  </div>
+
+                  {/* Send Message */}
+                  <form onSubmit={handleSendChatMessage} className="p-4 border-t border-slate-100 flex gap-3 bg-white">
+                    <input
+                      type="text"
+                      value={chatMessage}
+                      onChange={(e) => setChatMessage(e.target.value)}
+                      placeholder={`Message ${booking.provider_name || 'your provider'}...`}
+                      className="flex-1 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]"
+                      disabled={sendingChat}
+                    />
+                    <button
+                      type="submit"
+                      disabled={sendingChat || !chatMessage.trim()}
+                      className="h-10 w-10 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl flex items-center justify-center transition-colors disabled:opacity-50 flex-shrink-0 shadow-xs"
+                    >
+                      {sendingChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Interactive In-App Cancellation Modal */}
       {showCancelModal && (

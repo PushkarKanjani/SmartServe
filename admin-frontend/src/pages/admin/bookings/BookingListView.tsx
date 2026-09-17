@@ -73,6 +73,10 @@ export const BookingListView: React.FC = () => {
 
   useEffect(() => {
     fetchBookingsData();
+    const interval = setInterval(() => {
+      fetchBookingsData();
+    }, 5000);
+
     getAuthenticatedAdmin().then((s) => setAdminSession(s)).catch(() => {});
 
     // Pre-fetch option lists for Emergency Dispatch Modal
@@ -114,6 +118,7 @@ export const BookingListView: React.FC = () => {
     } catch (err) {}
 
     return () => {
+      clearInterval(interval);
       if (ws) ws.close();
     };
   }, []);

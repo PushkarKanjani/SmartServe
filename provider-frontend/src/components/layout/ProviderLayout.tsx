@@ -67,7 +67,7 @@ export const ProviderLayout: React.FC = () => {
     { label: 'My Services', path: '/services', icon: Briefcase },
     { label: 'Availability', path: '/availability', icon: Calendar },
     { label: 'Profile & Trust', path: '/profile', icon: UserIcon },
-    { label: 'Support & Help', path: '/support', icon: LifeBuoy },
+    { label: 'Support Tickets', path: '/support', icon: LifeBuoy },
   ];
 
   const providerName = profile?.full_name || (user?.email ? user.email.split('@')[0] : 'Partner');
@@ -85,10 +85,10 @@ export const ProviderLayout: React.FC = () => {
       )}
 
       {/* ══════════════════════════════════════════════════
-          SIDEBAR NAVIGATION (Desktop: Sticky, Mobile: Drawer)
+          SIDEBAR NAVIGATION (Desktop: Fixed Sticky, Mobile: Drawer)
           ════════════════════════════════════════════════*/}
       <aside
-        className={`fixed lg:sticky top-0 h-screen w-72 bg-white/95 backdrop-blur-md border-r border-[#E5DEC9] z-50 flex flex-col justify-between transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-0 h-screen w-72 bg-white/95 backdrop-blur-md border-r border-[#E5DEC9] z-40 flex flex-col justify-between transition-transform duration-300 ease-in-out ${
           drawerOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'
         }`}
       >
@@ -190,7 +190,7 @@ export const ProviderLayout: React.FC = () => {
       {/* ══════════════════════════════════════════════════
           MAIN CONTENT AREA
           ════════════════════════════════════════════════*/}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
         {/* Top Header Navbar */}
         <header className="sticky top-0 z-30 bg-[#FAF7F0]/95 backdrop-blur-md border-b border-[#E5DEC9] h-20 flex items-center justify-between px-4 sm:px-8">
           <div className="flex items-center gap-4">

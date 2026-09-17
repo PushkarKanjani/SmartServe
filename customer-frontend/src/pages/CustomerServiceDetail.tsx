@@ -89,29 +89,34 @@ export const CustomerServiceDetail: React.FC = () => {
   const selectedProvider = eligibleProviders.find((p) => p.provider_id === selectedProviderId);
 
   const allRelevantSlots = React.useMemo(() => {
+    const targetSlots: ProviderSlotDetail[] = [];
     if (selectedProvider) {
-      return selectedProvider.structured_slots || [];
-    }
-    // Combine across all providers
-    const map = new Map<string, ProviderSlotDetail>();
-    eligibleProviders.forEach((p) => {
-      (p.structured_slots || []).forEach((slot) => {
-        if (!map.has(slot.slot_date)) {
-          map.set(slot.slot_date, { ...slot, available_times: [...slot.available_times] });
-        } else {
-          const existing = map.get(slot.slot_date)!;
-          const combined = Array.from(new Set([...existing.available_times, ...slot.available_times])).sort();
-          map.set(slot.slot_date, { ...existing, available_times: combined });
-        }
+      targetSlots.push(...(selectedProvider.structured_slots || []));
+    } else {
+      eligibleProviders.forEach((p) => {
+        targetSlots.push(...(p.structured_slots || []));
       });
+    }
+
+    // Combine across slots by date
+    const map = new Map<string, ProviderSlotDetail>();
+    targetSlots.forEach((slot) => {
+      if (!map.has(slot.slot_date)) {
+        map.set(slot.slot_date, { ...slot, available_times: [...(slot.available_times || [])] });
+      } else {
+        const existing = map.get(slot.slot_date)!;
+        const combined = Array.from(new Set([...existing.available_times, ...(slot.available_times || [])])).sort();
+        map.set(slot.slot_date, { ...existing, available_times: combined });
+      }
     });
-    return Array.from(map.values()).sort((a, b) => a.slot_date.localeCompare(b.slot_date));
+
+    return Array.from(map.values())
+      .filter((s) => s.available_times && s.available_times.length > 0)
+      .sort((a, b) => a.slot_date.localeCompare(b.slot_date));
   }, [selectedProvider, eligibleProviders]);
 
   const availableDates = React.useMemo(() => {
-    return allRelevantSlots
-      .filter((s) => s.available_times && s.available_times.length > 0)
-      .map((s) => s.slot_date);
+    return allRelevantSlots.map((s) => s.slot_date);
   }, [allRelevantSlots]);
 
   // For the selected bookingDate, determine available times

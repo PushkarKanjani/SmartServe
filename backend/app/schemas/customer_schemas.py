@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, List, Dict, Any, Union
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 # Auth Schemas
@@ -236,6 +236,15 @@ class BookingDetail(BaseModel):
     emergency_flag: Optional[str] = None
     timeline: Optional[List[Dict[str, Any]]] = None
     created_at: datetime
+
+    @field_validator("timeline", mode="before")
+    @classmethod
+    def normalize_timeline(cls, v):
+        if isinstance(v, list):
+            return [x if isinstance(x, dict) else {"event": str(x)} for x in v]
+        if isinstance(v, dict):
+            return [v]
+        return []
 
 
 # Support Schemas

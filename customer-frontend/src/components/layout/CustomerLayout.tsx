@@ -42,7 +42,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   return (
     <div className="flex min-h-screen bg-[#FAF7F0] font-sans text-[#1F2A1E] selection:bg-[#2F5233] selection:text-white">
       {/* 1. DESKTOP VERTICAL SIDEBAR (Fixed / Sticky Left) */}
-      <aside className="hidden lg:flex w-[260px] bg-[#FAF7F0] border-r border-[#E5DEC9] flex-col flex-shrink-0 sticky top-0 h-screen z-20 shadow-xs">
+      <aside className="hidden lg:flex w-[260px] bg-[#FAF7F0] border-r border-[#E5DEC9] flex-col lg:fixed lg:top-0 lg:bottom-0 lg:left-0 h-screen z-30 shadow-xs">
         <CustomerSidebar />
       </aside>
 
@@ -71,7 +71,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
       </aside>
 
       {/* 4. MAIN CONTENT AREA (Occupies Remaining Width) */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-[#FAF7F0]">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-[#FAF7F0] lg:pl-[260px]">
         {/* Mobile Header (Only visible on screens < lg) */}
         <header className="lg:hidden h-16 bg-[#FAF7F0]/95 backdrop-blur-md border-b border-[#E5DEC9] px-4 flex items-center justify-between sticky top-0 z-30 flex-shrink-0">
           <div className="flex items-center gap-3">

@@ -565,7 +565,7 @@ def _serialize_ticket_response(t) -> SupportTicketResponse:
             id=str(m.id),
             sender_id=str(m.sender_id),
             sender_role=m.sender_role,
-            sender_name=getattr(m, "sender_name", None),
+            sender_name=getattr(m, "sender_name", None) or (m.sender_role.title() if m.sender_role else "User"),
             message_text=m.message_text,
             attachment_url=m.attachment_url,
             created_at=m.created_at.isoformat() if m.created_at else ""
@@ -573,11 +573,18 @@ def _serialize_ticket_response(t) -> SupportTicketResponse:
     ]
     msgs.sort(key=lambda m: m.created_at)
     
+    # Resolve accurate customer name
+    c_name = "Customer"
+    if getattr(t, "customer", None) and getattr(t.customer, "full_name", None):
+        c_name = t.customer.full_name
+    elif not getattr(t, "customer_id", None) and getattr(t, "provider_id", None):
+        c_name = "Provider"
+
     return SupportTicketResponse(
         id=str(t.id),
         customer_id=str(t.customer_id) if getattr(t, "customer_id", None) else None,
         provider_id=str(t.provider_id) if getattr(t, "provider_id", None) else None,
-        customer_name="Provider" if getattr(t, "provider_id", None) else "Customer",
+        customer_name=c_name,
         subject=t.subject,
         description=t.description,
         category=getattr(t, "category", None),
@@ -590,6 +597,7 @@ def _serialize_ticket_response(t) -> SupportTicketResponse:
         updated_at=t.updated_at.isoformat() if t.updated_at else "",
         messages=msgs
     )
+
 
 @router.post(
     "/providers/me/tickets",
@@ -649,8 +657,135 @@ def reply_my_ticket(
         id=str(msg.id),
         sender_id=str(msg.sender_id),
         sender_role=msg.sender_role,
+        sender_name=getattr(msg, "sender_name", None) or current_user.full_name,
         message_text=msg.message_text,
         attachment_url=msg.attachment_url,
         created_at=msg.created_at.isoformat() if msg.created_at else ""
     )
 
+
+# ==========================================
+# BOOKING CHAT (Provider ↔ Customer)
+# ==========================================
+
+@router.get(
+    "/providers/me/bookings/{booking_id}/chat",
+    response_model=SupportTicketResponse,
+    summary="Get or create the Customer ↔ Provider chat thread for a booking",
+)
+def get_my_booking_chat(
+    booking_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    """Provider retrieves the chat thread for a specific booking they're assigned to."""
+    from app.models.customer import SupportTicket, TicketMessage
+    from datetime import datetime
+
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking.provider_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You cannot access chats for bookings not assigned to you")
+    if not booking.customer_id:
+        raise HTTPException(status_code=400, detail="No customer linked to this booking")
+
+    ticket = db.query(SupportTicket).filter(
+        SupportTicket.booking_id == booking_id,
+        SupportTicket.provider_id == current_user.id,
+        SupportTicket.customer_id == booking.customer_id,
+    ).first()
+
+    if not ticket:
+        ticket = SupportTicket(
+            id=uuid.uuid4(),
+            customer_id=booking.customer_id,
+            provider_id=current_user.id,
+            booking_id=booking_id,
+            subject=f"Chat: {booking.service_name} (Booking {booking.booking_reference})",
+            description=f"Booking chat thread between customer and provider for {booking.service_name}.",
+            category="Booking Chat",
+            priority="Normal",
+            status="Open",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(ticket)
+        db.commit()
+        db.refresh(ticket)
+
+    return _serialize_ticket_response(ticket)
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/chat/messages",
+    response_model=TicketMessageResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Provider sends a message in the Customer ↔ Provider booking chat",
+)
+def send_my_booking_chat_message(
+    booking_id: uuid.UUID,
+    payload: TicketReplyRequest,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    """Provider sends a message to the customer in a booking chat thread."""
+    from app.models.customer import SupportTicket, TicketMessage
+    from app.models.user import User
+    from datetime import datetime
+
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking.provider_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Forbidden: You cannot send messages in chats for bookings not assigned to you")
+    if not booking.customer_id:
+        raise HTTPException(status_code=400, detail="No customer linked to this booking")
+
+    ticket = db.query(SupportTicket).filter(
+        SupportTicket.booking_id == booking_id,
+        SupportTicket.provider_id == current_user.id,
+        SupportTicket.customer_id == booking.customer_id,
+    ).first()
+
+    if not ticket:
+        ticket = SupportTicket(
+            id=uuid.uuid4(),
+            customer_id=booking.customer_id,
+            provider_id=current_user.id,
+            booking_id=booking_id,
+            subject=f"Chat: {booking.service_name} (Booking {booking.booking_reference})",
+            description=f"Booking chat thread between customer and provider for {booking.service_name}.",
+            category="Booking Chat",
+            priority="Normal",
+            status="Open",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+        )
+        db.add(ticket)
+        db.flush()
+
+    msg = TicketMessage(
+        id=uuid.uuid4(),
+        ticket_id=ticket.id,
+        sender_id=current_user.id,
+        sender_role="provider",
+        sender_name=current_user.full_name,
+        message_text=payload.message_text,
+        attachment_url=payload.attachment_url,
+        created_at=datetime.utcnow(),
+    )
+    db.add(msg)
+    ticket.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(msg)
+
+    return TicketMessageResponse(
+        id=str(msg.id),
+        sender_id=str(msg.sender_id),
+        sender_role=msg.sender_role,
+        sender_name=msg.sender_name,
+        message_text=msg.message_text,
+        attachment_url=msg.attachment_url,
+        created_at=msg.created_at.isoformat() if msg.created_at else "",
+    )
