@@ -1,21 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// SmartServe Admin Splash Screen (~8-Second Cinematic Sequence)
-// ═══════════════════════════════════════════════════════════════════════════
-// Sequence Timeline:
-// 0.0s – 0.5s: Background videos softly blurred with ivory overlay; center empty.
-// 0.5s – 2.2s: GOLDEN BOX boundary is progressively sketched with real SVG stroke
-//              (monoline draw from top-center -> corners -> sides -> closes).
-//              A glowing golden stylus tip tracks the leading edge.
-// 1.0s – 2.8s: S is progressively sketched with real SVG stroke (Forest Green + Gold).
-//              A glowing golden stylus tip tracks the leading edge.
-// 2.8s – 3.2s: S + golden box complete; gentle settling pause & subtle breath.
-// 3.0s – 4.2s: Original SmartServe wordmark reveals smoothly ("Smart" + "Serve").
-// 4.0s – 4.8s: "HOME SERVICES" subtitle appears between delicate golden rules.
-// 4.5s – 7.4s: Loading / progress bar fills gradually from 0% to 100%.
-// 7.4s – 8.0s: Smooth fade-out and seamless transition to existing Admin Login.
-// Total Duration: ~8.0 seconds (Maximum: 10 seconds).
+// SmartServe Canonical Splash Screen (~8-Second Cinematic Sequence)
+// VERBATIM COPY of customer-frontend/src/components/common/SplashScreen.tsx
+// Assets: /videos/cleaning.mp4, /videos/repair.mp4, /videos/home-service.mp4
 // ═══════════════════════════════════════════════════════════════════════════
 
 interface SplashScreenProps {
@@ -235,11 +223,10 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
         setSplashOpacity(Math.max(0, 1 - fadeProg));
       }
 
-      // Expose progress for verification
+      // Expose progress for automated testing
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).__splashElapsed = elapsed;
-        (window as any).__splashBoxProgress = boxProgress;
-        (window as any).__splashSProgress = sProgress;
       } catch {}
 
       // Continue or trigger complete
@@ -253,7 +240,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
 
     rafRef.current = requestAnimationFrame(render);
 
-    // Failsafe timer (guarantees transition around 8s)
+    // Failsafe timer
     const failsafeTimer = setTimeout(() => {
       if (!doneRef.current) {
         doneRef.current = true;
@@ -275,7 +262,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden select-none transition-opacity duration-300"
       style={{ opacity: splashOpacity }}
-      aria-label="SmartServe Service Partner Splash Screen"
+      aria-label="SmartServe Splash Screen"
     >
       {/* Skip Intro Button */}
       <button
@@ -312,7 +299,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
           />
         ))}
 
-        {/* Soft Ivory / Japandi Translucent Overlay */}
+        {/* Soft Ivory / Translucent Overlay */}
         <div
           className="absolute inset-0 pointer-events-none"
           style={{

@@ -7,6 +7,7 @@ import { ProviderLayout } from '../components/layout/ProviderLayout';
 import { useAuth } from '../context/AuthContext';
 import { ProviderApplicationStatusView } from '../pages/status/ProviderApplicationStatusView';
 
+import { ProviderSplashView } from '../pages/ProviderSplashView';
 import { ProviderServicesView } from '../pages/services/ProviderServicesView';
 import { ProviderAvailabilityView } from '../pages/availability/ProviderAvailabilityView';
 import { ProviderProfileView } from '../pages/profile/ProviderProfileView';
@@ -77,11 +78,14 @@ const StatusRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public routes — no auth required */}
+      {/* 1. Splash Screen Initial Landing (Parity with Customer Portal) */}
+      <Route path="/" element={<ProviderSplashView />} />
+
+      {/* 2. Public Auth & Onboarding Routes */}
       <Route path="/login" element={<ProviderLoginView />} />
       <Route path="/onboarding" element={<ProviderOnboardingView />} />
 
-      {/* Application status — requires auth, blocks verified providers (sends them to dashboard) */}
+      {/* 3. Application status — requires auth, blocks verified providers (sends them to dashboard) */}
       <Route
         path="/application-status"
         element={
@@ -91,7 +95,7 @@ export const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Protected operational routes — requires verified provider */}
+      {/* 4. Protected operational routes — requires verified provider */}
       <Route
         element={
           <ProtectedRoute>
@@ -107,8 +111,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/support/:ticketId" element={<ProviderSupportDetail />} />
       </Route>
 
-      <Route path="/" element={<Navigate to="/onboarding" replace />} />
-      <Route path="*" element={<Navigate to="/onboarding" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };
