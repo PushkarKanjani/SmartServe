@@ -1,4 +1,5 @@
 import { Mail, Phone, MapPin } from 'lucide-react';
+import { scrollToEl } from '../lib/lenis';
 
 const NAV_LINKS = [
   { label: 'How It Works', href: '#how-it-works' },
@@ -33,11 +34,17 @@ const colLink: React.CSSProperties = {
   display: 'block',
   marginBottom: '0.7rem',
   transition: 'color 0.15s ease',
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
+  textAlign: 'left',
 };
 
 export default function Footer() {
   return (
     <footer
+      id="contact"
       style={{
         background: '#1F2A1E',
         borderTop: '1px solid rgba(250,247,240,0.06)',
@@ -87,15 +94,15 @@ export default function Footer() {
           <div>
             <p style={colLabel}>Platform</p>
             {NAV_LINKS.map((l) => (
-              <a
+              <button
                 key={l.label}
-                href={l.href}
+                onClick={() => scrollToEl(l.href)}
                 style={colLink}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = '#FAF7F0')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,247,240,0.65)')}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#FAF7F0')}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(250,247,240,0.65)')}
               >
                 {l.label}
-              </a>
+              </button>
             ))}
           </div>
 
@@ -103,15 +110,20 @@ export default function Footer() {
           <div>
             <p style={colLabel}>Support</p>
             {SUPPORT_LINKS.map((l) => (
-              <a
+              <button
                 key={l.label}
-                href={l.href}
+                onClick={() => {
+                  if (l.href.startsWith('#')) {
+                    const el = document.querySelector(l.href);
+                    if (el) scrollToEl(l.href);
+                  }
+                }}
                 style={colLink}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = '#FAF7F0')}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(250,247,240,0.65)')}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = '#FAF7F0')}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(250,247,240,0.65)')}
               >
                 {l.label}
-              </a>
+              </button>
             ))}
           </div>
 

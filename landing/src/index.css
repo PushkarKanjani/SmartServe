@@ -18,7 +18,7 @@
 }
 
 html {
-  scroll-behavior: smooth;
+  /* scroll-behavior is handled by Lenis — do NOT add scroll-behavior:smooth here */
   background-color: var(--ss-ivory);
   overflow-x: clip;
 }

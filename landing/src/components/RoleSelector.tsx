@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { Reveal } from './Reveal';
 
 const CUSTOMER_BULLETS = [
   '457+ services across 8 categories',
@@ -34,50 +35,46 @@ export default function RoleSelector() {
     >
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          style={{ textAlign: 'center', marginBottom: 'clamp(3rem, 5vw, 5rem)' }}
-        >
-          <p
-            style={{
-              fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: '#7A9E6E',
-              marginBottom: '1rem',
-            }}
-          >
-            Entry Gateway
-          </p>
-          <h2
-            style={{
-              fontFamily: '"DM Serif Display", Georgia, serif',
-              fontSize: 'clamp(2rem, 4.5vw, 3.5rem)',
-              fontWeight: 400,
-              color: '#1F2A1E',
-              lineHeight: 1.15,
-              letterSpacing: '-0.015em',
-              marginBottom: '0.75rem',
-            }}
-          >
-            Get Started
-          </h2>
-          <p
-            style={{
-              fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              fontSize: '1rem',
-              fontWeight: 500,
-              color: 'rgba(31,42,30,0.6)',
-            }}
-          >
-            Choose how you'd like to use SmartServe
-          </p>
-        </motion.div>
+        <Reveal>
+          <div style={{ textAlign: 'center', marginBottom: 'clamp(3rem, 5vw, 5rem)' }}>
+            <p
+              style={{
+                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: '#7A9E6E',
+                marginBottom: '1rem',
+              }}
+            >
+              Entry Gateway
+            </p>
+            <h2
+              style={{
+                fontFamily: '"DM Serif Display", Georgia, serif',
+                fontSize: 'clamp(2rem, 4.5vw, 3.5rem)',
+                fontWeight: 400,
+                color: '#1F2A1E',
+                lineHeight: 1.15,
+                letterSpacing: '-0.015em',
+                marginBottom: '0.75rem',
+              }}
+            >
+              Get Started
+            </h2>
+            <p
+              style={{
+                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                fontSize: '1rem',
+                fontWeight: 500,
+                color: 'rgba(31,42,30,0.6)',
+              }}
+            >
+              Choose how you'd like to use SmartServe
+            </p>
+          </div>
+        </Reveal>
 
         {/* Dual cards */}
         <div
