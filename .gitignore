@@ -80,8 +80,9 @@ scratch/
 # Screenshots & visual test captures
 *.png
 *.webp
-VIDEOS/
+/VIDEOS/
 *.mp4
+!**/public/videos/*.mp4
 docker_inspect.json
 
 # Ad-hoc test, scraper, and local verification scripts

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72" fill="none">
+  <!-- Outer rounded container with translucent border -->
+  <rect x="2" y="2" width="68" height="68" rx="20" fill="white" fill-opacity="0.12" stroke="white" stroke-opacity="0.3" stroke-width="2" />
+  
+  <!-- Geometric Interlocking 'S' and Network Nodes -->
+  <path d="M44 24c-2.5-2.5-6-3.2-9.5-2.4-4.5 1-7.2 4.8-6.4 9.2.8 4.4 4.8 6.7 9.6 8.3 4.8 1.6 8.8 4 8 8.8-.8 4.8-5.1 7.7-9.9 7.2-4-.4-7.6-2.4-9.8-5.6" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Highlight spark / node -->
+  <circle cx="50" cy="22" r="3.5" fill="#FBBF24" />
+  <circle cx="22" cy="50" r="3" fill="#60A5FA" />
+</svg>

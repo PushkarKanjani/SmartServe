@@ -7,6 +7,7 @@ import { ProviderLayout } from '../components/layout/ProviderLayout';
 import { useAuth } from '../context/AuthContext';
 import { ProviderApplicationStatusView } from '../pages/status/ProviderApplicationStatusView';
 
+import { ProviderSplashView } from '../pages/ProviderSplashView';
 import { ProviderServicesView } from '../pages/services/ProviderServicesView';
 import { ProviderAvailabilityView } from '../pages/availability/ProviderAvailabilityView';
 import { ProviderProfileView } from '../pages/profile/ProviderProfileView';
@@ -74,45 +75,17 @@ const StatusRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-/**
- * RootRoute: Checks existing auth state and redirects:
- * - If not authenticated -> /login
- * - If authenticated but unverified -> /application-status
- * - If authenticated and verified -> /dashboard
- */
-const RootRoute: React.FC = () => {
-  const { token, loading, isVerified } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center text-xs text-[#1F2A1E]/60">
-        <div className="text-center">
-          <div className="w-10 h-10 border-4 border-[#2F5233] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          Loading…
-        </div>
-      </div>
-    );
-  }
-
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (isVerified === false) {
-    return <Navigate to="/application-status" replace />;
-  }
-
-  return <Navigate to="/dashboard" replace />;
-};
-
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
-      {/* Public routes — no auth required */}
+      {/* 1. Splash Screen Initial Landing (Parity with Customer Portal) */}
+      <Route path="/" element={<ProviderSplashView />} />
+
+      {/* 2. Public Auth & Onboarding Routes */}
       <Route path="/login" element={<ProviderLoginView />} />
       <Route path="/onboarding" element={<ProviderOnboardingView />} />
 
-      {/* Application status — requires auth, blocks verified providers (sends them to dashboard) */}
+      {/* 3. Application status — requires auth, blocks verified providers (sends them to dashboard) */}
       <Route
         path="/application-status"
         element={
@@ -122,7 +95,7 @@ export const AppRoutes: React.FC = () => {
         }
       />
 
-      {/* Protected operational routes — requires verified provider */}
+      {/* 4. Protected operational routes — requires verified provider */}
       <Route
         element={
           <ProtectedRoute>
@@ -138,10 +111,6 @@ export const AppRoutes: React.FC = () => {
         <Route path="/support/:ticketId" element={<ProviderSupportDetail />} />
       </Route>
 
-      {/* Root route: directs according to existing auth state */}
-      <Route path="/" element={<RootRoute />} />
-
-      {/* Catch-all fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

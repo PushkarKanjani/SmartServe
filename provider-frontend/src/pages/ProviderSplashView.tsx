@@ -10,10 +10,10 @@ export const ProviderSplashView: React.FC = () => {
   const handleFinish = () => {
     sessionStorage.setItem('smartserve_splash_done', 'true');
     if (token) {
-      if (isVerified === true) {
-        navigate('/dashboard', { replace: true });
-      } else {
+      if (isVerified === false) {
         navigate('/application-status', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
       }
     } else {
       navigate('/login', { replace: true });
