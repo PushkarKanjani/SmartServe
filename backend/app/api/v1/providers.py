@@ -26,6 +26,7 @@ from app.schemas.provider import (
     ProviderStatusResponse,
     ProviderResubmitRequest,
     BookingStatusUpdatePayload,
+    BookingStartPayload,
     BookingRejectPayload,
     BookingCompletePayload,
     ProviderTicketCreateRequest,
@@ -378,7 +379,7 @@ def get_my_assigned_bookings(
                 scheduled_date=b.scheduled_date,
                 address=b.address or "",
                 total_price=Decimal(str(b.total_price or "0.00")),
-                otp_code=b.otp_code,
+                otp_code=None,
                 emergency_flag=b.emergency_flag,
                 timeline=b.timeline,
                 created_at=b.created_at,
@@ -420,7 +421,7 @@ def get_my_assigned_booking_detail(
         scheduled_date=b.scheduled_date,
         address=b.address or "",
         total_price=Decimal(str(b.total_price or "0.00")),
-        otp_code=b.otp_code,
+        otp_code=None,
         emergency_flag=b.emergency_flag,
         timeline=b.timeline,
         created_at=b.created_at,
@@ -443,7 +444,7 @@ def _serialize_booking_response(b: Booking) -> ProviderBookingResponse:
         scheduled_date=b.scheduled_date,
         address=b.address or "",
         total_price=Decimal(str(b.total_price or "0.00")),
-        otp_code=b.otp_code,
+        otp_code=None,
         emergency_flag=b.emergency_flag,
         timeline=b.timeline,
         created_at=b.created_at,
@@ -460,6 +461,8 @@ def accept_booking(
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
+    from app.core.websockets import broadcast_realtime
+
     updated = transition_booking_status(
         db=db,
         booking_id=booking_id,
@@ -467,33 +470,57 @@ def accept_booking(
         user=current_user,
     )
 
+    cust_id = str(updated.customer_id) if updated.customer_id else None
+    cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+
+    # Direct realtime WebSocket broadcast (independent of Kafka)
+    channels = ["dashboard", "bookings", "admin", f"booking_{updated.id}", f"admin_booking_{updated.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if cust_user_id:
+        channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
+    channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
+
+    accepted_msg = {
+        "type": "BOOKING_ACCEPTED",
+        "event": "booking.accepted",
+        "event_type": "booking.accepted",
+        "booking_id": str(updated.id),
+        "status": "Accepted",
+        "booking": {
+            "id": str(updated.id),
+            "booking_reference": updated.booking_reference,
+            "customer_id": cust_id,
+            "customer_user_id": cust_user_id,
+            "customer_name": updated.customer.full_name if updated.customer else "Customer",
+            "provider_id": str(current_user.id),
+            "provider_name": current_user.full_name,
+            "service_name": updated.service_name,
+            "status": "Accepted",
+            "total_price": float(updated.total_price or 0.0),
+            "scheduled_date": updated.scheduled_date,
+            "scheduled_time": updated.scheduled_time.strftime("%H:%M:%S") if hasattr(updated.scheduled_time, "strftime") else str(updated.scheduled_time),
+        },
+        "data": {
+            "id": str(updated.id),
+            "status": "Accepted",
+        }
+    }
+    broadcast_realtime(channels, accepted_msg)
+
+    # Optional background Kafka notification if available
     try:
         from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
-        cust_id = str(updated.customer_id) if updated.customer_id else None
-        cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
         accepted_event = KafkaEvent(
             event_type=KafkaTopics.BOOKING_ACCEPTED,
             booking_id=str(updated.id),
             sender_id=str(current_user.id),
             receiver_id=cust_id,
-            payload={
-                "booking_id": str(updated.id),
-                "booking_reference": updated.booking_reference,
-                "customer_id": cust_id,
-                "customer_user_id": cust_user_id,
-                "customer_name": updated.customer.full_name if updated.customer else "Customer",
-                "provider_id": str(current_user.id),
-                "provider_name": current_user.full_name,
-                "service_name": updated.service_name,
-                "status": "Accepted",
-                "total_price": float(updated.total_price or 0.0),
-                "scheduled_date": updated.scheduled_date,
-                "scheduled_time": updated.scheduled_time.strftime("%H:%M:%S") if hasattr(updated.scheduled_time, "strftime") else str(updated.scheduled_time),
-            }
+            payload=accepted_msg["booking"]
         )
         kafka_producer.publish_event(KafkaTopics.BOOKING_ACCEPTED, accepted_event)
-    except Exception as exc:
-        print(f"[Provider Accept Booking Kafka Error] {exc}")
+    except Exception:
+        pass
 
     return _serialize_booking_response(updated)
 
@@ -509,6 +536,8 @@ def reject_booking(
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
+    from app.core.websockets import broadcast_realtime
+
     if not payload or not payload.reason or not payload.reason.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -523,35 +552,62 @@ def reject_booking(
         reason=reason,
     )
 
+    cust_id = str(updated.customer_id) if updated.customer_id else None
+    cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+
+    # Direct realtime WebSocket broadcast (independent of Kafka)
+    channels = ["dashboard", "bookings", "admin", f"booking_{updated.id}", f"admin_booking_{updated.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if cust_user_id:
+        channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
+    channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
+
+    rejected_msg = {
+        "type": "BOOKING_REJECTED",
+        "event": "booking.rejected",
+        "event_type": "booking.rejected",
+        "booking_id": str(updated.id),
+        "status": "Rejected",
+        "reason": reason,
+        "rejection_reason": reason,
+        "cancellation_reason": reason,
+        "booking": {
+            "id": str(updated.id),
+            "booking_reference": updated.booking_reference,
+            "customer_id": cust_id,
+            "customer_user_id": cust_user_id,
+            "customer_name": updated.customer.full_name if updated.customer else "Customer",
+            "provider_id": str(current_user.id),
+            "provider_name": current_user.full_name,
+            "service_name": updated.service_name,
+            "status": "Rejected",
+            "reason": reason,
+            "rejection_reason": reason,
+            "cancellation_reason": reason,
+            "total_price": float(updated.total_price or 0.0),
+            "scheduled_date": updated.scheduled_date,
+        },
+        "data": {
+            "id": str(updated.id),
+            "status": "Rejected",
+            "reason": reason,
+        }
+    }
+    broadcast_realtime(channels, rejected_msg)
+
     try:
         from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
-        cust_id = str(updated.customer_id) if updated.customer_id else None
-        cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
         rejected_event = KafkaEvent(
             event_type=KafkaTopics.BOOKING_REJECTED,
             booking_id=str(updated.id),
             sender_id=str(current_user.id),
             receiver_id=cust_id,
-            payload={
-                "booking_id": str(updated.id),
-                "booking_reference": updated.booking_reference,
-                "customer_id": cust_id,
-                "customer_user_id": cust_user_id,
-                "customer_name": updated.customer.full_name if updated.customer else "Customer",
-                "provider_id": str(current_user.id),
-                "provider_name": current_user.full_name,
-                "service_name": updated.service_name,
-                "status": "Rejected",
-                "reason": reason,
-                "rejection_reason": reason,
-                "cancellation_reason": reason,
-                "total_price": float(updated.total_price or 0.0),
-                "scheduled_date": updated.scheduled_date,
-            }
+            payload=rejected_msg["booking"]
         )
         kafka_producer.publish_event(KafkaTopics.BOOKING_REJECTED, rejected_event)
-    except Exception as exc:
-        print(f"[Provider Reject Booking Kafka Error] {exc}")
+    except Exception:
+        pass
 
     return _serialize_booking_response(updated)
 
@@ -559,26 +615,67 @@ def reject_booking(
 @router.post(
     "/providers/me/bookings/{booking_id}/start",
     response_model=ProviderBookingResponse,
-    summary="Mark an accepted booking as Started (service delivery initiated)",
+    summary="Mark an arrived booking as Started with verified customer 4-digit start OTP",
 )
 def start_booking(
     booking_id: uuid.UUID,
+    payload: Optional[BookingStartPayload] = None,
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
+    from app.core.websockets import broadcast_realtime
+
+    otp = payload.otp_code.strip() if (payload and payload.otp_code) else None
     updated = transition_booking_status(
         db=db,
         booking_id=booking_id,
         next_status="Started",
         user=current_user,
+        otp_code=otp,
     )
+
+    cust_id = str(updated.customer_id) if updated.customer_id else None
+    cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+
+    # Direct realtime WebSocket broadcast (Phase 1: No Kafka required)
+    channels = ["dashboard", "bookings", "admin", f"booking_{updated.id}", f"admin_booking_{updated.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if cust_user_id:
+        channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
+    channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
+
+    started_msg = {
+        "type": "BOOKING_STARTED",
+        "event": "booking.started",
+        "event_type": "booking.started",
+        "booking_id": str(updated.id),
+        "status": "Started",
+        "booking": {
+            "id": str(updated.id),
+            "booking_reference": updated.booking_reference,
+            "customer_id": cust_id,
+            "customer_name": updated.customer.full_name if updated.customer else "Customer",
+            "provider_id": str(current_user.id),
+            "provider_name": current_user.full_name,
+            "service_name": updated.service_name,
+            "status": "Started",
+            "total_price": float(updated.total_price or 0.0),
+        },
+        "data": {
+            "id": str(updated.id),
+            "status": "Started",
+        }
+    }
+    broadcast_realtime(channels, started_msg)
+
     return _serialize_booking_response(updated)
 
 
 @router.post(
     "/providers/me/bookings/{booking_id}/complete",
     response_model=ProviderBookingResponse,
-    summary="Complete a job in progress with optional customer OTP verification",
+    summary="Complete a job in progress (OTP previously validated at start)",
 )
 def complete_booking(
     booking_id: uuid.UUID,
@@ -586,14 +683,63 @@ def complete_booking(
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
-    otp = payload.otp_code if payload else None
+    from app.core.websockets import broadcast_realtime
+    from app.models.provider import ProviderLocation
+
+    reason = payload.notes if payload else None
     updated = transition_booking_status(
         db=db,
         booking_id=booking_id,
         next_status="Completed",
         user=current_user,
-        otp_code=otp,
+        reason=reason,
     )
+
+    # Stop active location tracking in PostgreSQL
+    try:
+        loc = db.query(ProviderLocation).filter(ProviderLocation.provider_id == current_user.id).first()
+        if loc:
+            loc.is_active = False
+            db.add(loc)
+            db.commit()
+    except Exception:
+        pass
+
+    cust_id = str(updated.customer_id) if updated.customer_id else None
+    cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+
+    # Direct realtime WebSocket broadcast (Phase 1: No Kafka required)
+    channels = ["dashboard", "bookings", "admin", f"booking_{updated.id}", f"admin_booking_{updated.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if cust_user_id:
+        channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
+    channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
+
+    completed_msg = {
+        "type": "BOOKING_COMPLETED",
+        "event": "booking.completed",
+        "event_type": "booking.completed",
+        "booking_id": str(updated.id),
+        "status": "Completed",
+        "booking": {
+            "id": str(updated.id),
+            "booking_reference": updated.booking_reference,
+            "customer_id": cust_id,
+            "customer_name": updated.customer.full_name if updated.customer else "Customer",
+            "provider_id": str(current_user.id),
+            "provider_name": current_user.full_name,
+            "service_name": updated.service_name,
+            "status": "Completed",
+            "total_price": float(updated.total_price or 0.0),
+        },
+        "data": {
+            "id": str(updated.id),
+            "status": "Completed",
+        }
+    }
+    broadcast_realtime(channels, completed_msg)
+
     return _serialize_booking_response(updated)
 
 
@@ -608,6 +754,8 @@ def update_booking_status(
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
+    from app.core.websockets import broadcast_realtime
+
     updated = transition_booking_status(
         db=db,
         booking_id=booking_id,
@@ -616,7 +764,265 @@ def update_booking_status(
         reason=payload.reason,
         otp_code=payload.otp_code,
     )
+
+    cust_id = str(updated.customer_id) if updated.customer_id else None
+    cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+
+    # Direct realtime WebSocket broadcast (Phase 1: No Kafka required)
+    channels = ["dashboard", "bookings", "admin", f"booking_{updated.id}", f"admin_booking_{updated.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if cust_user_id:
+        channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
+    channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
+
+    status_msg = {
+        "type": "BOOKING_STATUS_UPDATED",
+        "event": "booking.updated",
+        "event_type": "booking.updated",
+        "booking_id": str(updated.id),
+        "status": updated.status,
+        "booking": {
+            "id": str(updated.id),
+            "booking_reference": updated.booking_reference,
+            "customer_id": cust_id,
+            "provider_id": str(current_user.id),
+            "status": updated.status,
+        },
+        "data": {
+            "id": str(updated.id),
+            "status": updated.status,
+        }
+    }
+    broadcast_realtime(channels, status_msg)
+
     return _serialize_booking_response(updated)
+
+
+from pydantic import BaseModel
+
+class ProviderLocationPayload(BaseModel):
+    booking_id: uuid.UUID
+    latitude: float
+    longitude: float
+    heading: Optional[float] = None
+    speed: Optional[float] = None
+    accuracy: Optional[float] = None
+    timestamp: Optional[str] = None
+
+
+@router.post(
+    "/providers/me/location",
+    summary="Update real-time GPS location of provider for active booking",
+)
+def update_provider_location(
+    payload: ProviderLocationPayload,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    from datetime import datetime
+    from app.models.provider import Provider, ProviderLocation
+    from app.core.websockets import broadcast_realtime
+
+    # 1. Coordinate Validity Check
+    if not (-90.0 <= payload.latitude <= 90.0 and -180.0 <= payload.longitude <= 180.0):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid GPS coordinates: latitude must be in [-90, 90] and longitude in [-180, 180].",
+        )
+
+    # 2. Safety Check: Verify provider is verified
+    provider = db.query(Provider).filter(Provider.user_id == current_user.id).first()
+    if not provider or not provider.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only approved, verified service providers can broadcast live GPS location.",
+        )
+
+    # 3. Safety Check: Verify active booking ownership and state
+    booking = db.query(Booking).filter(
+        Booking.id == payload.booking_id,
+        Booking.provider_id == current_user.id
+    ).first()
+
+    if not booking:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Active booking not found for this provider.",
+        )
+
+    active_statuses = ["Accepted", "On The Way", "Arrived", "Started"]
+    if booking.status not in active_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Live location updates are only permitted during an active job. Current status: '{booking.status}'",
+        )
+
+    # 4. Upsert latest location record in PostgreSQL
+    loc = db.query(ProviderLocation).filter(ProviderLocation.provider_id == current_user.id).first()
+    now_utc = datetime.utcnow()
+    if not loc:
+        loc = ProviderLocation(
+            id=uuid.uuid4(),
+            provider_id=current_user.id,
+            booking_id=payload.booking_id,
+            latitude=Decimal(str(payload.latitude)),
+            longitude=Decimal(str(payload.longitude)),
+            heading=Decimal(str(payload.heading)) if payload.heading is not None else None,
+            speed=Decimal(str(payload.speed)) if payload.speed is not None else None,
+            accuracy=Decimal(str(payload.accuracy)) if payload.accuracy is not None else None,
+            is_active=True,
+            updated_at=now_utc,
+        )
+        db.add(loc)
+    else:
+        loc.booking_id = payload.booking_id
+        loc.latitude = Decimal(str(payload.latitude))
+        loc.longitude = Decimal(str(payload.longitude))
+        if payload.heading is not None:
+            loc.heading = Decimal(str(payload.heading))
+        if payload.speed is not None:
+            loc.speed = Decimal(str(payload.speed))
+        if payload.accuracy is not None:
+            loc.accuracy = Decimal(str(payload.accuracy))
+        loc.is_active = True
+        loc.updated_at = now_utc
+        db.add(loc)
+
+    db.commit()
+
+    # 5. Direct WebSocket broadcast to customer, admin, and active booking channels
+    cust_id = str(booking.customer_id) if booking.customer_id else None
+    channels = ["dashboard", "bookings", "admin", f"booking_{booking.id}", f"admin_booking_{booking.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if booking.customer and hasattr(booking.customer, "user_id") and booking.customer.user_id:
+        channels.extend([f"customer_{booking.customer.user_id}", f"user_{booking.customer.user_id}"])
+
+    loc_msg = {
+        "type": "PROVIDER_LOCATION_UPDATED",
+        "event": "provider.location.updated",
+        "event_type": "provider.location.updated",
+        "booking_id": str(booking.id),
+        "provider_id": str(current_user.id),
+        "provider_name": provider.full_name,
+        "latitude": float(payload.latitude),
+        "longitude": float(payload.longitude),
+        "heading": float(payload.heading) if payload.heading is not None else None,
+        "speed": float(payload.speed) if payload.speed is not None else None,
+        "accuracy": float(payload.accuracy) if payload.accuracy is not None else None,
+        "status": booking.status,
+        "updated_at": f"{now_utc.isoformat()}Z",
+    }
+    broadcast_realtime(channels, loc_msg)
+
+    return {
+        "status": "success",
+        "booking_id": str(booking.id),
+        "latitude": float(payload.latitude),
+        "longitude": float(payload.longitude),
+        "updated_at": f"{now_utc.isoformat()}Z",
+    }
+
+
+@router.post(
+    "/providers/dev-simulate-location",
+    summary="[DEV ONLY] Update real-time GPS location of provider along OSRM route for testing",
+)
+def dev_simulate_provider_location(
+    payload: ProviderLocationPayload,
+    db: Session = Depends(get_db),
+):
+    from datetime import datetime
+    from app.models.provider import Provider, ProviderLocation
+    from app.core.websockets import broadcast_realtime
+    from app.core.config import settings
+
+    if settings.ENVIRONMENT == "production":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="DEV GPS simulation endpoint is disabled in production.",
+        )
+
+    if not (-90.0 <= payload.latitude <= 90.0 and -180.0 <= payload.longitude <= 180.0):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid GPS coordinates.",
+        )
+
+    booking = db.query(Booking).filter(Booking.id == payload.booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found.")
+
+    provider_id = booking.provider_id
+    provider = db.query(Provider).filter(Provider.user_id == provider_id).first() if provider_id else None
+
+    now_utc = datetime.utcnow()
+    loc = db.query(ProviderLocation).filter(ProviderLocation.booking_id == payload.booking_id).first()
+    if not loc and provider_id:
+        loc = db.query(ProviderLocation).filter(ProviderLocation.provider_id == provider_id).first()
+
+    if not loc:
+        loc = ProviderLocation(
+            id=uuid.uuid4(),
+            provider_id=provider_id or uuid.uuid4(),
+            booking_id=payload.booking_id,
+            latitude=Decimal(str(payload.latitude)),
+            longitude=Decimal(str(payload.longitude)),
+            heading=Decimal(str(payload.heading)) if payload.heading is not None else None,
+            speed=Decimal(str(payload.speed)) if payload.speed is not None else None,
+            accuracy=Decimal(str(payload.accuracy)) if payload.accuracy is not None else Decimal("5.0"),
+            is_active=True,
+            updated_at=now_utc,
+        )
+        db.add(loc)
+    else:
+        loc.booking_id = payload.booking_id
+        loc.latitude = Decimal(str(payload.latitude))
+        loc.longitude = Decimal(str(payload.longitude))
+        if payload.heading is not None:
+            loc.heading = Decimal(str(payload.heading))
+        if payload.speed is not None:
+            loc.speed = Decimal(str(payload.speed))
+        if payload.accuracy is not None:
+            loc.accuracy = Decimal(str(payload.accuracy))
+        loc.is_active = True
+        loc.updated_at = now_utc
+        db.add(loc)
+
+    db.commit()
+
+    cust_id = str(booking.customer_id) if booking.customer_id else None
+    channels = ["dashboard", "bookings", "admin", f"booking_{booking.id}", f"admin_booking_{booking.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if booking.customer and hasattr(booking.customer, "user_id") and booking.customer.user_id:
+        channels.extend([f"customer_{booking.customer.user_id}", f"user_{booking.customer.user_id}"])
+
+    loc_msg = {
+        "type": "PROVIDER_LOCATION_UPDATED",
+        "event": "provider.location.updated",
+        "event_type": "provider.location.updated",
+        "booking_id": str(booking.id),
+        "provider_id": str(provider_id) if provider_id else "",
+        "provider_name": provider.full_name if provider else (booking.provider_name or "Service Partner"),
+        "latitude": float(payload.latitude),
+        "longitude": float(payload.longitude),
+        "heading": float(payload.heading) if payload.heading is not None else None,
+        "speed": float(payload.speed) if payload.speed is not None else None,
+        "accuracy": float(payload.accuracy) if payload.accuracy is not None else 5.0,
+        "status": booking.status,
+        "updated_at": f"{now_utc.isoformat()}Z",
+    }
+    broadcast_realtime(channels, loc_msg)
+
+    return {
+        "status": "success",
+        "booking_id": str(booking.id),
+        "latitude": float(payload.latitude),
+        "longitude": float(payload.longitude),
+        "updated_at": f"{now_utc.isoformat()}Z",
+    }
 
 
 # ==========================================

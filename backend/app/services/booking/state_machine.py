@@ -22,6 +22,14 @@ ALLOWED_TRANSITIONS: Dict[str, set] = {
         BookingStatus.EXPIRED.value,
     },
     BookingStatus.ACCEPTED.value: {
+        BookingStatus.ON_THE_WAY.value,
+        BookingStatus.CANCELLED.value,
+    },
+    BookingStatus.ON_THE_WAY.value: {
+        BookingStatus.ARRIVED.value,
+        BookingStatus.CANCELLED.value,
+    },
+    BookingStatus.ARRIVED.value: {
         BookingStatus.STARTED.value,
         BookingStatus.CANCELLED.value,
     },
@@ -95,14 +103,69 @@ def transition_booking_status(
             ),
         )
 
-    # 4. Special validation for Completion: Check OTP if provided
-    if next_status == BookingStatus.COMPLETED.value:
-        if otp_code and booking.otp_code and otp_code.strip() != booking.otp_code.strip():
+    # 4. Enforce OTP Verification BEFORE Service Starts (Phase 1 Requirement)
+    if next_status == BookingStatus.ARRIVED.value:
+        if not booking.otp_code or len(str(booking.otp_code).strip()) != 4 or not str(booking.otp_code).strip().isdigit():
+            booking.otp_code = f"{uuid.uuid4().int % 9000 + 1000}"
+        # Append arrival timeline event
+        tl_arrived = {
+            "event": "Provider arrived at service location",
+            "actor": user.full_name or user.email,
+            "role": user.role,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        cur_tl = list(booking.timeline or [])
+        cur_tl.append(tl_arrived)
+        booking.timeline = cur_tl
+
+    if next_status == BookingStatus.STARTED.value:
+        if curr_status != BookingStatus.ARRIVED.value and user.role == "provider":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid service completion OTP code provided by customer.",
+                detail=f"Invalid state transition: Must mark 'Arrived' before starting service. Current status: '{curr_status}'.",
             )
+        # Provider role MUST provide valid OTP
+        if user.role == "provider" or booking.otp_code:
+            if not otp_code or not booking.otp_code or otp_code.strip() != str(booking.otp_code).strip():
+                tl_fail = {
+                    "event": "Failed Service Start OTP Verification Attempt",
+                    "actor": user.full_name or user.email,
+                    "role": user.role,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+                cur_tl = list(booking.timeline or [])
+                cur_tl.append(tl_fail)
+                booking.timeline = cur_tl
+                db.add(booking)
+                db.commit()
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid service start OTP verification code. Please request the customer's 4-digit start OTP.",
+                )
+            # Record audit and invalidate single-use OTP
+            tl_otp = {
+                "event": "Service Start OTP Verified",
+                "actor": user.full_name or user.email,
+                "role": user.role,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            cur_tl = list(booking.timeline or [])
+            cur_tl.append(tl_otp)
+            booking.timeline = cur_tl
+            booking.otp_code = None  # Consumed single-use OTP
+
+    # 4b. Service Completion handling (No OTP required at completion; already validated at Start)
+    if next_status == BookingStatus.COMPLETED.value:
         booking.payment_status = "Completed"
+        try:
+            from app.models.provider import ProviderLocation
+            if booking.provider_id:
+                loc = db.query(ProviderLocation).filter(ProviderLocation.provider_id == booking.provider_id).first()
+                if loc:
+                    loc.is_active = False
+                    db.add(loc)
+        except Exception:
+            pass
 
     # 4b. If booking is rejected or cancelled, release reserved slot back to FREE
     if next_status in [BookingStatus.REJECTED.value, BookingStatus.CANCELLED.value]:

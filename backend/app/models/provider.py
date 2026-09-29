@@ -134,3 +134,21 @@ class ProviderService(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     provider = relationship("Provider", back_populates="services")
+
+
+class ProviderLocation(Base):
+    __tablename__ = "provider_locations"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    provider_id = Column(GUID(), ForeignKey("providers.user_id", ondelete="CASCADE"), nullable=False, unique=True, index=True)
+    booking_id = Column(GUID(), ForeignKey("bookings.id", ondelete="SET NULL"), nullable=True, index=True)
+    latitude = Column(Numeric(10, 7), nullable=False)
+    longitude = Column(Numeric(10, 7), nullable=False)
+    heading = Column(Numeric(5, 2), nullable=True)
+    speed = Column(Numeric(6, 2), nullable=True)
+    accuracy = Column(Numeric(8, 2), nullable=True)
+    is_active = Column(Boolean, default=True, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    provider = relationship("Provider", backref="latest_location")
+

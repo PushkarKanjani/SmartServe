@@ -232,6 +232,7 @@ class BookingDetail(BaseModel):
     notes: Optional[str] = None
     provider_id: Optional[str] = None
     provider_name: Optional[str] = None
+    provider: Optional[Dict[str, Any]] = None
     otp_code: Optional[str] = None
     emergency_flag: Optional[str] = None
     timeline: Optional[List[Dict[str, Any]]] = None

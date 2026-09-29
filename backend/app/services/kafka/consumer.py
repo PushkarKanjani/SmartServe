@@ -145,6 +145,12 @@ class KafkaConsumerService:
                 await self._handle_booking_accepted(data, booking_id, payload)
             elif topic == KafkaTopics.BOOKING_REJECTED or event_type == "booking.rejected":
                 await self._handle_booking_rejected(data, booking_id, payload)
+            elif topic == KafkaTopics.BOOKING_STARTED or event_type == "booking.started":
+                await self._handle_booking_started(data, booking_id, payload)
+            elif topic == KafkaTopics.BOOKING_COMPLETED or event_type == "booking.completed":
+                await self._handle_booking_completed(data, booking_id, payload)
+            elif topic == KafkaTopics.PROVIDER_LOCATION_UPDATED or event_type == "provider.location.updated":
+                await self._handle_provider_location_updated(data, booking_id, payload)
             elif topic == KafkaTopics.SUPPORT_MESSAGE or event_type == "support.message":
                 await self._handle_support_message(data, ticket_id, booking_id, payload)
             else:
@@ -306,6 +312,109 @@ class KafkaConsumerService:
         if provider_id:
             channels.append(f"provider_{provider_id}")
             channels.append(f"user_{provider_id}")
+        await ws_manager.broadcast_to_channels(channels, broadcast_msg)
+
+    async def _handle_booking_started(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
+        """Customer and Admin receive booking.started status update."""
+        customer_id = event.get("receiver_id") or payload.get("customer_id")
+        provider_name = payload.get("provider_name", "Service Provider")
+        booking_ref = payload.get("booking_reference", booking_id)
+
+        logger.info(
+            f"[Kafka Consumer -> Customer & Admin] Received booking.started event: "
+            f"Booking #{booking_ref} started by Provider '{provider_name}'."
+        )
+        broadcast_msg = {
+            "event_id": event.get("event_id"),
+            "type": "BOOKING_STARTED",
+            "event": "booking.started",
+            "event_type": "booking.started",
+            "booking_id": booking_id,
+            "status": "Started",
+            "booking": payload,
+            "data": payload,
+        }
+        channels = ["dashboard", "bookings"]
+        if booking_id:
+            channels.append(f"booking_{booking_id}")
+        if customer_id:
+            channels.append(f"customer_{customer_id}")
+            channels.append(f"user_{customer_id}")
+        customer_user_id = payload.get("customer_user_id")
+        if customer_user_id:
+            channels.append(f"customer_{customer_user_id}")
+            channels.append(f"user_{customer_user_id}")
+        provider_id = payload.get("provider_id") or event.get("sender_id")
+        if provider_id:
+            channels.append(f"provider_{provider_id}")
+            channels.append(f"user_{provider_id}")
+        await ws_manager.broadcast_to_channels(channels, broadcast_msg)
+
+    async def _handle_booking_completed(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
+        """Customer and Admin receive booking.completed status update."""
+        customer_id = event.get("receiver_id") or payload.get("customer_id")
+        provider_name = payload.get("provider_name", "Service Provider")
+        booking_ref = payload.get("booking_reference", booking_id)
+
+        logger.info(
+            f"[Kafka Consumer -> Customer & Admin] Received booking.completed event: "
+            f"Booking #{booking_ref} completed by Provider '{provider_name}'."
+        )
+        broadcast_msg = {
+            "event_id": event.get("event_id"),
+            "type": "BOOKING_COMPLETED",
+            "event": "booking.completed",
+            "event_type": "booking.completed",
+            "booking_id": booking_id,
+            "status": "Completed",
+            "booking": payload,
+            "data": payload,
+        }
+        channels = ["dashboard", "bookings"]
+        if booking_id:
+            channels.append(f"booking_{booking_id}")
+        if customer_id:
+            channels.append(f"customer_{customer_id}")
+            channels.append(f"user_{customer_id}")
+        customer_user_id = payload.get("customer_user_id")
+        if customer_user_id:
+            channels.append(f"customer_{customer_user_id}")
+            channels.append(f"user_{customer_user_id}")
+        provider_id = payload.get("provider_id") or event.get("sender_id")
+        if provider_id:
+            channels.append(f"provider_{provider_id}")
+            channels.append(f"user_{provider_id}")
+        await ws_manager.broadcast_to_channels(channels, broadcast_msg)
+
+    async def _handle_provider_location_updated(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
+        """Customer live map and Admin monitor receive real-time GPS coordinate update."""
+        customer_id = event.get("receiver_id") or payload.get("customer_id")
+        provider_id = event.get("sender_id") or payload.get("provider_id")
+        lat = payload.get("latitude")
+        lng = payload.get("longitude")
+
+        broadcast_msg = {
+            "event_id": event.get("event_id"),
+            "type": "PROVIDER_LOCATION_UPDATED",
+            "event": "provider.location.updated",
+            "event_type": "provider.location.updated",
+            "booking_id": booking_id,
+            "provider_id": provider_id,
+            "provider_name": payload.get("provider_name"),
+            "latitude": float(lat) if lat is not None else None,
+            "longitude": float(lng) if lng is not None else None,
+            "heading": payload.get("heading"),
+            "speed": payload.get("speed"),
+            "accuracy": payload.get("accuracy"),
+            "updated_at": payload.get("updated_at"),
+            "status": payload.get("status", "On the Way"),
+        }
+        channels = ["dashboard"]
+        if booking_id:
+            channels.append(f"booking_{booking_id}")
+        if customer_id:
+            channels.append(f"customer_{customer_id}")
+            channels.append(f"user_{customer_id}")
         await ws_manager.broadcast_to_channels(channels, broadcast_msg)
 
     async def _handle_support_message(self, event: Dict[str, Any], ticket_id: Optional[str], booking_id: Optional[str], payload: Dict[str, Any]):

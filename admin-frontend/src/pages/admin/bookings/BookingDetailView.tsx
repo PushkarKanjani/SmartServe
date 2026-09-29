@@ -24,14 +24,18 @@ import type { SupportTicketItem } from '../../../api/support';
 import { 
   getBookingDetail, 
   updateBookingStatus, 
-  reassignBookingProvider 
+  reassignBookingProvider,
+  getAdminBookingLocation,
+  type BookingItem,
+  type AdminBookingLocationResponse,
+  type AdminProviderLocation
 } from '../../../api/bookings';
-import type { BookingItem } from '../../../api/bookings';
 import { getProvidersList } from '../../../api/providers';
 import { getAuthenticatedAdmin } from '../../../api/admins';
 import type { SessionAdminInfo } from '../../../api/admins';
 import { hasPermission } from '../../../utils/rbac';
 import { subscribeToRealtime } from '../../../utils/realtime';
+import { AdminLiveTrackingCard } from '../../../components/AdminLiveTrackingCard';
 
 export const BookingDetailView: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -41,6 +45,9 @@ export const BookingDetailView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [adminSession, setAdminSession] = useState<SessionAdminInfo | null>(null);
+  const [liveLocationData, setLiveLocationData] = useState<AdminBookingLocationResponse | null>(null);
+  const [liveProviderLocation, setLiveProviderLocation] = useState<AdminProviderLocation | null>(null);
+  const [wsConnected, setWsConnected] = useState<boolean>(true);
 
   // Status Transition Modal State
   const [transitionModalOpen, setTransitionModalOpen] = useState<boolean>(false);
@@ -80,10 +87,24 @@ export const BookingDetailView: React.FC = () => {
       if (data.allowed_next_statuses && data.allowed_next_statuses.length > 0) {
         setTargetNextStatus(data.allowed_next_statuses[0]);
       }
+      fetchLocation();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to load booking details from backend.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLocation = async () => {
+    if (!bookingId) return;
+    try {
+      const loc = await getAdminBookingLocation(bookingId);
+      setLiveLocationData(loc);
+      if (loc.provider_location) {
+        setLiveProviderLocation(loc.provider_location);
+      }
+    } catch (e) {
+      console.warn('Failed to load admin live location:', e);
     }
   };
 
@@ -101,47 +122,86 @@ export const BookingDetailView: React.FC = () => {
 
     const channels = [
       `booking_${bookingId}`,
+      `admin_booking_${bookingId}`,
       `booking_chat_${bookingId}`,
       'bookings',
       'dashboard',
+      'admin',
       'support_tickets',
       'support'
     ];
 
-    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
-      const type = payload.type || payload.event_type || payload.event;
-      const targetBookingId = String(payload.booking_id || payload.booking?.id || payload.id || '').toLowerCase();
-      const currentBookingId = String(bookingId || '').toLowerCase();
+    const unsubscribeWs = subscribeToRealtime(
+      channels,
+      (payload) => {
+        const type = payload.type || payload.event_type || payload.event;
+        const targetBookingId = String(payload.booking_id || payload.booking?.id || payload.id || '').toLowerCase();
+        const currentBookingId = String(bookingId || '').toLowerCase();
 
-      if (targetBookingId && targetBookingId === currentBookingId) {
-        if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
-          setBookingData((prev) => (prev ? { ...prev, status: 'Accepted' } : prev));
-        } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
-          const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Rejected by provider';
-          setBookingData((prev) =>
-            prev ? { ...prev, status: 'Rejected', cancellation_reason: reason } : prev
-          );
+        if (targetBookingId && targetBookingId === currentBookingId) {
+          if (type === 'PROVIDER_LOCATION_UPDATED' || type === 'provider.location.updated') {
+            if (payload.latitude !== undefined && payload.longitude !== undefined) {
+              setLiveProviderLocation({
+                latitude: Number(payload.latitude),
+                longitude: Number(payload.longitude),
+                heading: payload.heading !== undefined ? Number(payload.heading) : null,
+                speed: payload.speed !== undefined ? Number(payload.speed) : null,
+                accuracy: payload.accuracy !== undefined ? Number(payload.accuracy) : null,
+                updated_at: payload.updated_at || new Date().toISOString(),
+              });
+            }
+            if (payload.status) {
+              setBookingData((prev) => (prev ? { ...prev, status: payload.status } : prev));
+            }
+          } else if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
+            setBookingData((prev) => (prev ? { ...prev, status: 'Accepted' } : prev));
+            fetchLocation();
+          } else if (type === 'BOOKING_STATUS_UPDATED' || type === 'booking.updated' || type === 'BOOKING_STARTED' || type === 'BOOKING_COMPLETED') {
+            const nextSt = payload.status || payload.booking?.status;
+            if (nextSt) {
+              setBookingData((prev) => (prev ? { ...prev, status: nextSt } : prev));
+              if (['Completed', 'Cancelled', 'Rejected'].includes(nextSt)) {
+                setLiveProviderLocation(null);
+              }
+            }
+            fetchLocation();
+          } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
+            const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Rejected by provider';
+            setBookingData((prev) =>
+              prev ? { ...prev, status: 'Rejected', cancellation_reason: reason } : prev
+            );
+          }
+          if (type !== 'PROVIDER_LOCATION_UPDATED' && type !== 'provider.location.updated') {
+            fetchBookingProfile();
+          }
         }
-        fetchBookingProfile();
-      }
 
-      if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {
-        const msg = payload.message || payload.data;
-        if (msg && (!payload.booking_id || String(payload.booking_id).toLowerCase() === currentBookingId)) {
-          setAuditTicket((prev) => {
-            if (!prev) return prev;
-            const exists = (prev.messages || []).some((m: any) => String(m.id).toLowerCase() === String(msg.id).toLowerCase());
-            if (exists) return prev;
-            return {
-              ...prev,
-              messages: [...(prev.messages || []), msg],
-            };
-          });
+        if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {
+          const msg = payload.message || payload.data;
+          if (msg && (!payload.booking_id || String(payload.booking_id).toLowerCase() === currentBookingId)) {
+            setAuditTicket((prev) => {
+              if (!prev) return prev;
+              const exists = (prev.messages || []).some((m: any) => String(m.id).toLowerCase() === String(msg.id).toLowerCase());
+              if (exists) return prev;
+              return {
+                ...prev,
+                messages: [...(prev.messages || []), msg],
+              };
+            });
+          }
         }
+      },
+      (status: 'connected' | 'connecting' | 'disconnected') => {
+        setWsConnected(status === 'connected');
       }
-    });
+    );
+
+    const pollInterval = setInterval(() => {
+      fetchLocation();
+    }, 10000);
 
     return () => {
+      clearInterval(pollInterval);
       unsubscribeWs();
     };
   }, [bookingId]);
@@ -329,6 +389,33 @@ export const BookingDetailView: React.FC = () => {
             </p>
           </div>
         </div>
+      )}
+
+      {/* Live Provider Tracking Card (Ola / Swiggy style live monitoring) */}
+      {(['Accepted', 'On The Way', 'Arrived', 'In Progress', 'Started', 'Completed'].includes(bookingData.status) || liveProviderLocation || liveLocationData?.provider_location || (bookingData.provider_id && ['Accepted', 'On The Way', 'Arrived', 'Started'].includes(bookingData.status))) && (
+        <AdminLiveTrackingCard
+          bookingId={bookingData.id}
+          bookingStatus={bookingData.status}
+          customer={{
+            id: bookingData.customer_id,
+            name: bookingData.customer_name || 'Customer',
+            phone: bookingData.customer_phone || null,
+          }}
+          provider={
+            bookingData.provider_id
+              ? {
+                  id: bookingData.provider_id,
+                  full_name: bookingData.provider_name || 'Assigned Technician',
+                  phone: null,
+                }
+              : null
+          }
+          serviceName={bookingData.service_name || 'Service Booking'}
+          customerLocation={liveLocationData?.customer_location || null}
+          providerLocation={liveProviderLocation || liveLocationData?.provider_location || null}
+          wsConnected={wsConnected}
+          onRefresh={fetchLocation}
+        />
       )}
 
       {/* Grid Layout of Details */}

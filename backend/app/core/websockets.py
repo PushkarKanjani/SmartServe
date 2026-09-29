@@ -92,3 +92,22 @@ class WebSocketConnectionManager:
 
 ws_manager = WebSocketConnectionManager()
 
+
+def broadcast_realtime(channels: List[str], message: dict):
+    """
+    Fire-and-forget sync helper that dispatches WebSocket broadcasts
+    to the active asyncio event loop without requiring Kafka.
+    """
+    import asyncio
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(ws_manager.broadcast_to_channels(channels, message))
+    except RuntimeError:
+        try:
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(ws_manager.broadcast_to_channels(channels, message))
+            loop.close()
+        except Exception as exc:
+            logger.warning(f"[WebSocket] broadcast_realtime error: {exc}")
+
+

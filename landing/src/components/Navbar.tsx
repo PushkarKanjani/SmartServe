@@ -201,14 +201,14 @@ export default function Navbar() {
         initial={false}
         animate={{
           backgroundColor: scrolled
-            ? 'rgba(247, 244, 237, 0.96)'
-            : 'rgba(250, 247, 240, 0.92)',
+            ? 'rgba(15, 18, 16, 0.96)'
+            : 'rgba(18, 22, 19, 0.92)',
           boxShadow: scrolled
-            ? '0 4px 20px -2px rgba(31, 42, 30, 0.08), 0 1px 4px rgba(31, 42, 30, 0.04)'
-            : '0 2px 14px -2px rgba(31, 42, 30, 0.05)',
+            ? '0 4px 24px -2px rgba(0, 0, 0, 0.45), 0 1px 4px rgba(0, 0, 0, 0.25)'
+            : '0 2px 16px -2px rgba(0, 0, 0, 0.3)',
           borderBottomColor: scrolled
-            ? 'rgba(47, 82, 51, 0.12)'
-            : 'rgba(47, 82, 51, 0.08)',
+            ? 'rgba(255, 255, 255, 0.12)'
+            : 'rgba(255, 255, 255, 0.08)',
         }}
         transition={{ duration: 0.25, ease: 'easeOut' }}
         style={{
@@ -250,7 +250,7 @@ export default function Navbar() {
                 fontFamily: '"DM Serif Display", Georgia, serif',
                 fontSize: '1.45rem',
                 fontWeight: 400,
-                color: '#2F5233',
+                color: '#52A35C',
                 letterSpacing: '-0.01em',
                 lineHeight: 1,
               }}
@@ -287,7 +287,7 @@ export default function Navbar() {
                   onClick={() => handleNavClick(link.href)}
                   aria-current={isActive ? 'page' : undefined}
                   style={{
-                    background: isActive ? 'rgba(47, 82, 51, 0.05)' : 'none',
+                    background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'none',
                     border: 'none',
                     cursor: 'pointer',
                     padding: '0.55rem 0.95rem',
@@ -295,18 +295,19 @@ export default function Navbar() {
                     fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
                     fontSize: '0.875rem',
                     fontWeight: isActive ? 700 : 500,
-                    color: isActive ? '#2F5233' : '#1F2A1E',
+                    color: '#FFFFFF',
+                    opacity: isActive ? 1 : 0.85,
                     borderRadius: 8,
-                    transition: 'color 0.2s ease, background-color 0.2s ease',
+                    transition: 'color 0.2s ease, background-color 0.2s ease, opacity 0.2s ease',
                     position: 'relative',
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.color = '#2F5233';
-                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(47, 82, 51, 0.06)';
+                    (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+                    (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.12)';
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLButtonElement).style.color = isActive ? '#2F5233' : '#1F2A1E';
-                    (e.currentTarget as HTMLButtonElement).style.background = isActive ? 'rgba(47, 82, 51, 0.05)' : 'none';
+                    (e.currentTarget as HTMLButtonElement).style.opacity = isActive ? '1' : '0.85';
+                    (e.currentTarget as HTMLButtonElement).style.background = isActive ? 'rgba(255, 255, 255, 0.08)' : 'none';
                   }}
                 >
                   {link.label}
@@ -335,7 +336,7 @@ export default function Navbar() {
                 height: 2.5,
                 borderRadius: '3px 3px 0 0',
                 background: 'linear-gradient(90deg, #D4AF37 0%, #C9A15A 50%, #E5C378 100%)',
-                boxShadow: '0 -1px 8px rgba(201, 161, 90, 0.55), 0 0 3px rgba(201, 161, 90, 0.8)',
+                boxShadow: '0 -1px 8px rgba(201, 161, 90, 0.65), 0 0 4px rgba(201, 161, 90, 0.9)',
                 pointerEvents: 'none',
               }}
             />
@@ -348,24 +349,26 @@ export default function Navbar() {
             style={{
               background: '#2F5233',
               color: '#FAF7F0',
-              border: 'none',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
               borderRadius: 9999,
               padding: '0.6rem 1.4rem',
               fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
               fontWeight: 700,
               fontSize: '0.875rem',
               cursor: 'pointer',
-              transition: 'background 0.2s, box-shadow 0.2s',
-              boxShadow: '0 2px 10px rgba(47,82,51,0.24)',
+              transition: 'background 0.2s, box-shadow 0.2s, border-color 0.2s',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3), 0 0 12px rgba(47, 82, 51, 0.35)',
               minHeight: 'auto',
             }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLButtonElement).style.background = '#3D6B42';
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(47,82,51,0.32)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255, 255, 255, 0.28)';
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.4), 0 0 16px rgba(61, 107, 66, 0.45)';
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLButtonElement).style.background = '#2F5233';
-              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 10px rgba(47,82,51,0.24)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255, 255, 255, 0.16)';
+              (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.3), 0 0 12px rgba(47, 82, 51, 0.35)';
             }}
           >
             Get Started →
@@ -378,12 +381,12 @@ export default function Navbar() {
             aria-label="Main menu"
             aria-expanded={menuOpen}
             style={{
-              background: 'none',
-              border: '1.5px solid rgba(31,42,30,0.15)',
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1.5px solid rgba(255, 255, 255, 0.2)',
               borderRadius: 8,
               padding: '0.4rem',
               cursor: 'pointer',
-              color: '#1F2A1E',
+              color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -431,11 +434,11 @@ export default function Navbar() {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="fixed top-[72px] inset-x-0 z-40 overflow-hidden lg:hidden"
             style={{
-              background: 'rgba(247, 244, 237, 0.98)',
+              background: 'rgba(15, 18, 16, 0.98)',
               backdropFilter: 'blur(16px)',
               WebkitBackdropFilter: 'blur(16px)',
-              borderBottom: '1px solid rgba(47, 82, 51, 0.12)',
-              boxShadow: '0 8px 24px rgba(31, 42, 30, 0.12)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+              boxShadow: '0 12px 32px rgba(0, 0, 0, 0.5)',
             }}
           >
             <div style={{ padding: '1rem 1.5rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
@@ -446,7 +449,7 @@ export default function Navbar() {
                     key={link.href}
                     onClick={() => handleNavClick(link.href)}
                     style={{
-                      background: isActive ? 'rgba(47, 82, 51, 0.08)' : 'none',
+                      background: isActive ? 'rgba(255, 255, 255, 0.08)' : 'none',
                       border: 'none',
                       borderRadius: 10,
                       padding: '0.75rem 1rem',
@@ -455,7 +458,8 @@ export default function Navbar() {
                       fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
                       fontSize: '0.95rem',
                       fontWeight: isActive ? 700 : 500,
-                      color: isActive ? '#2F5233' : '#1F2A1E',
+                      color: '#FFFFFF',
+                      opacity: isActive ? 1 : 0.85,
                       minHeight: 'auto',
                       width: '100%',
                       display: 'flex',
@@ -484,7 +488,7 @@ export default function Navbar() {
                 style={{
                   background: '#2F5233',
                   color: '#FAF7F0',
-                  border: 'none',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
                   borderRadius: 9999,
                   padding: '0.85rem 1.5rem',
                   fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
@@ -494,7 +498,7 @@ export default function Navbar() {
                   marginTop: '0.75rem',
                   width: '100%',
                   minHeight: 'auto',
-                  boxShadow: '0 2px 10px rgba(47,82,51,0.24)',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3), 0 0 12px rgba(47, 82, 51, 0.35)',
                 }}
               >
                 Get Started →

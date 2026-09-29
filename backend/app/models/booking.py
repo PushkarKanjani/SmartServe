@@ -4,6 +4,8 @@ class BookingStatus(str, PyEnum):
     REQUESTED = "Requested"
     ASSIGNED = "Assigned"
     ACCEPTED = "Accepted"
+    ON_THE_WAY = "On The Way"
+    ARRIVED = "Arrived"
     STARTED = "Started"
     COMPLETED = "Completed"
     PAID = "Paid"

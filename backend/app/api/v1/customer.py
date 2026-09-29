@@ -4,6 +4,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -791,7 +792,44 @@ def create_customer_booking(
         else str(new_booking.scheduled_time)
     )
 
-    # Publish booking.created event to Kafka asynchronously
+    booking_payload = {
+        "booking_id": str(new_booking.id),
+        "booking_reference": new_booking.booking_reference,
+        "customer_id": str(current_customer.id),
+        "customer_name": current_customer.full_name,
+        "customer_phone": current_customer.phone,
+        "provider_id": str(new_booking.provider_id) if new_booking.provider_id else None,
+        "provider_name": eligible_provider.full_name if eligible_provider else None,
+        "service_id": str(srv_id),
+        "service_name": srv_name,
+        "category": srv_category,
+        "status": str(new_booking.status),
+        "scheduled_date": new_booking.scheduled_date,
+        "scheduled_time": sched_time_str,
+        "address": new_booking.address_line1,
+        "total_price": float(new_booking.total_price),
+        "emergency_flag": new_booking.emergency_flag,
+        "created_at": new_booking.created_at.isoformat() if hasattr(new_booking.created_at, "isoformat") else str(new_booking.created_at),
+    }
+
+    # Direct realtime WebSocket broadcast (Phase 1: No Kafka required)
+    from app.core.websockets import broadcast_realtime
+    channels = ["dashboard", "bookings", f"booking_{new_booking.id}"]
+    if new_booking.provider_id:
+        channels.extend([f"provider_{new_booking.provider_id}", f"user_{new_booking.provider_id}"])
+    channels.extend([f"customer_{current_customer.id}", f"user_{current_customer.id}"])
+
+    broadcast_realtime(channels, {
+        "type": "BOOKING_CREATED",
+        "event": "booking.created",
+        "event_type": "booking.created",
+        "booking_id": str(new_booking.id),
+        "status": "Requested",
+        "booking": booking_payload,
+        "data": booking_payload,
+    })
+
+    # Optional background Kafka notification if available
     try:
         from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
         booking_event = KafkaEvent(
@@ -799,29 +837,11 @@ def create_customer_booking(
             booking_id=str(new_booking.id),
             sender_id=str(current_customer.id),
             receiver_id=str(new_booking.provider_id) if new_booking.provider_id else None,
-            payload={
-                "booking_id": str(new_booking.id),
-                "booking_reference": new_booking.booking_reference,
-                "customer_id": str(current_customer.id),
-                "customer_name": current_customer.full_name,
-                "customer_phone": current_customer.phone,
-                "provider_id": str(new_booking.provider_id) if new_booking.provider_id else None,
-                "provider_name": eligible_provider.full_name if eligible_provider else None,
-                "service_id": str(srv_id),
-                "service_name": srv_name,
-                "category": srv_category,
-                "status": str(new_booking.status),
-                "scheduled_date": new_booking.scheduled_date,
-                "scheduled_time": sched_time_str,
-                "address": new_booking.address_line1,
-                "total_price": float(new_booking.total_price),
-                "emergency_flag": new_booking.emergency_flag,
-                "created_at": new_booking.created_at.isoformat() if hasattr(new_booking.created_at, "isoformat") else str(new_booking.created_at),
-            }
+            payload=booking_payload
         )
         kafka_producer.publish_event(KafkaTopics.BOOKING_CREATED, booking_event)
-    except Exception as exc:
-        print(f"[Customer Booking Kafka Publish Error] {exc}")
+    except Exception:
+        pass
 
     return BookingDetail(
         id=str(new_booking.id),
@@ -872,12 +892,31 @@ def get_booking_by_id(
             detail="Forbidden: You cannot access bookings belonging to another customer",
         )
 
+    provider_info = None
+    if record.provider_id:
+        from app.models.provider import Provider
+        p = db.query(Provider).filter(Provider.user_id == record.provider_id).first()
+        if p:
+            provider_info = {
+                "provider_id": str(p.user_id),
+                "full_name": p.full_name,
+                "photo_url": p.photo_url or f"https://api.dicebear.com/7.x/avataaars/svg?seed={p.full_name}",
+                "category": p.category,
+                "skills": p.skills or "Certified Service Professional",
+                "experience_years": p.experience_years or 5,
+                "reliability_score": float(p.reliability_score or 99.0),
+                "rating": 4.9,
+                "is_verified": p.is_verified,
+                "service_area": p.service_area or "Bengaluru, India",
+            }
+
     return BookingDetail(
         id=str(record.id),
         booking_reference=record.booking_reference,
         customer_id=str(record.customer_id),
         provider_id=str(record.provider_id) if record.provider_id else None,
         provider_name=record.provider.full_name if record.provider else None,
+        provider=provider_info,
         service_id=str(record.service_id),
         service_name=record.service_name,
         category=record.category,
@@ -897,6 +936,160 @@ def get_booking_by_id(
         timeline=safe_timeline(record.timeline),
         created_at=record.created_at,
     )
+
+
+# 16b. GET /customer/bookings/{id}/location
+@router.get("/bookings/{booking_id}/location")
+def get_booking_location(
+    booking_id: str,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db),
+):
+    from app.models.provider import Provider, ProviderLocation
+
+    record = (
+        db.query(Booking)
+        .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
+        .first()
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if record.customer_id != current_customer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot access location for bookings belonging to another customer",
+        )
+
+    provider_info = None
+    if record.provider_id:
+        provider = db.query(Provider).filter(Provider.user_id == record.provider_id).first()
+        if provider:
+            provider_info = {
+                "provider_id": str(provider.user_id),
+                "full_name": provider.full_name,
+                "photo_url": provider.photo_url or f"https://api.dicebear.com/7.x/avataaars/svg?seed={provider.full_name}",
+                "category": provider.category,
+                "skills": provider.skills,
+                "experience_years": provider.experience_years,
+                "reliability_score": float(provider.reliability_score or 100.0),
+                "rating": 4.9,
+                "is_verified": provider.is_verified,
+                "service_area": provider.service_area or "Delhi NCR",
+            }
+
+    loc = None
+    active_tracking_statuses = ["Accepted", "On The Way", "Arrived", "Started"]
+    if record.provider_id and record.status in active_tracking_statuses:
+        loc = db.query(ProviderLocation).filter(
+            ProviderLocation.provider_id == record.provider_id,
+            ProviderLocation.is_active == True,
+        ).first()
+
+    provider_loc_data = None
+    if loc:
+        provider_loc_data = {
+            "latitude": float(loc.latitude),
+            "longitude": float(loc.longitude),
+            "heading": float(loc.heading) if loc.heading is not None else None,
+            "speed": float(loc.speed) if loc.speed is not None else None,
+            "accuracy": float(loc.accuracy) if loc.accuracy is not None else None,
+            "updated_at": loc.updated_at.isoformat() if loc.updated_at else None,
+        }
+
+    c_lat = 28.6280
+    c_lng = 77.3649
+    if record.timeline:
+        for item in reversed(record.timeline):
+            if isinstance(item, dict) and item.get("event") == "Customer Coordinates Updated":
+                if item.get("latitude") is not None and item.get("longitude") is not None:
+                    c_lat = float(item["latitude"])
+                    c_lng = float(item["longitude"])
+                    break
+
+    customer_loc = {
+        "latitude": c_lat,
+        "longitude": c_lng,
+        "address": record.address_line1 or record.address or "Sector 62, Noida",
+        "city": record.city or "Noida",
+    }
+
+    return {
+        "booking_id": str(record.id),
+        "booking_reference": record.booking_reference,
+        "status": str(record.status.value if hasattr(record.status, "value") else record.status),
+        "provider": provider_info,
+        "provider_location": provider_loc_data,
+        "customer_location": customer_loc,
+        "service_name": record.service_name,
+        "scheduled_date": record.scheduled_date,
+        "scheduled_time": record.scheduled_time.strftime("%H:%M:%S") if hasattr(record.scheduled_time, "strftime") else str(record.scheduled_time),
+    }
+
+
+class CustomerCoordinatesPayload(BaseModel):
+    latitude: float
+    longitude: float
+
+
+# 16c. PATCH /customer/bookings/{id}/location
+@router.patch("/bookings/{booking_id}/location")
+def update_customer_booking_location(
+    booking_id: str,
+    payload: CustomerCoordinatesPayload,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db),
+):
+    if not (-90.0 <= payload.latitude <= 90.0 and -180.0 <= payload.longitude <= 180.0):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid GPS coordinates: latitude must be in [-90, 90] and longitude in [-180, 180]."
+        )
+
+    record = (
+        db.query(Booking)
+        .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
+        .first()
+    )
+    if not record:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    if record.customer_id != current_customer.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: You cannot access location for bookings belonging to another customer",
+        )
+
+    tl = list(record.timeline or [])
+    found = False
+    for item in tl:
+        if isinstance(item, dict) and item.get("event") == "Customer Coordinates Updated":
+            item["latitude"] = float(payload.latitude)
+            item["longitude"] = float(payload.longitude)
+            item["updated_at"] = datetime.utcnow().isoformat()
+            found = True
+            break
+    if not found:
+        tl.append({
+            "event": "Customer Coordinates Updated",
+            "latitude": float(payload.latitude),
+            "longitude": float(payload.longitude),
+            "updated_at": datetime.utcnow().isoformat(),
+        })
+    record.timeline = tl
+    db.add(record)
+    db.commit()
+
+    return {
+        "status": "success",
+        "booking_id": str(record.id),
+        "customer_location": {
+            "latitude": float(payload.latitude),
+            "longitude": float(payload.longitude),
+            "address": record.address_line1 or record.address or "Service Location",
+            "city": record.city or "Noida",
+        }
+    }
 
 
 # 17. POST /customer/bookings/{id}/cancel

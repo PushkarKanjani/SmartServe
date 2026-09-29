@@ -270,6 +270,14 @@ class BookingStatusUpdatePayload(BaseModel):
     otp_code: Optional[str] = Field(None, description="Customer OTP verification code")
 
 
+class BookingStartPayload(BaseModel):
+    otp_code: Optional[str] = Field(None, description="Customer 4-digit start OTP verification code")
+
+
+class BookingCompletePayload(BaseModel):
+    notes: Optional[str] = Field(None, description="Optional completion notes")
+
+
 class BookingRejectPayload(BaseModel):
     reason: Optional[str] = Field(None, description="Reason for declining the booking request")
 
@@ -283,7 +291,3 @@ class ProviderTicketCreateRequest(BaseModel):
     category: Optional[str] = "General Inquiry"
     priority: str = "Medium"
     image_evidence_url: Optional[str] = None
-
-
-class BookingCompletePayload(BaseModel):
-    otp_code: Optional[str] = Field(None, description="Customer OTP verification code")

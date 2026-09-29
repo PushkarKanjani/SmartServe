@@ -21,11 +21,13 @@ from app.schemas.booking import (
 router = APIRouter(prefix="/admin/bookings", tags=["Admin Booking Operations"])
 
 VALID_TRANSITIONS = {
-    BookingStatus.REQUESTED: [BookingStatus.ASSIGNED, BookingStatus.CANCELLED, BookingStatus.REJECTED, BookingStatus.EXPIRED],
+    BookingStatus.REQUESTED: [BookingStatus.ASSIGNED, BookingStatus.ACCEPTED, BookingStatus.CANCELLED, BookingStatus.REJECTED, BookingStatus.EXPIRED],
     BookingStatus.ASSIGNED: [BookingStatus.ACCEPTED, BookingStatus.CANCELLED, BookingStatus.REJECTED, BookingStatus.EXPIRED],
-    BookingStatus.ACCEPTED: [BookingStatus.STARTED, BookingStatus.CANCELLED],
-    BookingStatus.STARTED: [BookingStatus.COMPLETED, BookingStatus.CANCELLED],
-    BookingStatus.COMPLETED: [BookingStatus.PAID, BookingStatus.CANCELLED],
+    BookingStatus.ACCEPTED: [BookingStatus.ON_THE_WAY, BookingStatus.CANCELLED],
+    BookingStatus.ON_THE_WAY: [BookingStatus.ARRIVED, BookingStatus.CANCELLED],
+    BookingStatus.ARRIVED: [BookingStatus.STARTED, BookingStatus.CANCELLED],
+    BookingStatus.STARTED: [BookingStatus.COMPLETED, BookingStatus.PAID, BookingStatus.CANCELLED],
+    BookingStatus.COMPLETED: [BookingStatus.PAID],
     BookingStatus.PAID: [],
     BookingStatus.CANCELLED: [],
     BookingStatus.REJECTED: [],
@@ -535,5 +537,101 @@ def create_customer_mobile_booking(
             if matched_provider else "Booking received. Finding best provider."
         ),
     }
+
+
+@router.get("/{booking_id}/location")
+def get_admin_booking_location(
+    booking_id: str,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """
+    Get live location and route monitoring data for a booking.
+    Enforces Admin RBAC so only authorized admins can monitor dispatch locations.
+    """
+    from app.models.provider import Provider, ProviderLocation
+
+    booking = None
+    try:
+        b_uuid = uuid.UUID(booking_id)
+        booking = db.query(Booking).filter(Booking.id == b_uuid).first()
+    except ValueError:
+        booking = db.query(Booking).filter(Booking.booking_reference == booking_id).first()
+
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    provider_info = None
+    if booking.provider_id:
+        p = db.query(Provider).filter(Provider.user_id == booking.provider_id).first()
+        if p:
+            prov_phone = getattr(p, 'phone', None)
+            provider_info = {
+                "id": str(p.user_id),
+                "full_name": p.full_name,
+                "phone": prov_phone or "+91 98765 43210",
+                "photo_url": getattr(p, 'photo_url', None) or f"https://api.dicebear.com/7.x/avataaars/svg?seed={p.full_name}",
+                "category": getattr(p, 'category', 'Services'),
+                "experience_years": getattr(p, 'experience_years', 5),
+                "rating": 4.9,
+                "is_verified": getattr(p, 'is_verified', True),
+                "service_area": getattr(p, 'service_area', 'Delhi NCR'),
+            }
+
+    loc = None
+    if booking.provider_id:
+        loc = db.query(ProviderLocation).filter(
+            ProviderLocation.provider_id == booking.provider_id
+        ).first()
+
+    provider_loc_data = None
+    if loc:
+        provider_loc_data = {
+            "latitude": float(loc.latitude),
+            "longitude": float(loc.longitude),
+            "heading": float(loc.heading) if loc.heading is not None else None,
+            "speed": float(loc.speed) if loc.speed is not None else None,
+            "accuracy": float(loc.accuracy) if loc.accuracy is not None else None,
+            "is_active": loc.is_active,
+            "updated_at": loc.updated_at.isoformat() if loc.updated_at else None,
+        }
+
+    # Customer location from booking
+    c_lat = 28.6280
+    c_lng = 77.3649
+    if booking.timeline:
+        for item in reversed(booking.timeline):
+            if isinstance(item, dict) and item.get("event") == "Customer Coordinates Updated":
+                if item.get("latitude") is not None and item.get("longitude") is not None:
+                    c_lat = float(item["latitude"])
+                    c_lng = float(item["longitude"])
+                    break
+
+    customer_loc = {
+        "latitude": c_lat,
+        "longitude": c_lng,
+        "address": booking.address or "Sector 62, Noida",
+        "city": "Noida",
+    }
+
+    return {
+        "booking_id": str(booking.id),
+        "booking_reference": booking.booking_reference,
+        "status": str(booking.status.value if hasattr(booking.status, "value") else booking.status),
+        "customer": {
+            "id": str(booking.customer_id),
+            "name": booking.customer.full_name if booking.customer else "Customer",
+            "phone": booking.customer.phone if booking.customer else None,
+        },
+        "provider": provider_info,
+        "provider_location": provider_loc_data,
+        "customer_location": customer_loc,
+        "service_name": booking.service_name,
+        "total_price": float(booking.total_price or 0.0),
+        "scheduled_time": booking.scheduled_time.isoformat() if booking.scheduled_time else "",
+        "address": booking.address or "",
+        "timeline": booking.timeline or [],
+    }
+
 
 

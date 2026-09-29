@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Clock,
@@ -22,6 +22,10 @@ import {
   LifeBuoy,
   X,
   XCircle,
+  Radio,
+  Compass,
+  Navigation,
+  KeyRound,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { subscribeToRealtime } from '../../utils/realtime';
@@ -69,6 +73,8 @@ const STATUS_STYLES: Record<string, string> = {
   Requested: 'bg-amber-50 text-amber-800 border-amber-300',
   Assigned: 'bg-[#F2EDE1] text-[#2F5233] border-[#E5DEC9]',
   Accepted: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  'On The Way': 'bg-sky-50 text-sky-700 border-sky-200',
+  Arrived: 'bg-teal-50 text-teal-700 border-teal-200',
   Started: 'bg-purple-50 text-purple-700 border-purple-200',
   Completed: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Cancelled: 'bg-slate-100 text-slate-500 border-slate-200',
@@ -88,6 +94,23 @@ export const ProviderDashboardView: React.FC = () => {
   const [rejectingBooking, setRejectingBooking] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('Schedule conflict with another job');
 
+  // Service Start OTP state
+  const [startingBooking, setStartingBooking] = useState<any | null>(null);
+  const [startOtp, setStartOtp] = useState<string>('');
+  const [startOtpError, setStartOtpError] = useState<string | null>(null);
+
+  // Real Geolocation Tracking state
+  const [locationPermission, setLocationPermission] = useState<'prompt' | 'granted' | 'denied' | 'unsupported'>('prompt');
+  const [gpsCoordinates, setGpsCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    heading?: number;
+    speed?: number;
+  } | null>(null);
+  const [lastGpsSync, setLastGpsSync] = useState<string | null>(null);
+  const [isBroadcastingGps, setIsBroadcastingGps] = useState<boolean>(false);
+
   const fetchAll = async () => {
     try {
       const [statsRes, trustRes, bookingsRes] = await Promise.all([
@@ -104,6 +127,173 @@ export const ProviderDashboardView: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Active booking detection
+  const activeBooking = bookings.find((b) =>
+    ['Accepted', 'On The Way', 'Arrived', 'Started'].includes(b.status)
+  );
+
+  // Send real GPS coordinates to backend with throttling
+  const lastLocationSentRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
+  const [devSimulatingBookingId, setDevSimulatingBookingId] = useState<string | null>(null);
+  const devSimIntervalRef = useRef<any>(null);
+
+  const handleDevSimulateRoute = async (booking: any) => {
+    if (devSimulatingBookingId === booking.id) {
+      if (devSimIntervalRef.current) clearInterval(devSimIntervalRef.current);
+      setDevSimulatingBookingId(null);
+      return;
+    }
+
+    const pLat = gpsCoordinates?.latitude || 28.6280;
+    const pLng = gpsCoordinates?.longitude || 77.3649;
+    const cLat = 28.6360;
+    const cLng = 77.3750;
+
+    setDevSimulatingBookingId(booking.id);
+
+    try {
+      const url = `https://router.project-osrm.org/route/v1/driving/${pLng},${pLat};${cLng},${cLat}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      let coords: [number, number][] = [];
+      if (data.routes && data.routes.length > 0) {
+        coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+      } else {
+        coords = [[pLat, pLng], [cLat, cLng]];
+      }
+
+      let step = 0;
+      devSimIntervalRef.current = setInterval(async () => {
+        step++;
+        if (step >= coords.length) {
+          clearInterval(devSimIntervalRef.current);
+          setDevSimulatingBookingId(null);
+          return;
+        }
+        const pt = coords[step];
+        const prevPt = coords[step - 1];
+        if (!pt || !prevPt) return;
+
+        const dLon = ((pt[1] - prevPt[1]) * Math.PI) / 180;
+        const y = Math.sin(dLon) * Math.cos((pt[0] * Math.PI) / 180);
+        const x =
+          Math.cos((prevPt[0] * Math.PI) / 180) * Math.sin((pt[0] * Math.PI) / 180) -
+          Math.sin((prevPt[0] * Math.PI) / 180) * Math.cos((pt[0] * Math.PI) / 180) * Math.cos(dLon);
+        const heading = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+
+        await sendLocation(booking.id, {
+          latitude: pt[0],
+          longitude: pt[1],
+          heading,
+          speed: 8.5,
+          accuracy: 4.0,
+        } as any, true);
+      }, 1200);
+    } catch (err) {
+      console.warn('DEV Route simulation error:', err);
+      setDevSimulatingBookingId(null);
+    }
+  };
+
+  const sendLocation = async (bookingId: string, coords: GeolocationCoordinates, force = false) => {
+    const now = Date.now();
+    const last = lastLocationSentRef.current;
+    if (!force && last) {
+      const timeDiff = (now - last.time) / 1000;
+      const distKm = Math.sqrt(
+        Math.pow((coords.latitude - last.lat) * 111, 2) +
+        Math.pow((coords.longitude - last.lng) * 111 * Math.cos((coords.latitude * Math.PI) / 180), 2)
+      );
+      // Skip if less than 3 meters and less than 4 seconds
+      if (distKm < 0.003 && timeDiff < 4) {
+        return;
+      }
+    }
+
+    try {
+      await apiClient.post('/providers/me/location', {
+        booking_id: bookingId,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        heading: coords.heading || null,
+        speed: coords.speed || null,
+        accuracy: coords.accuracy || null,
+        timestamp: new Date().toISOString(),
+      });
+      lastLocationSentRef.current = { lat: coords.latitude, lng: coords.longitude, time: now };
+      setGpsCoordinates({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        accuracy: coords.accuracy,
+        heading: coords.heading || undefined,
+        speed: coords.speed || undefined,
+      });
+      setLocationPermission('granted');
+      setLastGpsSync(new Date().toLocaleTimeString());
+      setIsBroadcastingGps(true);
+    } catch (err) {
+      console.warn('GPS location post error:', err);
+    }
+  };
+
+  // Trigger GPS read from browser
+  const triggerCurrentGps = (bookingId: string, force = true) => {
+    if (!('geolocation' in navigator)) {
+      setLocationPermission('unsupported');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        sendLocation(bookingId, pos.coords, force);
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationPermission('denied');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
+  // Geolocation watch lifecycle while active booking exists
+  useEffect(() => {
+    if (!activeBooking) {
+      setIsBroadcastingGps(false);
+      return;
+    }
+
+    if (!('geolocation' in navigator)) {
+      setLocationPermission('unsupported');
+      return;
+    }
+
+    // Immediate initial sync
+    triggerCurrentGps(activeBooking.id, true);
+
+    // Watch position as device moves
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        sendLocation(activeBooking.id, pos.coords);
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setLocationPermission('denied');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 }
+    );
+
+    // Regular interval sync every 6 seconds
+    const interval = setInterval(() => {
+      triggerCurrentGps(activeBooking.id, false);
+    }, 6000);
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+      clearInterval(interval);
+    };
+  }, [activeBooking?.id, activeBooking?.status]);
 
   useEffect(() => {
     fetchAll();
@@ -122,15 +312,19 @@ export const ProviderDashboardView: React.FC = () => {
       channels.push(`provider_${providerId}`, `user_${providerId}`);
     }
 
-    // Real-Time Kafka -> WebSocket Subscription (No Polling Required)
+    // Real-Time WebSocket Subscription (No Polling Required)
     const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
       if (
         payload.type === 'BOOKING_CREATED' ||
         payload.type === 'BOOKING_ACCEPTED' ||
         payload.type === 'BOOKING_REJECTED' ||
+        payload.type === 'BOOKING_STARTED' ||
+        payload.type === 'BOOKING_COMPLETED' ||
         payload.event === 'booking.created' ||
         payload.event === 'booking.accepted' ||
-        payload.event === 'booking.rejected'
+        payload.event === 'booking.rejected' ||
+        payload.event === 'booking.started' ||
+        payload.event === 'booking.completed'
       ) {
         if (payload.type === 'BOOKING_ACCEPTED') {
           setBookings((prev) =>
@@ -156,24 +350,49 @@ export const ProviderDashboardView: React.FC = () => {
 
   const handleBookingAction = async (
     bookingId: string,
-    action: 'accept' | 'reject' | 'start' | 'complete',
-    customReason?: string
+    action: 'accept' | 'reject' | 'start' | 'complete' | 'on_the_way' | 'arrived',
+    customReason?: string,
+    otpCode?: string
   ) => {
     setActionLoading(bookingId);
     setActionError(null);
     try {
       if (action === 'accept') {
         await apiClient.post(`/providers/me/bookings/${bookingId}/accept`);
+        triggerCurrentGps(bookingId, true);
       } else if (action === 'reject') {
         const reasonToSend = (customReason || rejectionReason || 'Schedule conflict with another job').trim();
         await apiClient.post(`/providers/me/bookings/${bookingId}/reject`, {
           reason: reasonToSend,
         });
         setRejectingBooking(null);
+      } else if (action === 'on_the_way') {
+        await apiClient.patch(`/providers/me/bookings/${bookingId}/status`, {
+          status: 'On The Way',
+        });
+        triggerCurrentGps(bookingId, true);
+      } else if (action === 'arrived') {
+        await apiClient.patch(`/providers/me/bookings/${bookingId}/status`, {
+          status: 'Arrived',
+        });
+        triggerCurrentGps(bookingId, true);
       } else if (action === 'start') {
-        await apiClient.post(`/providers/me/bookings/${bookingId}/start`);
+        try {
+          await apiClient.post(`/providers/me/bookings/${bookingId}/start`, {
+            otp_code: otpCode ? otpCode.trim() : undefined,
+          });
+          triggerCurrentGps(bookingId, true);
+          setStartingBooking(null);
+          setStartOtp('');
+          setStartOtpError(null);
+        } catch (err: any) {
+          const detail = err.response?.data?.detail || 'Invalid service start OTP verification code.';
+          setStartOtpError(detail);
+          throw err;
+        }
       } else if (action === 'complete') {
         await apiClient.post(`/providers/me/bookings/${bookingId}/complete`);
+        setIsBroadcastingGps(false);
       }
       await fetchAll();
     } catch (err: any) {
@@ -182,6 +401,7 @@ export const ProviderDashboardView: React.FC = () => {
       setActionLoading(null);
     }
   };
+
 
   if (loading) {
     return (
@@ -198,7 +418,7 @@ export const ProviderDashboardView: React.FC = () => {
   const filteredBookings = bookings.filter((b) => {
     if (activeTab === 'all') return true;
     if (activeTab === 'pending') return b.status === 'Requested' || b.status === 'Assigned';
-    if (activeTab === 'active') return ['Accepted', 'Started'].includes(b.status);
+    if (activeTab === 'active') return ['Accepted', 'On The Way', 'Arrived', 'Started'].includes(b.status);
     if (activeTab === 'completed') return b.status === 'Completed';
     return true;
   });
@@ -331,6 +551,84 @@ export const ProviderDashboardView: React.FC = () => {
             <span className="text-xs font-semibold text-emerald-800 bg-white px-3 py-1.5 rounded-xl border border-emerald-200">
               Auto-Dispatch: Enabled
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* 2b. LOCATION PERMISSION DENIED WARNING BANNER */}
+      {locationPermission === 'denied' && (
+        <div className="p-5 rounded-3xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-rose-900 shadow-xs">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-700 shrink-0 mt-0.5">
+              <AlertCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold">Location Permission Required</h4>
+              <p className="text-xs text-rose-700 mt-0.5 max-w-xl">
+                Browser location access was denied. Please click the site settings / lock icon in your address bar and allow location permission so customers can view real dispatch telemetry.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => activeBooking && triggerCurrentGps(activeBooking.id)}
+            className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl transition-colors shrink-0"
+          >
+            Retry GPS Permission
+          </button>
+        </div>
+      )}
+
+      {/* 2c. ACTIVE DISPATCH & REAL LIVE GPS TELEMETRY CARD */}
+      {activeBooking && (
+        <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-[#1F2A1E] via-[#2F5233] to-[#1F2A1E] text-white border border-[#3D6B42] shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-start sm:items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <Radio className="w-6 h-6 animate-pulse text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-xs font-bold text-emerald-300 bg-white/10 px-2 py-0.5 rounded-lg border border-white/20">
+                  {activeBooking.booking_reference}
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
+                  {activeBooking.status}
+                </span>
+                <span className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-300 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/15">
+                  <span className={`w-2 h-2 rounded-full ${isBroadcastingGps ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
+                  <span>{isBroadcastingGps ? 'Broadcasting Real GPS Live' : 'Connecting GPS Stream...'}</span>
+                </span>
+              </div>
+              <h3 className="text-base sm:text-lg font-extrabold text-white mt-1">
+                {activeBooking.service_name} • {activeBooking.customer_name}
+              </h3>
+              <p className="text-xs text-white/70 flex items-center gap-1.5 mt-0.5">
+                <MapPin className="w-3.5 h-3.5 text-emerald-300" />
+                <span>{activeBooking.address || 'Customer destination on file'}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {gpsCoordinates ? (
+              <div className="bg-white/10 px-4 py-2 rounded-2xl border border-white/15 text-left sm:text-right font-mono text-[11px]">
+                <span className="text-white/60 block text-[9px] uppercase font-sans font-bold">Device GPS Coordinates</span>
+                <span className="text-emerald-300 font-bold">
+                  {gpsCoordinates.latitude.toFixed(4)}, {gpsCoordinates.longitude.toFixed(4)}
+                </span>
+                {lastGpsSync && <span className="text-white/50 block text-[9px] font-sans">Synced {lastGpsSync}</span>}
+              </div>
+            ) : (
+              <div className="text-xs text-emerald-200/80 bg-white/10 px-3.5 py-2 rounded-2xl border border-white/15">
+                Acquiring GPS fix...
+              </div>
+            )}
+            <button
+              onClick={() => triggerCurrentGps(activeBooking.id)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
+            >
+              <Compass className="w-4 h-4" />
+              <span>Ping GPS Now</span>
+            </button>
           </div>
         </div>
       )}
@@ -519,16 +817,6 @@ export const ProviderDashboardView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* OTP completion display */}
-                      {booking.otp_code && booking.status === 'Started' && (
-                        <div className="mb-4 flex items-center justify-between bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-xl text-xs">
-                          <span className="font-bold text-purple-900">Customer Completion OTP:</span>
-                          <span className="font-mono text-sm font-extrabold text-purple-950 tracking-widest">
-                            {booking.otp_code}
-                          </span>
-                        </div>
-                      )}
-
                       {/* Action Buttons */}
                       <div className="flex gap-2 flex-wrap pt-2 border-t border-[#E5DEC9]/60">
                         {(booking.status === 'Requested' || booking.status === 'Assigned') && (
@@ -552,12 +840,51 @@ export const ProviderDashboardView: React.FC = () => {
                         )}
                         {booking.status === 'Accepted' && (
                           <button
-                            onClick={() => handleBookingAction(booking.id, 'start')}
+                            onClick={() => handleBookingAction(booking.id, 'on_the_way')}
+                            disabled={actionLoading === booking.id}
+                            className="flex items-center gap-1.5 px-4 py-2 bg-sky-700 text-white text-xs font-bold rounded-xl hover:bg-sky-800 transition-colors disabled:opacity-50"
+                          >
+                            <Navigation className="w-3.5 h-3.5" />
+                            <span>{actionLoading === booking.id ? 'Updating...' : 'Start Trip (On The Way)'}</span>
+                          </button>
+                        )}
+                        {booking.status === 'On The Way' && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {import.meta.env.DEV && (
+                              <button
+                                onClick={() => handleDevSimulateRoute(booking)}
+                                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
+                                  devSimulatingBookingId === booking.id
+                                    ? 'bg-amber-600 text-white border-amber-700 animate-pulse'
+                                    : 'bg-slate-900 text-amber-300 border-amber-500/40 hover:bg-slate-800'
+                                }`}
+                              >
+                                <Navigation className="w-3.5 h-3.5" />
+                                <span>{devSimulatingBookingId === booking.id ? 'Pause DEV Sim' : 'DEV Sim Trip'}</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleBookingAction(booking.id, 'arrived')}
+                              disabled={actionLoading === booking.id}
+                              className="flex items-center gap-1.5 px-4 py-2 bg-teal-700 text-white text-xs font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
+                            >
+                              <MapPin className="w-3.5 h-3.5" />
+                              <span>{actionLoading === booking.id ? 'Updating...' : 'Mark Arrived'}</span>
+                            </button>
+                          </div>
+                        )}
+                        {booking.status === 'Arrived' && (
+                          <button
+                            onClick={() => {
+                              setStartingBooking(booking);
+                              setStartOtp('');
+                              setStartOtpError(null);
+                            }}
                             disabled={actionLoading === booking.id}
                             className="flex items-center gap-1.5 px-4 py-2 bg-purple-700 text-white text-xs font-bold rounded-xl hover:bg-purple-800 transition-colors disabled:opacity-50"
                           >
                             <Play className="w-3.5 h-3.5" />
-                            <span>{actionLoading === booking.id ? 'Starting...' : 'Start Service'}</span>
+                            <span>Start Service (Enter OTP)</span>
                           </button>
                         )}
                         {booking.status === 'Started' && (
@@ -567,7 +894,7 @@ export const ProviderDashboardView: React.FC = () => {
                             className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50"
                           >
                             <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>{actionLoading === booking.id ? 'Completing...' : 'Mark Complete'}</span>
+                            <span>{actionLoading === booking.id ? 'Completing...' : 'Complete Service'}</span>
                           </button>
                         )}
                       </div>
@@ -762,6 +1089,105 @@ export const ProviderDashboardView: React.FC = () => {
                 className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5"
               >
                 {actionLoading === rejectingBooking.id ? 'Declining...' : 'Confirm Decline'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service Start OTP Verification Modal */}
+      {startingBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-[#E5DEC9]">
+            <div className="flex items-start justify-between border-b border-[#E5DEC9]/60 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-center text-purple-700 shadow-xs">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-serif text-[#1F2A1E]">Verify Start OTP</h3>
+                  <p className="text-[11px] text-[#1F2A1E]/60 font-mono">
+                    {startingBooking.reference || startingBooking.booking_reference || startingBooking.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setStartingBooking(null);
+                  setStartOtp('');
+                  setStartOtpError(null);
+                }}
+                className="text-[#1F2A1E]/40 hover:text-[#1F2A1E] p-1 rounded-full hover:bg-black/5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-[#FAF7F0] rounded-xl border border-[#E5DEC9] text-xs space-y-1">
+              <p className="font-bold text-[#1F2A1E]">{startingBooking.service_name}</p>
+              <p className="text-[#1F2A1E]/70">Customer: <span className="font-semibold">{startingBooking.customer_name}</span></p>
+            </div>
+
+            {startOtpError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>{startOtpError}</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider">
+                Enter 4-Digit Customer Start OTP
+              </label>
+              <input
+                type="text"
+                maxLength={6}
+                value={startOtp}
+                onChange={(e) => {
+                  setStartOtp(e.target.value);
+                  setStartOtpError(null);
+                }}
+                placeholder="4-digit OTP"
+                className="w-full text-center font-mono text-2xl tracking-widest bg-[#FAF7F0] border border-[#E5DEC9] rounded-xl px-3 py-3 text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
+              />
+              <p className="text-[11px] text-[#1F2A1E]/60">
+                The customer has received this code on their live tracking screen upon your arrival. You must verify this OTP before initiating the service.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setStartingBooking(null);
+                  setStartOtp('');
+                  setStartOtpError(null);
+                }}
+                className="px-4 py-2 bg-[#FAF7F0] hover:bg-[#F2EDE1] text-[#1F2A1E] font-bold text-xs rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!startOtp.trim() || actionLoading === startingBooking.id}
+                onClick={async () => {
+                  try {
+                    await handleBookingAction(startingBooking.id, 'start', undefined, startOtp.trim());
+                  } catch (e) {
+                    // Handled inside handleBookingAction with setStartOtpError
+                  }
+                }}
+                className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {actionLoading === startingBooking.id ? (
+                  <span>Verifying...</span>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Verify & Start Service</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

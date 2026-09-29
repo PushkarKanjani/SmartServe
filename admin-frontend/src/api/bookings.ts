@@ -87,3 +87,54 @@ export const createEmergencyDispatchBooking = async (data: {
   const response = await apiClient.post<BookingItem>('/admin/bookings/', data);
   return response.data;
 };
+
+export interface AdminProviderLocation {
+  latitude: number;
+  longitude: number;
+  heading?: number | null;
+  speed?: number | null;
+  accuracy?: number | null;
+  is_active?: boolean;
+  updated_at?: string | null;
+}
+
+export interface AdminCustomerLocation {
+  latitude: number;
+  longitude: number;
+  address: string;
+  city: string;
+}
+
+export interface AdminBookingLocationResponse {
+  booking_id: string;
+  booking_reference: string;
+  status: string;
+  customer: {
+    id: string;
+    name: string;
+    phone?: string | null;
+  };
+  provider?: {
+    id: string;
+    full_name: string;
+    phone?: string | null;
+    photo_url?: string;
+    category?: string;
+    experience_years?: number;
+    rating?: number;
+    is_verified?: boolean;
+    service_area?: string;
+  } | null;
+  provider_location?: AdminProviderLocation | null;
+  customer_location?: AdminCustomerLocation | null;
+  service_name: string;
+  total_price: number;
+  scheduled_time: string;
+  address: string;
+  timeline: any[];
+}
+
+export const getAdminBookingLocation = async (bookingId: string): Promise<AdminBookingLocationResponse> => {
+  const response = await apiClient.get<AdminBookingLocationResponse>(`/admin/bookings/${bookingId}/location`);
+  return response.data;
+};

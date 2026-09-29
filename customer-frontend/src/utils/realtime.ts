@@ -23,7 +23,8 @@ export function getWebSocketUrl(channels: string[] = []): string {
 
 export function subscribeToRealtime(
   channels: string[],
-  onMessage: MessageHandler
+  onMessage: MessageHandler,
+  onStatusChange?: (status: 'connecting' | 'connected' | 'disconnected') => void
 ): () => void {
   let ws: WebSocket | null = null;
   let disposed = false;
@@ -56,15 +57,20 @@ export function subscribeToRealtime(
 
   function scheduleReconnect() {
     if (disposed) return;
+    onStatusChange?.('disconnected');
     const base = Math.min(1000 * Math.pow(1.5, retryCount), 8000);
     const jitter = Math.random() * 500;
     retryCount++;
-    reconnectTimer = setTimeout(connect, base + jitter);
+    reconnectTimer = setTimeout(() => {
+      onStatusChange?.('connecting');
+      connect();
+    }, base + jitter);
   }
 
   function connect() {
     if (disposed) return;
     clearTimers();
+    onStatusChange?.('connecting');
 
     // Close any lingering socket from a prior attempt
     if (ws) {
@@ -86,6 +92,7 @@ export function subscribeToRealtime(
       socket.onopen = () => {
         if (gen !== generation || disposed) { socket.close(); return; }
         retryCount = 0;
+        onStatusChange?.('connected');
         pingInterval = setInterval(() => {
           if (socket.readyState === WebSocket.OPEN) {
             try { socket.send(JSON.stringify({ action: 'ping' })); } catch (_) {}
@@ -113,6 +120,7 @@ export function subscribeToRealtime(
       socket.onclose = () => {
         if (gen !== generation) return;
         clearTimers();
+        onStatusChange?.('disconnected');
         if (!disposed) scheduleReconnect();
       };
 
@@ -120,6 +128,7 @@ export function subscribeToRealtime(
         // let onclose handle cleanup
       };
     } catch (_) {
+      onStatusChange?.('disconnected');
       if (!disposed) scheduleReconnect();
     }
   }

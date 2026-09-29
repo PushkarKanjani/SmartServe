@@ -1,6 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getBookingDetail, cancelBooking, BookingDetail } from '../api/bookings';
+import { 
+  getBookingDetail, 
+  cancelBooking, 
+  BookingDetail, 
+  getBookingLiveLocation,
+  updateCustomerLocation,
+  BookingLocationResponse,
+  ProviderProfileInfo,
+  ProviderGpsLocation,
+  CustomerLocationInfo
+} from '../api/bookings';
 import { getBookingChat, sendBookingChatMessage, SupportTicketDetail, MessageItem } from '../api/support';
 import { formatCurrencyINR } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
@@ -21,6 +31,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { subscribeToRealtime } from '../utils/realtime';
+import { CustomerLiveMap } from '../components/CustomerLiveMap';
+import { CustomerProviderCard, BookingTimeline } from '../components/CustomerProviderCard';
 
 export const CustomerBookingDetail: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -33,6 +45,54 @@ export const CustomerBookingDetail: React.FC = () => {
   const [cancelling, setCancelling] = useState<boolean>(false);
   const [showCancelModal, setShowCancelModal] = useState<boolean>(false);
   const [selectedReason, setSelectedReason] = useState<string>('Change of plans / schedule conflict');
+
+  // Live Location & Provider Profile state
+  const [providerProfile, setProviderProfile] = useState<ProviderProfileInfo | null>(null);
+  const [providerLocation, setProviderLocation] = useState<ProviderGpsLocation | null>(null);
+  const [customerLocationFromApi, setCustomerLocationFromApi] = useState<CustomerLocationInfo | null>(null);
+  const [, setCustomerGeoPermission] = useState<'prompt' | 'granted' | 'denied' | 'unsupported'>('prompt');
+  const [customerCoords, setCustomerCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+
+  // Request actual customer browser geolocation (Requirement 8)
+  useEffect(() => {
+    if (!('geolocation' in navigator)) {
+      setCustomerGeoPermission('unsupported');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setCustomerGeoPermission('granted');
+        setCustomerCoords({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        });
+        if (bookingId) {
+          updateCustomerLocation(bookingId, pos.coords.latitude, pos.coords.longitude);
+        }
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setCustomerGeoPermission('denied');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, [bookingId]);
+
+  const effectiveCustomerLocation: CustomerLocationInfo | null = customerCoords
+    ? {
+        latitude: customerCoords.latitude,
+        longitude: customerCoords.longitude,
+        address: booking?.address_line1 || booking?.address || customerLocationFromApi?.address || 'Service Location',
+        city: booking?.city || customerLocationFromApi?.city || '',
+      }
+    : (customerLocationFromApi || (booking ? {
+        latitude: 28.6280,
+        longitude: 77.3649,
+        address: booking.address_line1 || booking.address || 'Sector 62, Noida',
+        city: booking.city || 'Noida',
+      } : null));
 
   // Chat state
   const [chatTicket, setChatTicket] = useState<SupportTicketDetail | null>(null);
@@ -50,6 +110,8 @@ export const CustomerBookingDetail: React.FC = () => {
     try {
       const data = await getBookingDetail(bookingId);
       setBooking(data);
+      // Fetch live location & provider details
+      fetchLocationData();
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to fetch booking details from database.');
     } finally {
@@ -57,35 +119,94 @@ export const CustomerBookingDetail: React.FC = () => {
     }
   };
 
+  const fetchLocationData = async () => {
+    if (!bookingId) return;
+    try {
+      const locData: BookingLocationResponse = await getBookingLiveLocation(bookingId);
+      if (locData.provider) {
+        setProviderProfile(locData.provider);
+      }
+      if (locData.provider_location) {
+        setProviderLocation(locData.provider_location);
+      }
+      if (locData.customer_location) {
+        setCustomerLocationFromApi(locData.customer_location);
+      }
+    } catch (err) {
+      console.warn('Live location endpoint returned error or not yet ready:', err);
+    }
+  };
+
   useEffect(() => {
     fetchDetail();
     if (!bookingId) return;
 
-    // Real-Time Kafka -> WebSocket Subscription for booking status (No Polling Required)
-    const unsubscribeWs = subscribeToRealtime([`booking_${bookingId}`, 'bookings'], (payload) => {
-      const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
-      if (targetId && targetId === String(bookingId).toLowerCase()) {
-        const type = payload.type || payload.event_type || payload.event;
-        if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
-          setBooking((prev) => (prev ? { ...prev, status: 'Accepted' } : prev));
-        } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
-          const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Provider unavailable';
-          setBooking((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  status: 'Rejected',
-                  cancellation_reason: reason,
-                  rejection_reason: reason,
-                } as any
-              : prev
-          );
+    // Real-Time WebSocket Subscription for booking status & live GPS tracking (No Polling Required)
+    const unsubscribeWs = subscribeToRealtime(
+      [`booking_${bookingId}`, 'bookings', 'dashboard'],
+      (payload) => {
+        const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
+        if (targetId && targetId === String(bookingId).toLowerCase()) {
+          const type = payload.type || payload.event_type || payload.event;
+
+          if (type === 'PROVIDER_LOCATION_UPDATED' || type === 'provider.location.updated') {
+            // Real-time GPS coordinate event
+            if (payload.latitude !== undefined && payload.longitude !== undefined) {
+              setProviderLocation({
+                latitude: Number(payload.latitude),
+                longitude: Number(payload.longitude),
+                heading: payload.heading !== undefined ? Number(payload.heading) : null,
+                speed: payload.speed !== undefined ? Number(payload.speed) : null,
+                accuracy: payload.accuracy !== undefined ? Number(payload.accuracy) : null,
+                updated_at: payload.updated_at || new Date().toISOString(),
+              });
+            }
+            if (payload.status) {
+              setBooking((prev) => (prev ? { ...prev, status: payload.status } : prev));
+            }
+          } else if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
+            setBooking((prev) => (prev ? { ...prev, status: 'Accepted' } : prev));
+            fetchLocationData();
+          } else if (type === 'BOOKING_STATUS_UPDATED' || type === 'booking.updated') {
+            const nextSt = payload.status || payload.booking?.status;
+            if (nextSt) {
+              setBooking((prev) => (prev ? { ...prev, status: nextSt } : prev));
+              if (['Completed', 'Cancelled', 'Rejected'].includes(nextSt)) {
+                setProviderLocation(null);
+              }
+            }
+            fetchLocationData();
+          } else if (type === 'BOOKING_STARTED' || type === 'booking.started') {
+            setBooking((prev) => (prev ? { ...prev, status: 'Started' } : prev));
+            fetchLocationData();
+          } else if (type === 'BOOKING_COMPLETED' || type === 'booking.completed') {
+            setBooking((prev) => (prev ? { ...prev, status: 'Completed' } : prev));
+            setProviderLocation(null); // Stop live tracking
+          } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
+            const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Provider unavailable';
+            setBooking((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    status: 'Rejected',
+                    cancellation_reason: reason,
+                    rejection_reason: reason,
+                  } as any
+                : prev
+            );
+            setProviderLocation(null);
+          }
+
+          // Re-sync full record silently on lifecycle changes (avoid redundant fetch on 1s GPS pings)
+          if (type !== 'PROVIDER_LOCATION_UPDATED' && type !== 'provider.location.updated') {
+            getBookingDetail(bookingId)
+              .then((data) => setBooking(data))
+              .catch(() => {});
+          }
         }
-        getBookingDetail(bookingId)
-          .then((data) => setBooking(data))
-          .catch(() => {});
-      }
-    });
+      },
+      (status) => setWsStatus(status)
+    );
 
     return () => {
       unsubscribeWs();
@@ -213,10 +334,26 @@ export const CustomerBookingDetail: React.FC = () => {
   }
 
   const stLower = booking.status.toLowerCase();
-  const canCancel = stLower === 'requested' || stLower === 'assigned' || stLower === 'confirmed';
+  const canCancel = stLower === 'requested' || stLower === 'assigned';
+  const showLiveTracking = ['accepted', 'on the way', 'arrived', 'started'].includes(stLower);
+
+  const effectiveProvider: ProviderProfileInfo | null = providerProfile || booking.provider || (booking.provider_id ? {
+    provider_id: booking.provider_id,
+    full_name: booking.provider_name || 'Assigned Expert Partner',
+    photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${booking.provider_name || 'Provider'}`,
+    category: booking.category || 'Service Partner',
+    skills: 'Certified Service Professional',
+    experience_years: 5,
+    reliability_score: 99,
+    rating: 4.9,
+    is_verified: true,
+    service_area: booking.city || 'Bengaluru, India'
+  } : null);
+
+  const showProviderCard = Boolean(effectiveProvider);
 
   return (
-    <div className="space-y-8 font-sans max-w-4xl mx-auto">
+    <div className="space-y-6 font-sans max-w-4xl mx-auto pb-12">
       
       {/* Back button */}
       <button
@@ -227,162 +364,261 @@ export const CustomerBookingDetail: React.FC = () => {
         <span>Back to My Bookings</span>
       </button>
 
-      {/* Main Card */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md overflow-hidden space-y-6">
-        
-        {/* Header Ribbon */}
-        <div className="bg-[#0A1128] text-white p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-bold text-blue-300">{booking.booking_reference}</span>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
-                stLower === 'completed' || stLower === 'paid'
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
-                  : stLower === 'cancelled' || stLower === 'rejected'
-                  ? 'bg-rose-500/20 text-rose-300 border-rose-400/30'
-                  : 'bg-blue-500/20 text-blue-300 border-blue-400/30'
-              }`}>
-                {booking.status}
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{booking.service_name}</h1>
-          </div>
+      {/* Reconnecting banner if WebSocket is offline or reconnecting (Requirement 9) */}
+      {wsStatus !== 'connected' && (
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold w-fit animate-pulse">
+          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span>Reconnecting to live location…</span>
+        </div>
+      )}
 
-          <div className="text-left sm:text-right">
-            <span className="text-xs text-slate-400 font-semibold block">Total Amount</span>
-            <span className="text-2xl font-extrabold text-white font-mono">
-              {formatCurrencyINR(booking.total_price || booking.total_amount || 0)}
+      {/* Main Status & Reference Ribbon */}
+      <div className="bg-[#0A1128] text-white p-6 sm:p-8 rounded-3xl border border-slate-800 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-sm font-bold text-blue-300">{booking.booking_reference}</span>
+            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
+              stLower === 'completed' || stLower === 'paid'
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
+                : stLower === 'cancelled' || stLower === 'rejected'
+                ? 'bg-rose-500/20 text-rose-300 border-rose-400/30'
+                : stLower === 'started'
+                ? 'bg-purple-500/20 text-purple-300 border-purple-400/30'
+                : 'bg-blue-500/20 text-blue-300 border-blue-400/30'
+            }`}>
+              {booking.status}
+            </span>
+            {showLiveTracking && (
+              <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Active Job</span>
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{booking.service_name}</h1>
+        </div>
+
+        <div className="text-left sm:text-right">
+          <span className="text-xs text-slate-400 font-semibold block">Total Amount</span>
+          <span className="text-2xl font-extrabold text-white font-mono">
+            {formatCurrencyINR(booking.total_price || booking.total_amount || 0)}
+          </span>
+        </div>
+      </div>
+
+      {/* Emergency Alert Banner */}
+      {Boolean(booking.emergency_flag) && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold flex-shrink-0">
+              <Zap className="w-5 h-5 text-white animate-pulse" />
+            </div>
+            <div>
+              <h4 className="font-bold text-amber-950 text-sm">Emergency Fast-Track Service</h4>
+              <p className="text-xs text-amber-800">Priority safety dispatch auto-assigned per SmartServe safety protocols.</p>
+            </div>
+          </div>
+          <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 bg-amber-500 text-white rounded-lg shadow-2xs">
+            Emergency Dispatch
+          </span>
+        </div>
+      )}
+
+      {/* Rejection / Cancellation Reason Notification Banner */}
+      {(stLower === 'rejected' || stLower === 'cancelled') && (
+        <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-4 animate-in fade-in">
+          <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <XCircle className="w-5 h-5 text-rose-600" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="font-bold text-rose-950 text-sm">
+              {stLower === 'rejected' ? 'Service Request Declined by Partner' : 'Booking Cancelled'}
+            </h4>
+            <p className="text-xs text-rose-800 font-semibold">
+              Reason: {booking.cancellation_reason || (booking as any).rejection_reason || 'Provider unavailable'}
+            </p>
+            <p className="text-[11px] text-rose-600 font-medium pt-1">
+              You can reschedule with another time slot or choose another service from our catalog.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Provider Arrived Special Notification Banner */}
+      {stLower === 'arrived' && (
+        <div className="p-5 rounded-3xl bg-teal-500/10 border-2 border-teal-500/40 flex items-center justify-between gap-4 shadow-sm animate-in fade-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-md">
+              <MapPin className="w-6 h-6 animate-bounce" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-teal-950 text-base">Your Technician Has Arrived!</h4>
+                <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-teal-200 text-teal-900 border border-teal-300">
+                  Ready at Doorstep
+                </span>
+              </div>
+              <p className="text-xs text-teal-800 mt-0.5">
+                Please verify technician credentials and provide your 4-digit Service Start OTP to initiate the job.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service Start OTP Code Box (Before Service Starts) */}
+      {booking.otp_code && (stLower === 'arrived' || stLower === 'on the way' || stLower === 'accepted') && (
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 border-2 border-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center flex-shrink-0 shadow-md">
+              <KeyRound className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-extrabold text-amber-950 text-base">Service Start OTP</h4>
+                <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${
+                  stLower === 'arrived'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse'
+                    : 'bg-amber-100 text-amber-800 border-amber-300'
+                }`}>
+                  {stLower === 'arrived' ? 'Share With Technician Now' : 'Share Upon Arrival'}
+                </span>
+              </div>
+              <p className="text-xs text-amber-800 mt-1 max-w-lg">
+                Share this 4-digit one-time code with your service technician when they arrive at your location to authorize and start the service.
+              </p>
+            </div>
+          </div>
+          <div className="text-left sm:text-right shrink-0">
+            <span className="font-mono text-3xl font-black text-amber-950 tracking-widest bg-white px-5 py-2.5 rounded-2xl border-2 border-amber-400 shadow-sm inline-block">
+              {booking.otp_code}
+            </span>
+            <span className="text-[10px] font-bold text-amber-700 tracking-wider uppercase mt-1 block">
+              Single-Use Start Code
             </span>
           </div>
         </div>
+      )}
 
-        {/* Content Body */}
-        <div className="p-6 sm:p-8 space-y-8">
-          
-          {/* Emergency Alert Banner */}
-          {Boolean(booking.emergency_flag) && (
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold flex-shrink-0">
-                  <Zap className="w-5 h-5 text-white animate-pulse" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-amber-950 text-sm">Emergency Fast-Track Service</h4>
-                  <p className="text-xs text-amber-800">Priority safety dispatch auto-assigned per SmartServe safety protocols.</p>
-                </div>
-              </div>
-              <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 bg-amber-500 text-white rounded-lg shadow-2xs">
-                Emergency Dispatch
+      {/* Service In Progress Banner */}
+      {stLower === 'started' && (
+        <div className="p-5 rounded-3xl bg-purple-50 border-2 border-purple-200 flex items-center gap-3.5 shadow-sm">
+          <div className="w-12 h-12 rounded-2xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-md">
+            <ShieldCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="font-extrabold text-purple-950 text-base">Service In Progress</h4>
+              <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-300">
+                OTP Verified
               </span>
             </div>
-          )}
+            <p className="text-xs text-purple-800 mt-0.5">
+              Technician is currently performing your service. Start OTP was successfully verified.
+            </p>
+          </div>
+        </div>
+      )}
 
-          {/* Rejection / Cancellation Reason Notification Banner */}
-          {(stLower === 'rejected' || stLower === 'cancelled') && (
-            <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-4 animate-in fade-in">
-              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <XCircle className="w-5 h-5 text-rose-600" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="font-bold text-rose-950 text-sm">
-                  {stLower === 'rejected' ? 'Service Request Declined by Partner' : 'Booking Cancelled'}
-                </h4>
-                <p className="text-xs text-rose-800 font-semibold">
-                  Reason: {booking.cancellation_reason || (booking as any).rejection_reason || 'Provider unavailable'}
-                </p>
-                <p className="text-[11px] text-rose-600 font-medium pt-1">
-                  You can reschedule with another time slot or choose another service from our catalog.
-                </p>
-              </div>
-            </div>
-          )}
+      {/* ========================================================= */}
+      {/* 1. LIVE TRACKING MAP (Ola / Swiggy Style Road Tracking)   */}
+      {/* ========================================================= */}
+      {showLiveTracking && (
+        <CustomerLiveMap
+          bookingId={booking.id}
+          bookingStatus={booking.status}
+          provider={effectiveProvider}
+          providerLocation={providerLocation}
+          customerLocation={effectiveCustomerLocation}
+          serviceName={booking.service_name}
+        />
+      )}
 
-          {/* OTP Code Box */}
-          {booking.otp_code && stLower !== 'completed' && stLower !== 'cancelled' && stLower !== 'rejected' && (
-            <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">
-                  <KeyRound className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-amber-950 text-sm">Service OTP Verification Code</h4>
-                  <p className="text-xs text-amber-800">Share this code with your technician upon arrival to begin service.</p>
-                </div>
-              </div>
-              <span className="font-mono text-2xl font-black text-amber-950 tracking-widest bg-white px-4 py-2 rounded-xl border border-amber-300 shadow-2xs">
-                {booking.otp_code}
-              </span>
-            </div>
-          )}
+      {/* ========================================================= */}
+      {/* 2. FULL VERIFIED PROVIDER DETAILS CARD                     */}
+      {/* ========================================================= */}
+      {showProviderCard && effectiveProvider && (
+        <CustomerProviderCard
+          provider={effectiveProvider}
+          serviceName={booking.service_name}
+          category={booking.category}
+          scheduledDate={booking.scheduled_date}
+          scheduledTime={booking.scheduled_time}
+          status={booking.status}
+          providerLocation={providerLocation}
+        />
+      )}
 
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-            
-            {/* Schedule */}
-            <div className="space-y-3 p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-600" />
-                <span>Scheduled Appointment</span>
-              </h4>
-              <p className="font-bold text-slate-900 text-base">{booking.scheduled_date}</p>
-              <p className="text-xs text-slate-600">Time Slot: <strong>{booking.scheduled_time}</strong></p>
-            </div>
+      {/* ========================================================= */}
+      {/* 3. BOOKING LIFECYCLE PROGRESSION TIMELINE                  */}
+      {/* ========================================================= */}
+      <BookingTimeline status={booking.status} />
 
-            {/* Provider */}
-            <div className="space-y-3 p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-emerald-600" />
-                <span>Assigned Service Expert</span>
-              </h4>
-              <p className="font-bold text-slate-900 text-base">{booking.provider_name || 'Dispatching Verified Professional...'}</p>
-              <p className="text-xs text-slate-600">SmartServe Background Checked & Insured</p>
-            </div>
+      {/* Details Grid */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 sm:p-8 space-y-6">
+        <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">Appointment Information</h3>
 
-            {/* Address */}
-            <div className="space-y-3 p-5 rounded-2xl bg-slate-50 border border-slate-200/80 md:col-span-2">
-              <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-rose-600" />
-                <span>Service Location Address</span>
-              </h4>
-              <p className="font-medium text-slate-900 leading-relaxed">
-                {booking.address_line1 || booking.address || 'Address provided at booking'}
-              </p>
-            </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+          {/* Schedule */}
+          <div className="space-y-2 p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <Clock className="w-4 h-4 text-blue-600" />
+              <span>Scheduled Appointment</span>
+            </h4>
+            <p className="font-bold text-slate-900 text-base">{booking.scheduled_date}</p>
+            <p className="text-xs text-slate-600">Time Slot: <strong>{booking.scheduled_time}</strong></p>
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
-            <button
-              onClick={() => navigate('/support')}
-              className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl text-xs flex items-center gap-2 transition-colors"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span>Need Help with this Booking?</span>
-            </button>
-
-            {canCancel && (
-              <button
-                onClick={() => setShowCancelModal(true)}
-                disabled={cancelling}
-                className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50"
-              >
-                {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                <span>Cancel Booking</span>
-              </button>
-            )}
+          {/* Provider */}
+          <div className="space-y-2 p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-emerald-600" />
+              <span>Assigned Service Expert</span>
+            </h4>
+            <p className="font-bold text-slate-900 text-base">
+              {providerProfile?.full_name || booking.provider_name || 'Dispatching Verified Professional...'}
+            </p>
+            <p className="text-xs text-slate-600">SmartServe Background Checked & Insured</p>
           </div>
 
+          {/* Address */}
+          <div className="space-y-2 p-5 rounded-2xl bg-slate-50 border border-slate-200/80 md:col-span-2">
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-rose-600" />
+              <span>Service Location Address</span>
+            </h4>
+            <p className="font-medium text-slate-900 leading-relaxed">
+              {booking.address_line1 || booking.address || 'Address provided at booking'}
+            </p>
+          </div>
         </div>
 
+        {/* Action Buttons */}
+        <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
+          <button
+            onClick={() => navigate('/support')}
+            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl text-xs flex items-center gap-2 transition-colors"
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span>Need Help with this Booking?</span>
+          </button>
+
+          {canCancel && (
+            <button
+              onClick={() => setShowCancelModal(true)}
+              disabled={cancelling}
+              className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            >
+              {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-4 h-4" />}
+              <span>Cancel Booking</span>
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* ============================================ */}
-      {/* PROVIDER CHAT SECTION */}
-      {/* ============================================ */}
-      {booking.provider_id && (
+      {/* Provider Chat Section */}
+      {(booking.provider_id || providerProfile) && (
         <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md overflow-hidden">
-          {/* Chat Header Toggle */}
           <button
             onClick={() => setShowChat(!showChat)}
             className="w-full flex items-center justify-between p-6 text-left group"
@@ -392,8 +628,8 @@ export const CustomerBookingDetail: React.FC = () => {
                 <MessageCircle className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Chat with Provider</h3>
-                <p className="text-xs text-slate-500">{booking.provider_name || 'Your assigned service expert'}</p>
+                <h3 className="text-sm font-bold text-slate-900">Direct Chat with Partner</h3>
+                <p className="text-xs text-slate-500">{providerProfile?.full_name || booking.provider_name || 'Your assigned service expert'}</p>
               </div>
             </div>
             <div className={`w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center transition-all ${showChat ? 'rotate-180' : ''}`}>
@@ -403,7 +639,6 @@ export const CustomerBookingDetail: React.FC = () => {
             </div>
           </button>
 
-          {/* Chat Panel */}
           {showChat && (
             <div className="border-t border-slate-100">
               {chatLoading ? (
@@ -422,7 +657,6 @@ export const CustomerBookingDetail: React.FC = () => {
                 </div>
               ) : (
                 <>
-                  {/* Messages */}
                   <div className="max-h-96 overflow-y-auto p-6 space-y-4 bg-slate-50/50">
                     {(!chatTicket?.messages || chatTicket.messages.length === 0) ? (
                       <div className="text-center py-8">
@@ -442,9 +676,9 @@ export const CustomerBookingDetail: React.FC = () => {
                               {isCustomer ? (
                                 <><User className="w-3 h-3" /><span>You (Customer)</span></>
                               ) : isProvider ? (
-                                <><ShieldCheck className="w-3 h-3" /><span>{msg.sender_name || booking.provider_name || 'Provider'} (Provider)</span></>
+                                <><ShieldCheck className="w-3 h-3" /><span>{msg.sender_name || providerProfile?.full_name || 'Provider'}</span></>
                               ) : (
-                                <><ShieldCheck className="w-3 h-3" /><span>SmartServe Support (Admin)</span></>
+                                <><ShieldCheck className="w-3 h-3" /><span>SmartServe Support</span></>
                               )}
                             </div>
                             <div className={`px-4 py-3 rounded-2xl text-xs font-medium leading-relaxed shadow-2xs ${
@@ -464,13 +698,12 @@ export const CustomerBookingDetail: React.FC = () => {
                     <div ref={chatEndRef} />
                   </div>
 
-                  {/* Send Message */}
                   <form onSubmit={handleSendChatMessage} className="p-4 border-t border-slate-100 flex gap-3 bg-white">
                     <input
                       type="text"
                       value={chatMessage}
                       onChange={(e) => setChatMessage(e.target.value)}
-                      placeholder={`Message ${booking.provider_name || 'your provider'}...`}
+                      placeholder={`Message ${providerProfile?.full_name || 'your provider'}...`}
                       className="flex-1 h-10 bg-slate-50 border border-slate-200 rounded-xl px-3 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]"
                       disabled={sendingChat}
                     />
@@ -489,7 +722,7 @@ export const CustomerBookingDetail: React.FC = () => {
         </div>
       )}
 
-      {/* Interactive In-App Cancellation Modal */}
+      {/* Cancellation Modal */}
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-100 space-y-6">
@@ -520,9 +753,6 @@ export const CustomerBookingDetail: React.FC = () => {
                 <option value="Price or timeline concern">Price or timeline concern</option>
                 <option value="Other reasons">Other reasons</option>
               </select>
-              <p className="text-[11px] text-slate-400">
-                Cancellation is free with zero penalties for requested bookings.
-              </p>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">

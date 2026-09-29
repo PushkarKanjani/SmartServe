@@ -23,7 +23,8 @@ export function getWebSocketUrl(channels: string[] = []): string {
 
 export function subscribeToRealtime(
   channels: string[],
-  onMessage: MessageHandler
+  onMessage: MessageHandler,
+  onStatusChange?: (status: 'connected' | 'connecting' | 'disconnected') => void
 ): () => void {
   let ws: WebSocket | null = null;
   let disposed = false;
@@ -79,6 +80,7 @@ export function subscribeToRealtime(
 
     const gen = ++generation;
     try {
+      onStatusChange?.('connecting');
       const url = getWebSocketUrl(channels);
       const socket = new WebSocket(url);
       ws = socket;
@@ -86,6 +88,7 @@ export function subscribeToRealtime(
       socket.onopen = () => {
         if (gen !== generation || disposed) { socket.close(); return; }
         retryCount = 0;
+        onStatusChange?.('connected');
         pingInterval = setInterval(() => {
           if (socket.readyState === WebSocket.OPEN) {
             try { socket.send(JSON.stringify({ action: 'ping' })); } catch (_) {}
@@ -113,6 +116,7 @@ export function subscribeToRealtime(
       socket.onclose = () => {
         if (gen !== generation) return;
         clearTimers();
+        onStatusChange?.('disconnected');
         if (!disposed) scheduleReconnect();
       };
 

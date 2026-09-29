@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { Reveal } from './Reveal';
 import { scrollToEl } from '../lib/lenis';
@@ -7,8 +7,16 @@ const PRM =
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const HERO_VIDEOS = [
+  { src: '/videos/cleaning.mp4', poster: '/videos/cleaning-poster.jpg' },
+  { src: '/videos/repair.mp4', poster: '/videos/repair-poster.jpg' },
+  { src: '/videos/home-service.mp4', poster: '/videos/home-service-poster.jpg' },
+];
+
 export default function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   // Parallax: orbs drift on scroll
   const { scrollYProgress } = useScroll({
@@ -17,6 +25,28 @@ export default function Hero() {
   });
   const orbY1 = useTransform(scrollYProgress, [0, 1], ['0px', '-60px']);
   const orbY2 = useTransform(scrollYProgress, [0, 1], ['0px', '-40px']);
+
+  // Smooth crossfade between the 3 videos every 5.5 seconds
+  useEffect(() => {
+    if (PRM) return;
+    const interval = setInterval(() => {
+      setActiveVideoIndex((prev) => (prev + 1) % HERO_VIDEOS.length);
+    }, 5500);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Ensure playback is active on mount and when active video changes
+  useEffect(() => {
+    videoRefs.current.forEach((vid) => {
+      if (vid) {
+        vid.play().catch(() => {});
+      }
+    });
+    const currentVid = videoRefs.current[activeVideoIndex];
+    if (currentVid) {
+      currentVid.play().catch(() => {});
+    }
+  }, [activeVideoIndex]);
 
   return (
     <section
@@ -33,6 +63,63 @@ export default function Hero() {
         overflow: 'hidden',
       }}
     >
+      {/* ── LAYER 1: Subtle Cinematic Video Carousel Background ── */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          overflow: 'hidden',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      >
+        {HERO_VIDEOS.map((item, idx) => (
+          <video
+            key={item.src}
+            ref={(el) => { videoRefs.current[idx] = el; }}
+            src={item.src}
+            poster={item.poster}
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center 40%',
+              opacity: activeVideoIndex === idx ? 0.32 : 0,
+              filter: 'blur(7px) saturate(0.8) brightness(1.02)',
+              transform: 'scale(1.08)',
+              transformOrigin: 'center center',
+              transition: PRM ? 'none' : 'opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1)',
+              willChange: 'opacity',
+            }}
+          />
+        ))}
+      </div>
+
+      {/* ── LAYER 2: Warm Translucent Ivory Overlay & Blur ── */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'radial-gradient(ellipse at 50% 45%, rgba(250, 247, 240, 0.72) 0%, rgba(250, 247, 240, 0.88) 60%, rgba(250, 247, 240, 0.97) 100%)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+          pointerEvents: 'none',
+          zIndex: 1,
+        }}
+      />
+
       {/* Decorative warm radial glow — parallax drift */}
       <motion.div
         aria-hidden="true"
@@ -47,6 +134,7 @@ export default function Hero() {
           background: 'radial-gradient(ellipse, rgba(201,161,90,0.12) 0%, rgba(122,158,110,0.06) 40%, transparent 70%)',
           filter: 'blur(60px)',
           pointerEvents: 'none',
+          zIndex: 1,
         }}
       />
       <motion.div
@@ -62,10 +150,12 @@ export default function Hero() {
           background: 'radial-gradient(ellipse, rgba(47,82,51,0.08) 0%, transparent 70%)',
           filter: 'blur(50px)',
           pointerEvents: 'none',
+          zIndex: 1,
         }}
       />
 
-      <div style={{ maxWidth: 760, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+      {/* ── LAYER 3 & 4: Existing Hero Content, Text & Buttons ── */}
+      <div style={{ maxWidth: 760, margin: '0 auto', textAlign: 'center', position: 'relative', zIndex: 2 }}>
 
         {/* Eyebrow pill */}
         <Reveal delay={0}>

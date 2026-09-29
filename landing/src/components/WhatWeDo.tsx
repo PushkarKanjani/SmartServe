@@ -13,7 +13,7 @@ import {
   LiveTrackingMockup,
 } from './showcase';
 
-// ─── Per-service subtle card ambient gradients ───────────────────────────────
+// ─── Per-service full-bleed vibrant gradients ────────────────────────────────
 const GRADIENTS: Record<MockupKey, string> = {
   emergency:
     'radial-gradient(ellipse 120% 80% at 20% 30%, #FECACA 0%, #FCA5A5 35%, #FED7AA 70%, #FDBA74 100%)',
@@ -79,7 +79,8 @@ function IconTab({
         justifyContent: 'center',
         flexShrink: 0,
         outline: 'none',
-        /* Glass pill effect */
+        boxSizing: 'border-box',
+        /* Glass pill effect inside colored area */
         background: isActive
           ? 'rgba(255, 255, 255, 0.95)'
           : 'rgba(255, 255, 255, 0.65)',
@@ -120,364 +121,495 @@ function IconTab({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function WhatWeDo() {
-  const [activeId, setActiveId] = useState<MockupKey>('emergency');
-  const hoverRef = useRef(false);
+  const [isShowcaseActive, setIsShowcaseActive] = useState(false);
+  const [activeServiceIndex, setActiveServiceIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
-  const activeService = SERVICES.find((s) => s.id === activeId)!;
-  const activeIndex   = SERVICES.findIndex((s) => s.id === activeId);
-  const Icon          = activeService.icon;
+  const activeService = SERVICES[activeServiceIndex] ?? SERVICES[0];
+  const activeId = activeService.id;
+  const Icon = activeService.icon;
 
-  const resetTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (prefersReducedMotion) return;
-    timerRef.current = setInterval(() => {
-      if (!hoverRef.current) {
-        setActiveId((cur) => {
-          const idx = SERVICES.findIndex((s) => s.id === cur);
-          return SERVICES[(idx + 1) % SERVICES.length].id;
-        });
-      }
-    }, 6000);
+  // Clear auto-rotate timer safely
+  const clearAutoRotate = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
   }, []);
 
-  useEffect(() => {
-    resetTimer();
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [resetTimer]);
+  // Start 5-second rotation
+  const startAutoRotate = useCallback(() => {
+    clearAutoRotate();
+    if (prefersReducedMotion) return;
 
-  const handleSelect = (id: MockupKey) => {
-    setActiveId(id);
-    resetTimer();
+    timerRef.current = setInterval(() => {
+      setActiveServiceIndex((prev) => (prev + 1) % SERVICES.length);
+    }, 5000);
+  }, [clearAutoRotate]);
+
+  // When showcase active state changes: start or pause rotation
+  useEffect(() => {
+    if (isShowcaseActive) {
+      startAutoRotate();
+    } else {
+      clearAutoRotate();
+    }
+    return () => {
+      clearAutoRotate();
+    };
+  }, [isShowcaseActive, startAutoRotate, clearAutoRotate]);
+
+  // User click on an icon: switch immediately, reset 5s timer
+  const handleSelect = (index: number) => {
+    setActiveServiceIndex(index);
+    if (isShowcaseActive) {
+      startAutoRotate();
+    }
   };
 
   // Keyboard arrow nav on tablist
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      handleSelect(SERVICES[(activeIndex + 1) % SERVICES.length].id);
+      handleSelect((activeServiceIndex + 1) % SERVICES.length);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      handleSelect(SERVICES[(activeIndex - 1 + SERVICES.length) % SERVICES.length].id);
+      handleSelect((activeServiceIndex - 1 + SERVICES.length) % SERVICES.length);
     }
   };
+
+  // IntersectionObserver to detect when user scrolls into the showcase section
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry) {
+          setIsShowcaseActive(entry.isIntersecting);
+        }
+      },
+      {
+        root: null,
+        rootMargin: '-10% 0px -10% 0px',
+        threshold: 0.05,
+      }
+    );
+
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
   return (
     <section
       id="what-we-do"
+      ref={sectionRef}
       style={{
         scrollMarginTop: 80,
         position: 'relative',
+        width: '100%',
+        minHeight: '100vh',
         background: '#FAF7F0',
-        padding: 'clamp(4.5rem, 7vw, 6.5rem) clamp(1.25rem, 4vw, 2.5rem)',
+        padding: 0,
+        margin: 0,
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
-      onMouseEnter={() => { hoverRef.current = true; }}
-      onMouseLeave={() => { hoverRef.current = false; }}
     >
-      {/* ── Centered content container with generous framing margins ── */}
+      {/* ── EXPANDING FULL-WIDTH / FULL-VIEWPORT COLORED SHOWCASE CONTAINER ── */}
       <div
+        id="colored-showcase-container"
         style={{
-          maxWidth: 1200,
-          margin: '0 auto',
+          boxSizing: 'border-box',
           position: 'relative',
+          width: '100%',
+          minHeight: '100vh',
+          transform: prefersReducedMotion ? 'none' : isShowcaseActive ? 'scale(1)' : 'scale(0.93)',
+          transformOrigin: 'center center',
+          borderRadius: isShowcaseActive ? '0px' : '28px',
+          border: isShowcaseActive ? 'none' : '1.5px solid rgba(255, 255, 255, 0.65)',
+          boxShadow: isShowcaseActive
+            ? 'none'
+            : '0 24px 60px -12px rgba(31, 42, 30, 0.16), 0 4px 18px rgba(31, 42, 30, 0.06)',
+          paddingTop: 'clamp(2.5rem, 5vh, 4rem)',
+          paddingBottom: 'clamp(2rem, 4vh, 3.5rem)',
+          paddingLeft: 'clamp(1rem, 3vw, 2.5rem)',
+          paddingRight: 'clamp(1rem, 3vw, 2.5rem)',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+          transition: prefersReducedMotion
+            ? 'none'
+            : 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+          willChange: 'transform, border-radius',
         }}
       >
-        {/* Section header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          style={{ textAlign: 'center', marginBottom: 'clamp(2rem, 3.5vw, 2.75rem)' }}
-        >
-          <p
+        {/* Full-bleed Dynamic Gradient on the colored background */}
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={activeId + '-colored-bg'}
+            aria-hidden="true"
             style={{
-              fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              fontWeight: 600,
-              fontSize: '0.8rem',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'rgba(31, 42, 30, 0.55)',
-              marginBottom: '0.75rem',
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              background: GRADIENTS[activeId],
+              zIndex: 0,
+              pointerEvents: 'none',
             }}
-          >
-            Capabilities &amp; Coverage
-          </p>
-          <h2
-            style={{
-              fontFamily: '"DM Serif Display", Georgia, serif',
-              fontSize: 'clamp(2rem, 4.5vw, 3.25rem)',
-              fontWeight: 400,
-              color: '#1F2A1E',
-              lineHeight: 1.15,
-              letterSpacing: '-0.015em',
-              marginBottom: '0.5rem',
-            }}
-          >
-            What We Do
-          </h2>
-          <p
-            style={{
-              fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              fontSize: '1rem',
-              fontWeight: 500,
-              color: 'rgba(31, 42, 30, 0.55)',
-            }}
-          >
-            One platform. Every home service. Zero guesswork.
-          </p>
-        </motion.div>
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.7, ease: 'easeInOut' }}
+          />
+        </AnimatePresence>
 
-        {/* ── 6 floating icon tabs ── */}
+        {/* Ambient specular highlight inside colored background */}
         <div
-          role="tablist"
-          aria-label="Service categories"
-          onKeyDown={onKeyDown}
+          aria-hidden="true"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 'clamp(0.5rem, 1.2vw, 1rem)',
-            marginBottom: 'clamp(1.75rem, 3.5vw, 2.75rem)',
-            flexWrap: 'wrap',
+            position: 'absolute',
+            top: '-15%',
+            right: '-10%',
+            width: '65%',
+            height: '65%',
+            background: 'radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 65%)',
+            filter: 'blur(40px)',
+            zIndex: 0,
+            pointerEvents: 'none',
           }}
-        >
-          {SERVICES.map((svc) => (
-            <IconTab
-              key={svc.id}
-              service={svc}
-              isActive={activeId === svc.id}
-              onSelect={() => handleSelect(svc.id)}
-            />
-          ))}
-        </div>
+        />
 
-        {/* ── Compact Centered Showcase Card (Calendly-style) ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 32, scale: 0.98 }}
-          whileInView={{ opacity: 1, y: 0, scale: 1 }}
-          viewport={{ once: true, amount: 0.15 }}
-          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+        {/* Content Wrapper INSIDE colored background */}
+        <div
           style={{
             position: 'relative',
-            maxWidth: 1160,
+            zIndex: 1,
+            width: '100%',
+            maxWidth: 1200,
             margin: '0 auto',
-            borderRadius: 24,
-            border: '1.5px solid rgba(47, 82, 51, 0.1)',
-            boxShadow: '0 24px 60px -12px rgba(31, 42, 30, 0.10), 0 4px 18px rgba(31, 42, 30, 0.04)',
-            background: '#FFFFFF',
-            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            boxSizing: 'border-box',
           }}
         >
-          {/* Subtle Dynamic Ambient Gradient contained strictly inside the card */}
-          <AnimatePresence initial={false}>
-            <motion.div
-              key={activeId + '-card-tint'}
-              aria-hidden="true"
+          {/* Section Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            style={{ textAlign: 'center', marginBottom: 'clamp(1.5rem, 3vh, 2.25rem)' }}
+          >
+            <p
               style={{
-                position: 'absolute',
-                inset: 0,
-                background: GRADIENTS[activeId],
-                opacity: 0.16,
-                zIndex: 0,
-                pointerEvents: 'none',
+                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                color: 'rgba(31, 42, 30, 0.65)',
+                marginBottom: '0.5rem',
               }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.16 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: prefersReducedMotion ? 0 : 0.6, ease: 'easeInOut' }}
-            />
-          </AnimatePresence>
+            >
+              Capabilities &amp; Coverage
+            </p>
+            <h2
+              style={{
+                fontFamily: '"DM Serif Display", Georgia, serif',
+                fontSize: 'clamp(2rem, 4vw, 3.25rem)',
+                fontWeight: 400,
+                color: '#1F2A1E',
+                lineHeight: 1.15,
+                letterSpacing: '-0.015em',
+                marginBottom: '0.4rem',
+              }}
+            >
+              What We Do
+            </h2>
+            <p
+              style={{
+                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                fontSize: '0.95rem',
+                fontWeight: 500,
+                color: 'rgba(31, 42, 30, 0.6)',
+              }}
+            >
+              One platform. Every home service. Zero guesswork.
+            </p>
+          </motion.div>
 
-          {/* Internal Content Grid */}
+          {/* ── 6 Service Icons Navigation INSIDE the colored area at top ── */}
           <div
-            className="grid grid-cols-1 lg:grid-cols-2 items-center"
+            role="tablist"
+            aria-label="Service categories"
+            onKeyDown={onKeyDown}
             style={{
-              position: 'relative',
-              zIndex: 1,
-              padding: 'clamp(2rem, 4vw, 3.25rem)',
-              gap: 'clamp(2rem, 4vw, 3.5rem)',
-              minHeight: 480,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 'clamp(0.5rem, 1.2vw, 1rem)',
+              marginBottom: 'clamp(1.5rem, 3vh, 2.25rem)',
+              flexWrap: 'wrap',
+              boxSizing: 'border-box',
             }}
           >
-            {/* Copy block — left */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeId + '-copy'}
-                role="tabpanel"
-                aria-live="polite"
-                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
-                transition={{ duration: prefersReducedMotion ? 0.1 : 0.32, ease: 'easeOut' }}
-                style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}
+            {SERVICES.map((svc, idx) => (
+              <IconTab
+                key={svc.id}
+                service={svc}
+                isActive={activeServiceIndex === idx}
+                onSelect={() => handleSelect(idx)}
+              />
+            ))}
+          </div>
+
+          {/* ── White Content Card INSIDE colored area (Contained, NOT full-screen) ── */}
+          <div
+            id="showcase-card"
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: 1140,
+              margin: '0 auto',
+              background: 'rgba(255, 255, 255, 0.94)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              borderRadius: 24,
+              border: '1.5px solid rgba(255, 255, 255, 0.85)',
+              boxShadow: '0 20px 50px -10px rgba(31, 42, 30, 0.12), 0 4px 16px rgba(31, 42, 30, 0.04)',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+              flexShrink: 0,
+            }}
+          >
+            {/* Internal Content Grid — Responsive 2-Column on desktop, 1-Column on mobile */}
+            <div
+              className="grid grid-cols-1 lg:grid-cols-2 items-center"
+              style={{
+                boxSizing: 'border-box',
+                width: '100%',
+                padding: 'clamp(2rem, 3.5vw, 3rem)',
+                gap: 'clamp(2rem, 3.5vw, 3.5rem)',
+                minHeight: 495,
+              }}
+            >
+              {/* Left copy block */}
+              <div
+                style={{
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  minWidth: 0,
+                }}
               >
-                {/* Service chip */}
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.45rem',
-                    width: 'fit-content',
-                  }}
-                >
-                  <div
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeId + '-copy'}
+                    role="tabpanel"
+                    aria-live="polite"
+                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+                    transition={{ duration: prefersReducedMotion ? 0.1 : 0.32, ease: 'easeOut' }}
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 8,
-                      background: `${activeService.accent}1A`,
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
+                      flexDirection: 'column',
+                      gap: '1.1rem',
+                      width: '100%',
+                      boxSizing: 'border-box',
                     }}
                   >
-                    <Icon size={14} color={activeService.accent} />
-                  </div>
-                  <span
-                    style={{
-                      fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                      fontWeight: 700,
-                      fontSize: '0.8rem',
-                      letterSpacing: '0.04em',
-                      color: activeService.accent,
-                    }}
-                  >
-                    {activeService.tagline}
-                  </span>
-                </div>
-
-                {/* Heading */}
-                <h3
-                  style={{
-                    fontFamily: '"DM Serif Display", Georgia, serif',
-                    fontSize: 'clamp(1.6rem, 2.8vw, 2.2rem)',
-                    fontWeight: 400,
-                    color: '#1F2A1E',
-                    lineHeight: 1.2,
-                    letterSpacing: '-0.015em',
-                    margin: 0,
-                  }}
-                >
-                  {activeService.heading}
-                </h3>
-
-                {/* Description */}
-                <p
-                  style={{
-                    fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                    fontSize: '0.9rem',
-                    lineHeight: 1.75,
-                    color: 'rgba(31, 42, 30, 0.65)',
-                    margin: 0,
-                  }}
-                >
-                  {activeService.description}
-                </p>
-
-                {/* Bullets */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
-                  {activeService.bullets.map((b) => (
-                    <div key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem' }}>
+                    {/* Service chip */}
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        width: 'fit-content',
+                      }}
+                    >
                       <div
                         style={{
-                          width: 20,
-                          height: 20,
-                          borderRadius: 6,
-                          background: '#2F5233',
+                          width: 28,
+                          height: 28,
+                          borderRadius: 8,
+                          background: `${activeService.accent}1A`,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          flexShrink: 0,
-                          marginTop: 2,
                         }}
                       >
-                        <Check size={11} color="#C9A15A" strokeWidth={2.5} />
+                        <Icon size={14} color={activeService.accent} />
                       </div>
                       <span
                         style={{
                           fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                          fontSize: '0.85rem',
-                          fontWeight: 600,
-                          color: '#1F2A1E',
-                          lineHeight: 1.55,
+                          fontWeight: 700,
+                          fontSize: '0.8rem',
+                          letterSpacing: '0.04em',
+                          color: activeService.accent,
                         }}
                       >
-                        {b}
+                        {activeService.tagline}
                       </span>
                     </div>
-                  ))}
-                </div>
 
-                {/* Learn more CTA */}
-                <button
-                  onClick={() => scrollToEl('#get-started')}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                    fontWeight: 700,
-                    fontSize: '0.875rem',
-                    color: '#2F5233',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.3rem',
-                    padding: 0,
-                    width: 'fit-content',
-                    textDecoration: 'none',
-                    marginTop: '0.25rem',
-                  }}
-                >
-                  Learn more →
-                </button>
-              </motion.div>
-            </AnimatePresence>
+                    {/* Heading */}
+                    <h3
+                      style={{
+                        fontFamily: '"DM Serif Display", Georgia, serif',
+                        fontSize: 'clamp(1.6rem, 2.5vw, 2.2rem)',
+                        fontWeight: 400,
+                        color: '#1F2A1E',
+                        lineHeight: 1.2,
+                        letterSpacing: '-0.015em',
+                        margin: 0,
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {activeService.heading}
+                    </h3>
 
-            {/* Mockup — right */}
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeId + '-mockup'}
-                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, rotateY: 6 }}
-                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
-                transition={{ duration: prefersReducedMotion ? 0.1 : 0.42, ease: [0.16, 1, 0.3, 1] }}
+                    {/* Description */}
+                    <p
+                      style={{
+                        fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                        fontSize: '0.9rem',
+                        lineHeight: 1.75,
+                        color: 'rgba(31, 42, 30, 0.65)',
+                        margin: 0,
+                      }}
+                    >
+                      {activeService.description}
+                    </p>
+
+                    {/* Bullets */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem', width: '100%' }}>
+                      {activeService.bullets.map((b) => (
+                        <div key={b} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.55rem' }}>
+                          <div
+                            style={{
+                              width: 20,
+                              height: 20,
+                              borderRadius: 6,
+                              background: '#2F5233',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              marginTop: 2,
+                            }}
+                          >
+                            <Check size={11} color="#C9A15A" strokeWidth={2.5} />
+                          </div>
+                          <span
+                            style={{
+                              fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                              fontSize: '0.85rem',
+                              fontWeight: 600,
+                              color: '#1F2A1E',
+                              lineHeight: 1.55,
+                            }}
+                          >
+                            {b}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Learn more CTA */}
+                    <button
+                      onClick={() => scrollToEl('#get-started')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                        fontWeight: 700,
+                        fontSize: '0.875rem',
+                        color: '#2F5233',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        padding: 0,
+                        width: 'fit-content',
+                        textDecoration: 'none',
+                        marginTop: '0.25rem',
+                      }}
+                    >
+                      Learn more →
+                    </button>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Right mockup visual */}
+              <div
                 style={{
-                  perspective: '1200px',
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  minWidth: 0,
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  width: '100%',
                 }}
               >
-                <ShowcaseMockup id={activeService.mockup} accent={activeService.accent} />
-              </motion.div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeId + '-mockup'}
+                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.94, rotateY: 6 }}
+                    animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                    transition={{ duration: prefersReducedMotion ? 0.1 : 0.42, ease: [0.16, 1, 0.3, 1] }}
+                    style={{
+                      perspective: '1200px',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <ShowcaseMockup id={activeService.mockup} accent={activeService.accent} />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom label */}
+          <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={activeId + '-label'}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
+                style={{
+                  fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  color: 'rgba(31, 42, 30, 0.55)',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {activeService.label}
+              </motion.p>
             </AnimatePresence>
           </div>
-        </motion.div>
-
-        {/* Bottom label */}
-        <div style={{ textAlign: 'center', marginTop: '1.75rem' }}>
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={activeId + '-label'}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.25 }}
-              style={{
-                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                color: 'rgba(31, 42, 30, 0.5)',
-                letterSpacing: '0.04em',
-              }}
-            >
-              {activeService.label}
-            </motion.p>
-          </AnimatePresence>
         </div>
       </div>
     </section>
