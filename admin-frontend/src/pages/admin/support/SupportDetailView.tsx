@@ -99,8 +99,9 @@ export const SupportDetailView: React.FC = () => {
       const targetTicketId = String(payload.ticket_id || '').toLowerCase();
       const currentTicketId = String(ticketId || '').toLowerCase();
       const isTargetTicket = !targetTicketId || targetTicketId === currentTicketId;
+      const payloadType = payload?.type || payload?.event || '';
       if (
-        (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') &&
+        (payloadType === 'NEW_SUPPORT_MESSAGE' || payloadType === 'support.message') &&
         isTargetTicket
       ) {
         if (payload.message) {
