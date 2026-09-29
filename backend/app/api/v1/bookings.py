@@ -97,6 +97,7 @@ def list_admin_bookings(
                     timeline=safe_timeline(b.timeline),
                     allowed_next_statuses=allowed_next,
                     emergency_flag=b.emergency_flag,
+                    cancellation_reason=b.cancellation_reason,
                     created_at=b.created_at.isoformat() if b.created_at else ""
                 )
             )
@@ -144,6 +145,7 @@ def get_admin_booking_detail(
         timeline=safe_timeline(b.timeline),
         allowed_next_statuses=allowed_next,
         emergency_flag=b.emergency_flag,
+        cancellation_reason=b.cancellation_reason,
         created_at=b.created_at.isoformat() if b.created_at else ""
     )
 
@@ -178,6 +180,30 @@ def create_admin_booking(
         action=f"Created Admin Booking #{booking.id}", target_resource=str(booking.id)
     )
 
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        booking_event = KafkaEvent(
+            event_type=KafkaTopics.BOOKING_CREATED,
+            booking_id=str(booking.id),
+            sender_id=str(admin.id),
+            receiver_id=str(booking.provider_id) if booking.provider_id else None,
+            payload={
+                "booking_id": str(booking.id),
+                "booking_reference": getattr(booking, "booking_reference", str(booking.id)[:8]),
+                "customer_id": str(booking.customer_id),
+                "provider_id": str(booking.provider_id) if booking.provider_id else None,
+                "service_id": str(booking.service_id),
+                "status": booking.status.value if hasattr(booking.status, "value") else str(booking.status),
+                "address": booking.address,
+                "total_price": float(booking.total_price),
+                "emergency_flag": booking.emergency_flag,
+                "created_at": booking.created_at.isoformat() if hasattr(booking.created_at, "isoformat") else str(booking.created_at),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.BOOKING_CREATED, booking_event)
+    except Exception as exc:
+        print(f"[Admin Booking Kafka Error] {exc}")
+
     c_name = booking.customer.full_name if booking.customer else "Customer"
     c_phone = booking.customer.phone if (booking.customer and booking.customer.phone) else "+91 98765 43210"
     p_name = booking.provider.full_name if booking.provider else None
@@ -202,6 +228,7 @@ def create_admin_booking(
         timeline=safe_timeline(booking.timeline),
         allowed_next_statuses=allowed_next,
         emergency_flag=booking.emergency_flag,
+        cancellation_reason=booking.cancellation_reason,
         created_at=booking.created_at.isoformat() if booking.created_at else ""
     )
 
@@ -277,6 +304,7 @@ def transition_booking_status(
         timeline=safe_timeline(updated.timeline),
         allowed_next_statuses=fresh_allowed_next,
         emergency_flag=updated.emergency_flag,
+        cancellation_reason=updated.cancellation_reason,
         created_at=updated.created_at.isoformat() if updated.created_at else ""
     )
 

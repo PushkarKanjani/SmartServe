@@ -31,6 +31,7 @@ import type { SupportTicketItem } from '../../../api/support';
 import { getAuthenticatedAdmin } from '../../../api/admins';
 import type { SessionAdminInfo } from '../../../api/admins';
 import { hasPermission } from '../../../utils/rbac';
+import { subscribeToRealtime } from '../../../utils/realtime';
 
 export const SupportDetailView: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -88,6 +89,42 @@ export const SupportDetailView: React.FC = () => {
   useEffect(() => {
     fetchTicketProfile();
     getAuthenticatedAdmin().then((s) => setAdminSession(s)).catch(() => {});
+
+    // Real-Time Kafka -> WebSocket Subscription (No Polling Required)
+    const channels = ticketId
+      ? [`ticket_${ticketId}`, 'support_tickets', 'support']
+      : ['support_tickets', 'support'];
+
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      const targetTicketId = String(payload.ticket_id || '').toLowerCase();
+      const currentTicketId = String(ticketId || '').toLowerCase();
+      const isTargetTicket = !targetTicketId || targetTicketId === currentTicketId;
+      if (
+        (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') &&
+        isTargetTicket
+      ) {
+        if (payload.message) {
+          setTicketData((prev) => {
+            if (!prev) return prev;
+            const exists = (prev.messages || []).some((m: any) => String(m.id).toLowerCase() === String(payload.message?.id).toLowerCase());
+            if (exists) return prev;
+            return {
+              ...prev,
+              messages: [...(prev.messages || []), payload.message],
+            };
+          });
+        }
+        if (ticketId) {
+          getSupportTicketDetail(ticketId)
+            .then((data) => setTicketData(data))
+            .catch(() => {});
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, [ticketId]);
 
   const handleReplySubmit = async (e: React.FormEvent) => {

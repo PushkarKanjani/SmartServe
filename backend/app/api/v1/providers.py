@@ -466,6 +466,35 @@ def accept_booking(
         next_status="Accepted",
         user=current_user,
     )
+
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        cust_id = str(updated.customer_id) if updated.customer_id else None
+        cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+        accepted_event = KafkaEvent(
+            event_type=KafkaTopics.BOOKING_ACCEPTED,
+            booking_id=str(updated.id),
+            sender_id=str(current_user.id),
+            receiver_id=cust_id,
+            payload={
+                "booking_id": str(updated.id),
+                "booking_reference": updated.booking_reference,
+                "customer_id": cust_id,
+                "customer_user_id": cust_user_id,
+                "customer_name": updated.customer.full_name if updated.customer else "Customer",
+                "provider_id": str(current_user.id),
+                "provider_name": current_user.full_name,
+                "service_name": updated.service_name,
+                "status": "Accepted",
+                "total_price": float(updated.total_price or 0.0),
+                "scheduled_date": updated.scheduled_date,
+                "scheduled_time": updated.scheduled_time.strftime("%H:%M:%S") if hasattr(updated.scheduled_time, "strftime") else str(updated.scheduled_time),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.BOOKING_ACCEPTED, accepted_event)
+    except Exception as exc:
+        print(f"[Provider Accept Booking Kafka Error] {exc}")
+
     return _serialize_booking_response(updated)
 
 
@@ -480,7 +509,12 @@ def reject_booking(
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
-    reason = payload.reason if payload else "Declined by service partner"
+    if not payload or not payload.reason or not payload.reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rejection reason is required when declining a booking request.",
+        )
+    reason = payload.reason.strip()
     updated = transition_booking_status(
         db=db,
         booking_id=booking_id,
@@ -488,6 +522,37 @@ def reject_booking(
         user=current_user,
         reason=reason,
     )
+
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        cust_id = str(updated.customer_id) if updated.customer_id else None
+        cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+        rejected_event = KafkaEvent(
+            event_type=KafkaTopics.BOOKING_REJECTED,
+            booking_id=str(updated.id),
+            sender_id=str(current_user.id),
+            receiver_id=cust_id,
+            payload={
+                "booking_id": str(updated.id),
+                "booking_reference": updated.booking_reference,
+                "customer_id": cust_id,
+                "customer_user_id": cust_user_id,
+                "customer_name": updated.customer.full_name if updated.customer else "Customer",
+                "provider_id": str(current_user.id),
+                "provider_name": current_user.full_name,
+                "service_name": updated.service_name,
+                "status": "Rejected",
+                "reason": reason,
+                "rejection_reason": reason,
+                "cancellation_reason": reason,
+                "total_price": float(updated.total_price or 0.0),
+                "scheduled_date": updated.scheduled_date,
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.BOOKING_REJECTED, rejected_event)
+    except Exception as exc:
+        print(f"[Provider Reject Booking Kafka Error] {exc}")
+
     return _serialize_booking_response(updated)
 
 
@@ -611,6 +676,29 @@ def create_my_ticket(
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
     ticket = service.create_support_ticket(current_user, data)
+
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        msg_event = KafkaEvent(
+            event_type=KafkaTopics.SUPPORT_MESSAGE,
+            ticket_id=str(ticket.id),
+            booking_id=str(ticket.booking_id) if ticket.booking_id else None,
+            sender_id=str(current_user.id),
+            payload={
+                "ticket_id": str(ticket.id),
+                "booking_id": str(ticket.booking_id) if ticket.booking_id else None,
+                "sender_id": str(current_user.id),
+                "sender_role": "provider",
+                "sender_name": current_user.full_name,
+                "subject": ticket.subject,
+                "message_text": ticket.description or ticket.subject,
+                "created_at": ticket.created_at.isoformat() if hasattr(ticket.created_at, "isoformat") else str(ticket.created_at),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.SUPPORT_MESSAGE, msg_event)
+    except Exception as exc:
+        print(f"[Provider Create Ticket Kafka Error] {exc}")
+
     return _serialize_ticket_response(ticket)
 
 
@@ -652,7 +740,39 @@ def reply_my_ticket(
     current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
+    ticket = service.get_my_ticket(current_user, ticket_id)
     msg = service.reply_to_ticket(current_user, ticket_id, payload.message_text, payload.attachment_url)
+
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        target_receiver = str(ticket.customer_id) if hasattr(ticket, 'customer_id') and ticket.customer_id else None
+        cust_user_id = str(ticket.customer.user_id) if hasattr(ticket, 'customer') and ticket.customer and hasattr(ticket.customer, 'user_id') else None
+        b_id = str(ticket.booking_id) if hasattr(ticket, 'booking_id') and ticket.booking_id else None
+        msg_event = KafkaEvent(
+            event_type=KafkaTopics.SUPPORT_MESSAGE,
+            ticket_id=str(ticket_id),
+            booking_id=b_id,
+            sender_id=str(current_user.id),
+            receiver_id=target_receiver,
+            payload={
+                "ticket_id": str(ticket_id),
+                "booking_id": b_id,
+                "message_id": str(msg.id),
+                "sender_id": str(current_user.id),
+                "sender_role": "provider",
+                "sender_name": current_user.full_name,
+                "receiver_id": target_receiver,
+                "customer_id": target_receiver,
+                "customer_user_id": cust_user_id,
+                "message_text": msg.message_text,
+                "attachment_url": msg.attachment_url,
+                "created_at": msg.created_at.isoformat() if hasattr(msg.created_at, "isoformat") else str(msg.created_at),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.SUPPORT_MESSAGE, msg_event)
+    except Exception as exc:
+        print(f"[Provider Ticket Reply Kafka Error] {exc}")
+
     return TicketMessageResponse(
         id=str(msg.id),
         sender_id=str(msg.sender_id),
@@ -779,6 +899,36 @@ def send_my_booking_chat_message(
     ticket.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(msg)
+
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        cust_id = str(booking.customer_id) if booking.customer_id else None
+        cust_user_id = str(booking.customer.user_id) if booking.customer and hasattr(booking.customer, 'user_id') else None
+        chat_event = KafkaEvent(
+            event_type=KafkaTopics.SUPPORT_MESSAGE,
+            ticket_id=str(ticket.id),
+            booking_id=str(booking_id),
+            sender_id=str(current_user.id),
+            receiver_id=cust_id,
+            payload={
+                "ticket_id": str(ticket.id),
+                "booking_id": str(booking_id),
+                "message_id": str(msg.id),
+                "sender_id": str(current_user.id),
+                "sender_role": "provider",
+                "sender_name": current_user.full_name,
+                "receiver_id": cust_id,
+                "customer_id": cust_id,
+                "customer_user_id": cust_user_id,
+                "message_text": msg.message_text,
+                "attachment_url": msg.attachment_url,
+                "category": "Booking Chat",
+                "created_at": msg.created_at.isoformat() if hasattr(msg.created_at, "isoformat") else str(msg.created_at),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.SUPPORT_MESSAGE, chat_event)
+    except Exception as exc:
+        print(f"[Provider Booking Chat Kafka Error] {exc}")
 
     return TicketMessageResponse(
         id=str(msg.id),

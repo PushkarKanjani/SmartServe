@@ -24,6 +24,7 @@ export interface BookingItem {
   timeline: TimelineItem[];
   allowed_next_statuses: string[];
   emergency_flag?: string | null;
+  cancellation_reason?: string | null;
   created_at: string;
 }
 

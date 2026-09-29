@@ -14,6 +14,7 @@ from app.api.v1.services import router as services_router
 from app.api.v1.provider_onboarding import router as provider_onboarding_router
 from app.api.v1.admin_providers import router as admin_providers_router
 from app.api.v1.emails import router as emails_router
+from app.api.v1.kafka_admin import router as kafka_admin_router
 
 
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -33,7 +34,8 @@ for r in [
     support_router,
     reports_router,
     security_router,
-    emails_router
+    emails_router,
+    kafka_admin_router,
 ]:
     api_v1_router.include_router(r)
 

@@ -791,6 +791,38 @@ def create_customer_booking(
         else str(new_booking.scheduled_time)
     )
 
+    # Publish booking.created event to Kafka asynchronously
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        booking_event = KafkaEvent(
+            event_type=KafkaTopics.BOOKING_CREATED,
+            booking_id=str(new_booking.id),
+            sender_id=str(current_customer.id),
+            receiver_id=str(new_booking.provider_id) if new_booking.provider_id else None,
+            payload={
+                "booking_id": str(new_booking.id),
+                "booking_reference": new_booking.booking_reference,
+                "customer_id": str(current_customer.id),
+                "customer_name": current_customer.full_name,
+                "customer_phone": current_customer.phone,
+                "provider_id": str(new_booking.provider_id) if new_booking.provider_id else None,
+                "provider_name": eligible_provider.full_name if eligible_provider else None,
+                "service_id": str(srv_id),
+                "service_name": srv_name,
+                "category": srv_category,
+                "status": str(new_booking.status),
+                "scheduled_date": new_booking.scheduled_date,
+                "scheduled_time": sched_time_str,
+                "address": new_booking.address_line1,
+                "total_price": float(new_booking.total_price),
+                "emergency_flag": new_booking.emergency_flag,
+                "created_at": new_booking.created_at.isoformat() if hasattr(new_booking.created_at, "isoformat") else str(new_booking.created_at),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.BOOKING_CREATED, booking_event)
+    except Exception as exc:
+        print(f"[Customer Booking Kafka Publish Error] {exc}")
+
     return BookingDetail(
         id=str(new_booking.id),
         booking_reference=new_booking.booking_reference,
@@ -1168,6 +1200,32 @@ def add_ticket_message(
     db.commit()
     db.refresh(new_msg)
 
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        msg_event = KafkaEvent(
+            event_type=KafkaTopics.SUPPORT_MESSAGE,
+            ticket_id=str(ticket.id),
+            booking_id=str(ticket.booking_id) if ticket.booking_id else None,
+            sender_id=str(current_customer.user_id),
+            receiver_id=str(ticket.provider_id) if ticket.provider_id else None,
+            payload={
+                "ticket_id": str(ticket.id),
+                "message_id": str(new_msg.id),
+                "booking_id": str(ticket.booking_id) if ticket.booking_id else None,
+                "sender_id": str(current_customer.user_id),
+                "sender_role": "customer",
+                "sender_name": current_customer.full_name,
+                "receiver_id": str(ticket.provider_id) if ticket.provider_id else None,
+                "message_text": new_msg.message_text,
+                "attachment_url": new_msg.attachment_url,
+                "category": getattr(ticket, "category", "General"),
+                "created_at": new_msg.created_at.isoformat() if hasattr(new_msg.created_at, "isoformat") else str(new_msg.created_at),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.SUPPORT_MESSAGE, msg_event)
+    except Exception as exc:
+        print(f"[Customer Ticket Msg Kafka Publish Error] {exc}")
+
     return MessageItem(
         id=str(new_msg.id),
         ticket_id=str(ticket.id),
@@ -1383,6 +1441,32 @@ def send_booking_chat_message(
     ticket.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(new_msg)
+
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        chat_event = KafkaEvent(
+            event_type=KafkaTopics.SUPPORT_MESSAGE,
+            ticket_id=str(ticket.id),
+            booking_id=str(booking.id),
+            sender_id=str(current_customer.user_id),
+            receiver_id=str(booking.provider_id) if booking.provider_id else None,
+            payload={
+                "ticket_id": str(ticket.id),
+                "booking_id": str(booking.id),
+                "message_id": str(new_msg.id),
+                "sender_id": str(current_customer.user_id),
+                "sender_role": "customer",
+                "sender_name": current_customer.full_name,
+                "receiver_id": str(booking.provider_id) if booking.provider_id else None,
+                "message_text": new_msg.message_text,
+                "attachment_url": new_msg.attachment_url,
+                "category": "Booking Chat",
+                "created_at": new_msg.created_at.isoformat() if hasattr(new_msg.created_at, "isoformat") else str(new_msg.created_at),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.SUPPORT_MESSAGE, chat_event)
+    except Exception as exc:
+        print(f"[Customer Chat Msg Kafka Publish Error] {exc}")
 
     return MessageItem(
         id=str(new_msg.id),

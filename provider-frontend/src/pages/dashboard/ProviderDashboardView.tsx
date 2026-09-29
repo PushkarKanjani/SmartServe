@@ -20,8 +20,11 @@ import {
   Award,
   ArrowRight,
   LifeBuoy,
+  X,
+  XCircle,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
+import { subscribeToRealtime } from '../../utils/realtime';
 
 interface DashboardStats {
   today_bookings_count: number;
@@ -82,6 +85,8 @@ export const ProviderDashboardView: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
+  const [rejectingBooking, setRejectingBooking] = useState<any | null>(null);
+  const [rejectionReason, setRejectionReason] = useState<string>('Schedule conflict with another job');
 
   const fetchAll = async () => {
     try {
@@ -102,16 +107,57 @@ export const ProviderDashboardView: React.FC = () => {
 
   useEffect(() => {
     fetchAll();
-    const interval = setInterval(() => {
-      apiClient.get('/providers/me/dashboard-stats').then((r) => setStats(r.data)).catch(() => {});
-      apiClient.get('/providers/me/bookings').then((r) => setBookings(r.data)).catch(() => {});
-    }, 6000);
-    return () => clearInterval(interval);
+
+    let providerId = '';
+    try {
+      const rawUser = localStorage.getItem('smartserve_provider_user');
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        providerId = parsed.user_id || '';
+      }
+    } catch (e) {}
+
+    const channels = ['bookings', 'dashboard'];
+    if (providerId) {
+      channels.push(`provider_${providerId}`, `user_${providerId}`);
+    }
+
+    // Real-Time Kafka -> WebSocket Subscription (No Polling Required)
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      if (
+        payload.type === 'BOOKING_CREATED' ||
+        payload.type === 'BOOKING_ACCEPTED' ||
+        payload.type === 'BOOKING_REJECTED' ||
+        payload.event === 'booking.created' ||
+        payload.event === 'booking.accepted' ||
+        payload.event === 'booking.rejected'
+      ) {
+        if (payload.type === 'BOOKING_ACCEPTED') {
+          setBookings((prev) =>
+            prev.map((b) => (b.id === payload.booking_id ? { ...b, status: 'Accepted' } : b))
+          );
+        } else if (payload.type === 'BOOKING_REJECTED') {
+          setBookings((prev) =>
+            prev.map((b) =>
+              b.id === payload.booking_id
+                ? { ...b, status: 'Rejected', rejection_reason: payload.reason || payload.rejection_reason }
+                : b
+            )
+          );
+        }
+        fetchAll();
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, []);
 
   const handleBookingAction = async (
     bookingId: string,
-    action: 'accept' | 'reject' | 'start' | 'complete'
+    action: 'accept' | 'reject' | 'start' | 'complete',
+    customReason?: string
   ) => {
     setActionLoading(bookingId);
     setActionError(null);
@@ -119,9 +165,11 @@ export const ProviderDashboardView: React.FC = () => {
       if (action === 'accept') {
         await apiClient.post(`/providers/me/bookings/${bookingId}/accept`);
       } else if (action === 'reject') {
+        const reasonToSend = (customReason || rejectionReason || 'Schedule conflict with another job').trim();
         await apiClient.post(`/providers/me/bookings/${bookingId}/reject`, {
-          reason: 'Declined by service partner',
+          reason: reasonToSend,
         });
+        setRejectingBooking(null);
       } else if (action === 'start') {
         await apiClient.post(`/providers/me/bookings/${bookingId}/start`);
       } else if (action === 'complete') {
@@ -494,7 +542,7 @@ export const ProviderDashboardView: React.FC = () => {
                               <span>{actionLoading === booking.id ? 'Accepting...' : 'Accept Job'}</span>
                             </button>
                             <button
-                              onClick={() => handleBookingAction(booking.id, 'reject')}
+                              onClick={() => setRejectingBooking(booking)}
                               disabled={actionLoading === booking.id}
                               className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50"
                             >
@@ -637,6 +685,88 @@ export const ProviderDashboardView: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Mandatory Rejection Reason Modal */}
+      {rejectingBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-[#E5DEC9]">
+            <div className="flex items-start justify-between border-b border-[#E5DEC9]/60 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+                  <XCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-serif text-[#1F2A1E]">Decline Service Request</h3>
+                  <p className="text-[11px] text-[#1F2A1E]/60 font-mono">
+                    {rejectingBooking.reference || rejectingBooking.booking_reference || rejectingBooking.id}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingBooking(null)}
+                className="text-[#1F2A1E]/40 hover:text-[#1F2A1E] p-1 rounded-full hover:bg-black/5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 bg-[#FAF7F0] rounded-xl border border-[#E5DEC9] text-xs space-y-1">
+              <p className="font-bold text-[#1F2A1E]">{rejectingBooking.service_name}</p>
+              <p className="text-[#1F2A1E]/70">Customer: <span className="font-semibold">{rejectingBooking.customer_name}</span></p>
+              <p className="text-[#1F2A1E]/70">Schedule: <span className="font-semibold">{rejectingBooking.scheduled_date} at {rejectingBooking.scheduled_time}</span></p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider">
+                Rejection Reason (Required) *
+              </label>
+
+              <select
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                className="w-full text-xs font-medium bg-[#FAF7F0] border border-[#E5DEC9] rounded-xl px-3 py-2.5 text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
+              >
+                <option value="Schedule conflict with another job">Schedule conflict with another job</option>
+                <option value="Outside service travel radius / transit delay">Outside service travel radius / transit delay</option>
+                <option value="Required tools or equipment currently unavailable">Required tools or equipment currently unavailable</option>
+                <option value="Personal emergency / urgent leave">Personal emergency / urgent leave</option>
+                <option value="Custom Reason">Custom Reason...</option>
+              </select>
+
+              <textarea
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                placeholder="Enter detailed reason for declining this request..."
+                rows={3}
+                required
+                className="w-full text-xs font-medium bg-white border border-[#E5DEC9] rounded-xl p-3 text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
+              />
+              <p className="text-[11px] text-[#1F2A1E]/50">
+                This reason will be recorded on the booking, communicated to the customer, and visible to operations admin.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setRejectingBooking(null)}
+                className="px-4 py-2 bg-[#FAF7F0] hover:bg-[#F2EDE1] text-[#1F2A1E] font-bold text-xs rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!rejectionReason.trim() || actionLoading === rejectingBooking.id}
+                onClick={() => handleBookingAction(rejectingBooking.id, 'reject', rejectionReason.trim())}
+                className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {actionLoading === rejectingBooking.id ? 'Declining...' : 'Confirm Decline'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

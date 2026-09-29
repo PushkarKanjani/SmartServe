@@ -20,6 +20,7 @@ import {
   User,
   ShieldCheck,
 } from 'lucide-react';
+import { subscribeToRealtime } from '../utils/realtime';
 
 export const CustomerBookingDetail: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -58,14 +59,37 @@ export const CustomerBookingDetail: React.FC = () => {
 
   useEffect(() => {
     fetchDetail();
-    const interval = setInterval(() => {
-      if (bookingId) {
+    if (!bookingId) return;
+
+    // Real-Time Kafka -> WebSocket Subscription for booking status (No Polling Required)
+    const unsubscribeWs = subscribeToRealtime([`booking_${bookingId}`, 'bookings'], (payload) => {
+      const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
+      if (targetId && targetId === String(bookingId).toLowerCase()) {
+        const type = payload.type || payload.event_type || payload.event;
+        if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
+          setBooking((prev) => (prev ? { ...prev, status: 'Accepted' } : prev));
+        } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
+          const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Provider unavailable';
+          setBooking((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: 'Rejected',
+                  cancellation_reason: reason,
+                  rejection_reason: reason,
+                } as any
+              : prev
+          );
+        }
         getBookingDetail(bookingId)
           .then((data) => setBooking(data))
           .catch(() => {});
       }
-    }, 4000);
-    return () => clearInterval(interval);
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, [bookingId]);
 
   // Load chat when provider is assigned and chat is open
@@ -90,9 +114,44 @@ export const CustomerBookingDetail: React.FC = () => {
   };
 
   useEffect(() => {
-    if (showChat && bookingId) {
-      fetchChat();
+    if (!showChat || !bookingId) return;
+
+    fetchChat();
+
+    const channels = [`booking_${bookingId}`, `booking_chat_${bookingId}`, 'support', 'support_tickets'];
+    if (chatTicket?.id) {
+      channels.push(`ticket_${chatTicket.id}`);
     }
+
+    // Real-Time Kafka -> WebSocket Subscription for chat messages (No Polling Required)
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {
+        const msg = payload.message || payload.data;
+        if (msg) {
+          setChatTicket((prev) => {
+            if (!prev) return prev;
+            const exists = (prev.messages || []).some((m: any) => m.id === msg.id);
+            if (exists) return prev;
+            return {
+              ...prev,
+              messages: [...(prev.messages || []), msg],
+            };
+          });
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+        }
+        getBookingChat(bookingId)
+          .then((data) => {
+            setChatTicket(data);
+            setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+          })
+          .catch(() => {});
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, [showChat, bookingId]);
 
   const handleSendChatMessage = async (e: React.FormEvent) => {
@@ -179,7 +238,7 @@ export const CustomerBookingDetail: React.FC = () => {
               <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
                 stLower === 'completed' || stLower === 'paid'
                   ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30'
-                  : stLower === 'cancelled'
+                  : stLower === 'cancelled' || stLower === 'rejected'
                   ? 'bg-rose-500/20 text-rose-300 border-rose-400/30'
                   : 'bg-blue-500/20 text-blue-300 border-blue-400/30'
               }`}>
@@ -218,8 +277,28 @@ export const CustomerBookingDetail: React.FC = () => {
             </div>
           )}
 
+          {/* Rejection / Cancellation Reason Notification Banner */}
+          {(stLower === 'rejected' || stLower === 'cancelled') && (
+            <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-4 animate-in fade-in">
+              <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <XCircle className="w-5 h-5 text-rose-600" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="font-bold text-rose-950 text-sm">
+                  {stLower === 'rejected' ? 'Service Request Declined by Partner' : 'Booking Cancelled'}
+                </h4>
+                <p className="text-xs text-rose-800 font-semibold">
+                  Reason: {booking.cancellation_reason || (booking as any).rejection_reason || 'Provider unavailable'}
+                </p>
+                <p className="text-[11px] text-rose-600 font-medium pt-1">
+                  You can reschedule with another time slot or choose another service from our catalog.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* OTP Code Box */}
-          {booking.otp_code && stLower !== 'completed' && stLower !== 'cancelled' && (
+          {booking.otp_code && stLower !== 'completed' && stLower !== 'cancelled' && stLower !== 'rejected' && (
             <div className="p-5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center flex-shrink-0">

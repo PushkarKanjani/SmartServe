@@ -24,6 +24,7 @@ import {
   MessageCircle, 
   User 
 } from 'lucide-react';
+import { subscribeToRealtime } from '../../utils/realtime';
 
 const formatDateINR = (dateStr?: string): string => {
   if (!dateStr) return '';
@@ -96,6 +97,72 @@ export const ProviderSupportView: React.FC = () => {
     fetchTickets();
     fetchBookingsList();
   }, []);
+
+  // Real-Time Kafka updates for tickets tab (No Polling Required)
+  useEffect(() => {
+    let providerId = '';
+    try {
+      const rawUser = localStorage.getItem('smartserve_provider_user');
+      if (rawUser) {
+        providerId = JSON.parse(rawUser).user_id || '';
+      }
+    } catch (e) {}
+
+    const channels = ['support_tickets', 'support'];
+    if (providerId) channels.push(`provider_${providerId}`, `user_${providerId}`);
+
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      if (payload.type === 'NEW_SUPPORT_MESSAGE' || payload.event_type === 'support.message') {
+        if (activeTab === 'tickets') {
+          getProviderTickets().then((data) => setTickets(data)).catch(() => {});
+        }
+      }
+    });
+    return () => {
+      unsubscribeWs();
+    };
+  }, [activeTab]);
+
+  // Real-Time Kafka updates for selected customer booking chat (No Polling Required)
+  useEffect(() => {
+    if (!selectedBookingForChat) return;
+
+    const bookingId = selectedBookingForChat.id;
+    const channels = [
+      `booking_${bookingId}`,
+      `booking_chat_${bookingId}`,
+      'support',
+      'support_tickets'
+    ];
+    if (chatTicket?.id) {
+      channels.push(`ticket_${chatTicket.id}`);
+    }
+
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {
+        const msg = payload.message || payload.data;
+        if (msg) {
+          setChatTicket((prev) => {
+            if (!prev) return prev;
+            const exists = (prev.messages || []).some((m: any) => m.id === msg.id);
+            if (exists) return prev;
+            return {
+              ...prev,
+              messages: [...(prev.messages || []), msg],
+            };
+          });
+        }
+        getBookingChat(bookingId)
+          .then((chat) => setChatTicket(chat))
+          .catch(() => {});
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
+  }, [selectedBookingForChat?.id]);
 
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();

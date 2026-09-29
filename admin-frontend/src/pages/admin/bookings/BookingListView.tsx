@@ -21,6 +21,7 @@ import { formatCurrencyINR } from '../../../utils/formatters';
 import { getAuthenticatedAdmin } from '../../../api/admins';
 import type { SessionAdminInfo } from '../../../api/admins';
 import { hasPermission } from '../../../utils/rbac';
+import { subscribeToRealtime } from '../../../utils/realtime';
 
 export const BookingListView: React.FC = () => {
   const navigate = useNavigate();
@@ -73,10 +74,6 @@ export const BookingListView: React.FC = () => {
 
   useEffect(() => {
     fetchBookingsData();
-    const interval = setInterval(() => {
-      fetchBookingsData();
-    }, 5000);
-
     getAuthenticatedAdmin().then((s) => setAdminSession(s)).catch(() => {});
 
     // Pre-fetch option lists for Emergency Dispatch Modal
@@ -93,33 +90,39 @@ export const BookingListView: React.FC = () => {
       }
     }).catch(() => {});
 
-    // Real-Time Emergency Alerts WebSocket Connection
-    const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
-    const isHttps = rawApiUrl.startsWith('https:') || window.location.protocol === 'https:';
-    const wsProtocol = isHttps ? 'wss:' : 'ws:';
-    const hostDomain = rawApiUrl.replace(/^https?:\/\//, '').replace(/\/api\/v1\/?$/, '');
-    const wsUrl = `${wsProtocol}//${hostDomain}/ws/emergency-alerts`;
-    let ws: WebSocket | null = null;
-
-    try {
-      ws = new WebSocket(wsUrl);
-      ws.onmessage = (event) => {
-        try {
-          const payload = JSON.parse(event.data);
-          if (payload.type === 'EMERGENCY_ALERT' || payload.event === 'emergency_dispatch') {
-            setWsAlert({
-              title: payload.title || '🚨 Real-Time Emergency Dispatch Event',
-              body: payload.message || 'New emergency service request logged in system.'
-            });
-            fetchBookingsData();
-          }
-        } catch (e) {}
-      };
-    } catch (err) {}
+    // Real-Time Kafka -> WebSocket Subscription (No Polling Required)
+    const unsubscribeWs = subscribeToRealtime(['bookings', 'dashboard', 'emergency'], (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (type === 'BOOKING_CREATED' || type === 'booking.created') {
+        getBookingsList().then((data) => setBookings(data)).catch(() => {});
+      } else if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
+        const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
+        setBookings((prev) =>
+          prev.map((b) => (String(b.id).toLowerCase() === targetId ? { ...b, status: 'Accepted' } : b))
+        );
+        getBookingsList().then((data) => setBookings(data)).catch(() => {});
+      } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
+        const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
+        const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Rejected by provider';
+        setBookings((prev) =>
+          prev.map((b) =>
+            String(b.id).toLowerCase() === targetId
+              ? { ...b, status: 'Rejected', cancellation_reason: reason }
+              : b
+          )
+        );
+        getBookingsList().then((data) => setBookings(data)).catch(() => {});
+      } else if (type === 'EMERGENCY_ALERT' || type === 'emergency_dispatch') {
+        setWsAlert({
+          title: payload.title || '🚨 Real-Time Emergency Dispatch Event',
+          body: payload.message || 'New emergency service request logged in system.'
+        });
+        getBookingsList().then((data) => setBookings(data)).catch(() => {});
+      }
+    });
 
     return () => {
-      clearInterval(interval);
-      if (ws) ws.close();
+      unsubscribeWs();
     };
   }, []);
 
@@ -399,6 +402,11 @@ export const BookingListView: React.FC = () => {
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getStatusBadgeStyle(b.status)}`}>
                         {b.status}
                       </span>
+                      {b.cancellation_reason && (
+                        <p className="text-[10px] text-rose-600 font-semibold mt-1 max-w-[180px] break-words">
+                          Reason: {b.cancellation_reason}
+                        </p>
+                      )}
                     </td>
 
                     <td className="py-4 px-6 text-right">
@@ -446,6 +454,11 @@ export const BookingListView: React.FC = () => {
                   <p className="flex items-center gap-1 text-[11px] text-slate-400">
                     <MapPin className="w-3 h-3" /> {b.address ? `${b.address.substring(0, 32)}...` : 'Location'}
                   </p>
+                  {b.cancellation_reason && (
+                    <p className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-200 mt-1">
+                      Reason: {b.cancellation_reason}
+                    </p>
+                  )}
                 </div>
               </div>
 

@@ -33,6 +33,7 @@ export interface BookingDetail {
   provider_id?: string;
   provider_name?: string;
   emergency_flag?: string;
+  cancellation_reason?: string;
   created_at: string;
 }
 

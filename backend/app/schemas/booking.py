@@ -36,4 +36,5 @@ class BookingDetailResponse(BaseModel):
     timeline: List[Dict[str, Any]] = []
     allowed_next_statuses: List[str] = []
     emergency_flag: Optional[str] = None
+    cancellation_reason: Optional[str] = None
     created_at: str

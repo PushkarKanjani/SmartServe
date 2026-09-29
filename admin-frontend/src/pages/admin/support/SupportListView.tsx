@@ -14,6 +14,7 @@ import {
   getSupportDashboardMetrics 
 } from '../../../api/support';
 import type { SupportTicketItem, SupportMetrics } from '../../../api/support';
+import { subscribeToRealtime } from '../../../utils/realtime';
 
 export const SupportListView: React.FC = () => {
   const navigate = useNavigate();
@@ -53,6 +54,17 @@ export const SupportListView: React.FC = () => {
 
   useEffect(() => {
     fetchTicketsData();
+
+    const unsubscribeWs = subscribeToRealtime(['support_tickets', 'support', 'dashboard'], (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {
+        fetchTicketsData();
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, [ticketTypeFilter]);
 
   const filteredTickets = useMemo(() => {

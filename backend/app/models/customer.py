@@ -136,11 +136,23 @@ class Booking(Base):
 
     @property
     def cancellation_reason(self) -> str:
+        if self.timeline:
+            for ev in reversed(self.timeline):
+                if isinstance(ev, dict) and ev.get("reason"):
+                    return str(ev["reason"])
         return ""
 
     @cancellation_reason.setter
     def cancellation_reason(self, value):
-        pass
+        if not value:
+            return
+        tl = list(self.timeline or [])
+        tl.append({
+            "event": "Rejection/Cancellation Reason",
+            "reason": str(value),
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        self.timeline = tl
 
 
 class SupportTicket(Base):

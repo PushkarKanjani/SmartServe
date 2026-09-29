@@ -275,7 +275,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center overflow-hidden select-none transition-opacity duration-300"
       style={{ opacity: splashOpacity }}
-      aria-label="SmartServe Admin Splash Screen"
+      aria-label="SmartServe Provider Splash Screen"
     >
       {/* Skip Intro Button */}
       <button

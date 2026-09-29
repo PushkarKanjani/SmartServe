@@ -169,15 +169,22 @@ def get_support_ticket_detail(
     if not t:
         raise HTTPException(status_code=404, detail="Support ticket not found")
 
-    c_name = t.customer.full_name if t.customer else None
-    if not c_name and t.provider_id:
-        p_user = db.query(User).filter(User.id == t.provider_id).first()
-        c_name = f"Provider: {p_user.full_name}" if p_user else "Service Provider"
-    elif not c_name:
+    if t.customer:
+        c_name = t.customer.full_name
+        c_email = t.customer.email
+        c_phone = t.customer.phone if t.customer.phone else "+91 98765 43210"
+    elif t.provider_id:
+        from app.models.provider import Provider as ProviderModel
+        prov_rec = db.query(ProviderModel).filter(ProviderModel.user_id == t.provider_id).first()
+        prov_user = db.query(User).filter(User.id == t.provider_id).first()
+        prov_title = prov_rec.full_name if (prov_rec and prov_rec.full_name) else "Provider"
+        c_name = f"Provider: {prov_title}"
+        c_email = prov_user.email if prov_user else "provider@smartserve.com"
+        c_phone = "+91 98765 43210"
+    else:
         c_name = "Customer"
-
-    c_email = t.customer.email if t.customer else "customer@example.com"
-    c_phone = t.customer.phone if (t.customer and t.customer.phone) else "+91 98765 43210"
+        c_email = "customer@example.com"
+        c_phone = "+91 98765 43210"
 
     assigned_admin = db.query(User).filter(User.id == t.assigned_admin_id).first() if t.assigned_admin_id else None
     assigned_email = assigned_admin.email if assigned_admin else None
@@ -263,6 +270,32 @@ def reply_to_ticket(
     ticket.assigned_admin_id = admin.id
     db.add(message)
     db.commit()
+
+    try:
+        from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
+        target_receiver = str(ticket.customer_id) if ticket.customer_id else (str(ticket.provider_id) if ticket.provider_id else None)
+        msg_event = KafkaEvent(
+            event_type=KafkaTopics.SUPPORT_MESSAGE,
+            ticket_id=str(ticket.id),
+            booking_id=str(ticket.booking_id) if ticket.booking_id else None,
+            sender_id=str(admin.id),
+            receiver_id=target_receiver,
+            payload={
+                "ticket_id": str(ticket.id),
+                "booking_id": str(ticket.booking_id) if ticket.booking_id else None,
+                "message_id": str(message.id),
+                "sender_id": str(admin.id),
+                "sender_role": admin.role,
+                "sender_name": message.sender_name,
+                "receiver_id": target_receiver,
+                "message_text": message.message_text,
+                "attachment_url": message.attachment_url,
+                "created_at": message.created_at.isoformat() if hasattr(message.created_at, "isoformat") else str(message.created_at),
+            }
+        )
+        kafka_producer.publish_event(KafkaTopics.SUPPORT_MESSAGE, msg_event)
+    except Exception as exc:
+        print(f"[Admin Ticket Reply Kafka Error] {exc}")
 
     audit_repository.create_audit_log(
         db, actor_id=admin.id, actor_email=admin.email, actor_role=admin.role,

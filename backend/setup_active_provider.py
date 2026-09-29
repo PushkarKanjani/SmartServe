@@ -24,6 +24,7 @@ def setup():
         u_rajesh = User(
             id=uuid.uuid4(),
             email="rajesh.sharma@smartserve.com",
+            password_hash=hash_password("ProviderPassword123!"),
             role="provider",
             is_active=True
         )
@@ -86,7 +87,7 @@ def setup():
             c.extracted_name = "Rajesh Sharma"
 
     # Services
-    beauty_svcs = db.query(Service).filter(Service.category.like("%Beauty%")).limit(5).all()
+    beauty_svcs = db.query(Service).filter(Service.category.like("%Beauty%")).all()
     for s in beauty_svcs:
         existing_ps = db.query(ProviderService).filter(
             ProviderService.provider_id == u_rajesh.id,
@@ -101,34 +102,34 @@ def setup():
             )
             db.add(ps)
 
-    # Availability Slots (Next 7 days)
+    # Availability Slots (Next 14 days)
     today = date.today()
-    existing_slots = db.query(Availability).filter(Availability.provider_id == u_rajesh.id).all()
-    if len(existing_slots) < 7:
-        slot_times = [
-            (time(9, 0), time(11, 0)),
-            (time(11, 30), time(13, 30)),
-            (time(14, 30), time(16, 30)),
-            (time(17, 0), time(19, 0)),
-        ]
-        for day_offset in range(7):
-            d = today + timedelta(days=day_offset)
-            for st, et in slot_times:
-                chk = db.query(Availability).filter(
-                    Availability.provider_id == u_rajesh.id,
-                    Availability.slot_date == d,
-                    Availability.start_time == st
-                ).first()
-                if not chk:
-                    slot = Availability(
-                        id=uuid.uuid4(),
-                        provider_id=u_rajesh.id,
-                        slot_date=d,
-                        start_time=st,
-                        end_time=et,
-                        status="FREE"
-                    )
-                    db.add(slot)
+    slot_times = [
+        (time(9, 0), time(11, 0)),
+        (time(11, 30), time(13, 30)),
+        (time(14, 0), time(16, 0)),
+        (time(16, 30), time(18, 30)),
+    ]
+    for day_offset in range(14):
+        d = today + timedelta(days=day_offset)
+        for st, et in slot_times:
+            chk = db.query(Availability).filter(
+                Availability.provider_id == u_rajesh.id,
+                Availability.slot_date == d,
+                Availability.start_time == st
+            ).first()
+            if not chk:
+                slot = Availability(
+                    id=uuid.uuid4(),
+                    provider_id=u_rajesh.id,
+                    slot_date=d,
+                    start_time=st,
+                    end_time=et,
+                    status="FREE"
+                )
+                db.add(slot)
+            elif chk.status != "FREE":
+                chk.status = "FREE"
 
     # -------------------------------------------------------------
     # 2. Amit Kumar (Electrician, Plumber, Carpenter)
@@ -138,6 +139,7 @@ def setup():
         u_amit = User(
             id=uuid.uuid4(),
             email="amit.kumar@smartserve.com",
+            password_hash=hash_password("ProviderPassword123!"),
             role="provider",
             is_active=True
         )

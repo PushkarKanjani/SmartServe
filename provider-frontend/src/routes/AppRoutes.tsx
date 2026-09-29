@@ -74,6 +74,37 @@ const StatusRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
+/**
+ * RootRoute: Checks existing auth state and redirects:
+ * - If not authenticated -> /login
+ * - If authenticated but unverified -> /application-status
+ * - If authenticated and verified -> /dashboard
+ */
+const RootRoute: React.FC = () => {
+  const { token, loading, isVerified } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F0] flex items-center justify-center text-xs text-[#1F2A1E]/60">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-[#2F5233] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          Loading…
+        </div>
+      </div>
+    );
+  }
+
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isVerified === false) {
+    return <Navigate to="/application-status" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+};
+
 export const AppRoutes: React.FC = () => {
   return (
     <Routes>
@@ -107,8 +138,11 @@ export const AppRoutes: React.FC = () => {
         <Route path="/support/:ticketId" element={<ProviderSupportDetail />} />
       </Route>
 
-      <Route path="/" element={<Navigate to="/onboarding" replace />} />
-      <Route path="*" element={<Navigate to="/onboarding" replace />} />
+      {/* Root route: directs according to existing auth state */}
+      <Route path="/" element={<RootRoute />} />
+
+      {/* Catch-all fallback */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

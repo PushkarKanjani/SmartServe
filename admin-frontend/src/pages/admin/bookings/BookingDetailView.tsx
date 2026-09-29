@@ -31,6 +31,7 @@ import { getProvidersList } from '../../../api/providers';
 import { getAuthenticatedAdmin } from '../../../api/admins';
 import type { SessionAdminInfo } from '../../../api/admins';
 import { hasPermission } from '../../../utils/rbac';
+import { subscribeToRealtime } from '../../../utils/realtime';
 
 export const BookingDetailView: React.FC = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -88,9 +89,6 @@ export const BookingDetailView: React.FC = () => {
 
   useEffect(() => {
     fetchBookingProfile();
-    const interval = setInterval(() => {
-      fetchBookingProfile();
-    }, 5000);
 
     getAuthenticatedAdmin().then((s) => setAdminSession(s)).catch(() => {});
 
@@ -99,7 +97,53 @@ export const BookingDetailView: React.FC = () => {
       if (provs.length > 0) setSelectedProviderId(provs[0].user_id);
     }).catch(() => {});
 
-    return () => clearInterval(interval);
+    if (!bookingId) return;
+
+    const channels = [
+      `booking_${bookingId}`,
+      `booking_chat_${bookingId}`,
+      'bookings',
+      'dashboard',
+      'support_tickets',
+      'support'
+    ];
+
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      const targetBookingId = String(payload.booking_id || payload.booking?.id || payload.id || '').toLowerCase();
+      const currentBookingId = String(bookingId || '').toLowerCase();
+
+      if (targetBookingId && targetBookingId === currentBookingId) {
+        if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
+          setBookingData((prev) => (prev ? { ...prev, status: 'Accepted' } : prev));
+        } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
+          const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Rejected by provider';
+          setBookingData((prev) =>
+            prev ? { ...prev, status: 'Rejected', cancellation_reason: reason } : prev
+          );
+        }
+        fetchBookingProfile();
+      }
+
+      if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {
+        const msg = payload.message || payload.data;
+        if (msg && (!payload.booking_id || String(payload.booking_id).toLowerCase() === currentBookingId)) {
+          setAuditTicket((prev) => {
+            if (!prev) return prev;
+            const exists = (prev.messages || []).some((m: any) => String(m.id).toLowerCase() === String(msg.id).toLowerCase());
+            if (exists) return prev;
+            return {
+              ...prev,
+              messages: [...(prev.messages || []), msg],
+            };
+          });
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, [bookingId]);
 
   const handleTransitionSubmit = async (e: React.FormEvent) => {
@@ -271,6 +315,21 @@ export const BookingDetailView: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Cancellation / Rejection Reason Banner */}
+      {bookingData.cancellation_reason && (
+        <div className="p-5 bg-rose-50 border border-rose-200 rounded-3xl flex items-start gap-3.5 text-rose-900 shadow-xs">
+          <AlertTriangle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-rose-800">
+              Booking Cancellation / Provider Rejection Reason Recorded
+            </h4>
+            <p className="text-sm font-semibold text-rose-950 font-serif">
+              "{bookingData.cancellation_reason}"
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Grid Layout of Details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

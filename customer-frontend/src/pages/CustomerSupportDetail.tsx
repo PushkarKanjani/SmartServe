@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getTicketDetail, addTicketMessage, SupportTicketDetail } from '../api/support';
 import { formatDateINR } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
 import { ArrowLeft, Send, Clock, User, ShieldCheck, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { subscribeToRealtime } from '../utils/realtime';
 
 export const CustomerSupportDetail: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -16,6 +17,7 @@ export const CustomerSupportDetail: React.FC = () => {
 
   const [newMessage, setNewMessage] = useState<string>('');
   const [replying, setReplying] = useState<boolean>(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const fetchDetail = async () => {
     if (!ticketId) return;
@@ -33,6 +35,32 @@ export const CustomerSupportDetail: React.FC = () => {
 
   useEffect(() => {
     fetchDetail();
+    if (!ticketId) return;
+
+    const channels = [`ticket_${ticketId}`, 'support', 'support_tickets'];
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {
+        const msg = payload.message || payload.data;
+        if (msg && (!payload.ticket_id || String(payload.ticket_id).toLowerCase() === String(ticketId).toLowerCase())) {
+          setTicket((prev) => {
+            if (!prev) return prev;
+            const exists = (prev.messages || []).some((m: any) => String(m.id).toLowerCase() === String(msg.id).toLowerCase());
+            if (exists) return prev;
+            return {
+              ...prev,
+              messages: [...(prev.messages || []), msg],
+            };
+          });
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
+        }
+        getTicketDetail(ticketId).then((data) => setTicket(data)).catch(() => {});
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, [ticketId]);
 
   const handleSendReply = async (e: React.FormEvent) => {

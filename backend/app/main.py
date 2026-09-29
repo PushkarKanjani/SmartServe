@@ -25,8 +25,34 @@ try:
 except Exception:
     pass
 
+from contextlib import asynccontextmanager
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+from app.services.kafka import kafka_producer, kafka_consumer
+from app.api.v1.ws import router as ws_router
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Start Kafka producer & background consumer
+    try:
+        await kafka_producer.start()
+    except Exception as e:
+        print(f"[Lifespan Startup] Kafka producer start warning: {e}")
+    try:
+        await kafka_consumer.start()
+    except Exception as e:
+        print(f"[Lifespan Startup] Kafka consumer start warning: {e}")
+    yield
+    # Shutdown
+    try:
+        await kafka_consumer.stop()
+    except Exception:
+        pass
+    try:
+        await kafka_producer.stop()
+    except Exception:
+        pass
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -34,6 +60,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 @app.exception_handler(RequestValidationError)
@@ -63,6 +90,8 @@ app.add_middleware(
 # Mount API Routers
 app.include_router(api_v1_router)
 app.include_router(customer_router, prefix=settings.API_V1_PREFIX)
+app.include_router(ws_router)
+app.include_router(ws_router, prefix=settings.API_V1_PREFIX)
 
 
 

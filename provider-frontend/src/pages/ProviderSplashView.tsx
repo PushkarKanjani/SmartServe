@@ -1,0 +1,26 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { SplashScreen } from '../components/common/SplashScreen';
+import { useAuth } from '../context/AuthContext';
+
+export const ProviderSplashView: React.FC = () => {
+  const navigate = useNavigate();
+  const { token, isVerified } = useAuth();
+
+  const handleFinish = () => {
+    sessionStorage.setItem('smartserve_splash_done', 'true');
+    if (token) {
+      if (isVerified === true) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate('/application-status', { replace: true });
+      }
+    } else {
+      navigate('/login', { replace: true });
+    }
+  };
+
+  return <SplashScreen onFinish={handleFinish} durationMs={8000} />;
+};
+
+export default ProviderSplashView;

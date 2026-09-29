@@ -24,6 +24,9 @@ class Settings(BaseSettings):
         "http://localhost:5175",
         "http://127.0.0.1:5175",
     ]
+    KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+    KAFKA_CONSUMER_GROUP: str = os.getenv("KAFKA_CONSUMER_GROUP", "smartserve-backend-group")
+    KAFKA_ENABLED: bool = os.getenv("KAFKA_ENABLED", "true").lower() in ("true", "1", "yes")
 
     class Config:
         case_sensitive = True

@@ -4,6 +4,7 @@ import { getCustomerBookings, BookingDetail } from '../api/bookings';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
 import { Calendar, Clock, ChevronRight, Loader2, Plus, AlertCircle, RefreshCw } from 'lucide-react';
+import { subscribeToRealtime } from '../utils/realtime';
 
 export const CustomerBookings: React.FC = () => {
   const navigate = useNavigate();
@@ -33,12 +34,73 @@ export const CustomerBookings: React.FC = () => {
 
   useEffect(() => {
     fetchBookings();
-    const interval = setInterval(() => {
-      getCustomerBookings()
-        .then((data) => setBookings(data))
-        .catch(() => {});
-    }, 6000);
-    return () => clearInterval(interval);
+
+    let customerId = '';
+    let userId = '';
+    try {
+      const rawUser = localStorage.getItem('smartserve_customer_user');
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        customerId = parsed.customer_id || '';
+        userId = parsed.user_id || '';
+      }
+    } catch (e) {}
+
+    const channels = ['bookings'];
+    if (customerId) channels.push(`customer_${customerId}`);
+    if (userId) channels.push(`customer_${userId}`, `user_${userId}`);
+
+    // Real-Time Kafka -> WebSocket Subscription (No Polling Required)
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (
+        type === 'BOOKING_CREATED' ||
+        type === 'BOOKING_ACCEPTED' ||
+        type === 'BOOKING_REJECTED' ||
+        type === 'booking.created' ||
+        type === 'booking.accepted' ||
+        type === 'booking.rejected'
+      ) {
+        if (type === 'BOOKING_CREATED' || type === 'booking.created') {
+          if (payload.booking) {
+            const newBooking = { ...payload.booking, id: String(payload.booking_id || payload.booking?.id) };
+            setBookings((prev) => {
+              const exists = prev.some((b) => String(b.id).toLowerCase() === String(newBooking.id).toLowerCase());
+              if (exists) return prev;
+              return [newBooking, ...prev];
+            });
+          }
+          getCustomerBookings().then((data) => setBookings(data)).catch(() => {});
+        } else if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
+          const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
+          setBookings((prev) =>
+            prev.map((b) => (String(b.id).toLowerCase() === targetId ? { ...b, status: 'Accepted' } : b))
+          );
+          getCustomerBookings().then((data) => {
+            setBookings(data.map((fresh) => (String(fresh.id).toLowerCase() === targetId ? { ...fresh, status: 'Accepted' } : fresh)));
+          }).catch(() => {});
+        } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
+          const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
+          const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Provider unavailable';
+          setBookings((prev) =>
+            prev.map((b) =>
+              String(b.id).toLowerCase() === targetId
+                ? { ...b, status: 'Rejected', cancellation_reason: reason, rejection_reason: reason } as any
+                : b
+            )
+          );
+          getCustomerBookings().then((data) => {
+            setBookings(data.map((fresh) => (String(fresh.id).toLowerCase() === targetId ? { ...fresh, status: 'Rejected', cancellation_reason: reason } : fresh)));
+          }).catch(() => {});
+        } else {
+          getCustomerBookings().then((data) => setBookings(data)).catch(() => {});
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, []);
 
   const filteredBookings = bookings.filter((b) => {
@@ -151,7 +213,7 @@ export const CustomerBookings: React.FC = () => {
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
                         stLower === 'completed' || stLower === 'paid'
                           ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : stLower === 'cancelled'
+                          : stLower === 'cancelled' || stLower === 'rejected'
                           ? 'bg-rose-50 text-rose-700 border-rose-200'
                           : 'bg-blue-50 text-[#2563EB] border-blue-200'
                       }`}>
@@ -170,6 +232,12 @@ export const CustomerBookings: React.FC = () => {
                       </span>
                       <span>• Provider: <strong className="text-slate-700">{b.provider_name || 'Assigned Soon'}</strong></span>
                     </div>
+
+                    {(b.cancellation_reason || (b as any).rejection_reason) && (
+                      <div className="text-xs text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 mt-1 inline-block">
+                        <strong>Reason:</strong> {b.cancellation_reason || (b as any).rejection_reason}
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -150,6 +150,9 @@ def transition_booking_status(
     booking.status = next_status
     booking.updated_at = datetime.now(timezone.utc)
 
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(booking, "timeline")
+
     db.commit()
     db.refresh(booking)
     return booking

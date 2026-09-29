@@ -16,6 +16,7 @@ import {
   Loader2, 
   RefreshCw 
 } from 'lucide-react';
+import { subscribeToRealtime } from '../../utils/realtime';
 
 const formatDateINR = (dateStr?: string): string => {
   if (!dateStr) return '';
@@ -56,6 +57,36 @@ export const ProviderSupportDetail: React.FC = () => {
 
   useEffect(() => {
     fetchDetail();
+    if (!ticketId) return;
+
+    // Real-Time Kafka -> WebSocket Subscription (No Polling Required)
+    const unsubscribeWs = subscribeToRealtime([`ticket_${ticketId}`, 'support_tickets', 'support'], (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (
+        type === 'NEW_SUPPORT_MESSAGE' ||
+        type === 'support.message' ||
+        payload.ticket_id === ticketId
+      ) {
+        if (payload.message) {
+          setTicket((prev) => {
+            if (!prev) return prev;
+            const exists = (prev.messages || []).some((m: any) => m.id === payload.message?.id);
+            if (exists) return prev;
+            return {
+              ...prev,
+              messages: [...(prev.messages || []), payload.message],
+            };
+          });
+        }
+        getProviderTicketDetail(ticketId)
+          .then((data) => setTicket(data))
+          .catch(() => {});
+      }
+    });
+
+    return () => {
+      unsubscribeWs();
+    };
   }, [ticketId]);
 
   const handleSendReply = async (e: React.FormEvent) => {
