@@ -1,21 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SplashScreen } from './components/SplashScreen';
+import Navbar from './components/Navbar';
 import Hero from './components/Hero';
 import WhatWeDo from './components/WhatWeDo';
 import HowItWorks from './components/HowItWorks';
 import StatsBar from './components/StatsBar';
 import RoleSelector from './components/RoleSelector';
 import Footer from './components/Footer';
+import { getLenis, destroyLenis } from './lib/lenis';
 
 /**
  * App — SmartServe Landing (port 5176)
  *
- * Intro visibility is pure component state initialized to `true` on mount.
- * NO localStorage / sessionStorage / cookie gating — plays on every refresh.
- * Content renders only after `onFinish` fires or "Skip Intro" is pressed.
+ * Splash: pure state, NO storage gating, plays on every refresh.
+ * Lenis: started after splash, stopped during splash, destroyed on unmount.
+ * prefers-reduced-motion: Lenis never created; native scroll.
  */
 export default function App() {
   const [splashDone, setSplashDone] = useState(false);
+
+  // ── Lenis lifecycle ──
+  useEffect(() => {
+    if (!splashDone) {
+      // Keep Lenis stopped while splash is visible (also locks body scroll)
+      getLenis()?.stop();
+      return;
+    }
+    // Start Lenis once splash finishes
+    getLenis()?.start();
+  }, [splashDone]);
+
+  // Destroy on unmount
+  useEffect(() => {
+    return () => destroyLenis();
+  }, []);
 
   return (
     <>
@@ -33,6 +51,9 @@ export default function App() {
             fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
           }}
         >
+          {/* Fixed navbar — z-50, always above page, always below splash */}
+          <Navbar />
+
           <Hero />
           <WhatWeDo />
           <HowItWorks />
