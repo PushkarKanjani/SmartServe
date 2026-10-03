@@ -1,19 +1,21 @@
-import { Platform } from 'react-native';
-
 /**
  * SmartServe Mobile API Configuration
  * 
- * Android Emulator uses 10.0.2.2 to access host machine's 127.0.0.1
- * Real devices / LAN testing use configurable EXPO_PUBLIC_API_URL or host IP
+ * Physical Phone / LAN Development Configuration
+ * On a physical phone, localhost / 127.0.0.1 refers to the phone itself.
+ * All phone traffic must route to the development PC's detected LAN IPv4 address.
  */
-export const getApiBaseUrl = (): string => {
-  // 1. Check custom environment variable
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
-  }
 
-  // 2. Default to production Render API URL
-  return 'https://smartserve-backend-tr3p.onrender.com/api/v1';
-};
+// Detected Developer PC LAN IPv4 Address
+export const DETECTED_PC_LAN_IP = '172.20.10.2';
+export const DEFAULT_BACKEND_PORT = '8000';
 
-export const API_BASE_URL = getApiBaseUrl();
+export const DEV_API_BASE_URL = 
+  process.env.EXPO_PUBLIC_API_BASE_URL || 
+  process.env.EXPO_PUBLIC_API_URL || 
+  `http://${DETECTED_PC_LAN_IP}:${DEFAULT_BACKEND_PORT}/api/v1`;
+
+export const DEV_BACKEND_ROOT_URL = 
+  DEV_API_BASE_URL.replace(/\/api\/v1\/?$/, '');
+
+export const API_BASE_URL = DEV_API_BASE_URL;

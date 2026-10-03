@@ -129,9 +129,11 @@ export const ProviderDashboardView: React.FC = () => {
   };
 
   // Active booking detection
-  const activeBooking = bookings.find((b) =>
-    ['Accepted', 'On The Way', 'Arrived', 'Started'].includes(b.status)
-  );
+  const isStatusActive = (st: string) => {
+    const s = (st || '').toLowerCase().replace(/_/g, ' ').trim();
+    return ['accepted', 'on the way', 'arrived', 'started'].includes(s);
+  };
+  const activeBooking = bookings.find((b) => isStatusActive(b.status));
 
   // Send real GPS coordinates to backend with throttling
   const lastLocationSentRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
@@ -237,23 +239,27 @@ export const ProviderDashboardView: React.FC = () => {
     }
   };
 
-  // Trigger GPS read from browser
+  // Trigger GPS read from browser (non-blocking, never halts booking pipeline)
   const triggerCurrentGps = (bookingId: string, force = true) => {
-    if (!('geolocation' in navigator)) {
-      setLocationPermission('unsupported');
-      return;
+    try {
+      if (!('geolocation' in navigator)) {
+        setLocationPermission('unsupported');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          sendLocation(bookingId, pos.coords, force).catch(() => {});
+        },
+        (err) => {
+          if (err.code === err.PERMISSION_DENIED) {
+            setLocationPermission('denied');
+          }
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    } catch (e) {
+      console.warn('GPS trigger error ignored:', e);
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        sendLocation(bookingId, pos.coords, force);
-      },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationPermission('denied');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
   };
 
   // Geolocation watch lifecycle while active booking exists
@@ -314,29 +320,26 @@ export const ProviderDashboardView: React.FC = () => {
 
     // Real-Time WebSocket Subscription (No Polling Required)
     const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
       if (
-        payload.type === 'BOOKING_CREATED' ||
-        payload.type === 'BOOKING_ACCEPTED' ||
-        payload.type === 'BOOKING_REJECTED' ||
-        payload.type === 'BOOKING_STARTED' ||
-        payload.type === 'BOOKING_COMPLETED' ||
-        payload.event === 'booking.created' ||
-        payload.event === 'booking.accepted' ||
-        payload.event === 'booking.rejected' ||
-        payload.event === 'booking.started' ||
-        payload.event === 'booking.completed'
+        type === 'BOOKING_CREATED' ||
+        type === 'BOOKING_ACCEPTED' ||
+        type === 'BOOKING_REJECTED' ||
+        type === 'BOOKING_STATUS_UPDATED' ||
+        type === 'BOOKING_STARTED' ||
+        type === 'BOOKING_COMPLETED' ||
+        type === 'booking.created' ||
+        type === 'booking.accepted' ||
+        type === 'booking.rejected' ||
+        type === 'booking.updated' ||
+        type === 'booking.started' ||
+        type === 'booking.completed'
       ) {
-        if (payload.type === 'BOOKING_ACCEPTED') {
+        const targetId = String(payload.booking_id || payload.booking?.id || '');
+        const newStatus = payload.status || payload.booking?.status;
+        if (targetId && newStatus) {
           setBookings((prev) =>
-            prev.map((b) => (b.id === payload.booking_id ? { ...b, status: 'Accepted' } : b))
-          );
-        } else if (payload.type === 'BOOKING_REJECTED') {
-          setBookings((prev) =>
-            prev.map((b) =>
-              b.id === payload.booking_id
-                ? { ...b, status: 'Rejected', rejection_reason: payload.reason || payload.rejection_reason }
-                : b
-            )
+            prev.map((b) => (String(b.id) === targetId ? { ...b, status: newStatus } : b))
           );
         }
         fetchAll();
@@ -359,7 +362,7 @@ export const ProviderDashboardView: React.FC = () => {
     try {
       if (action === 'accept') {
         await apiClient.post(`/providers/me/bookings/${bookingId}/accept`);
-        triggerCurrentGps(bookingId, true);
+        try { triggerCurrentGps(bookingId, true); } catch (e) {}
       } else if (action === 'reject') {
         const reasonToSend = (customReason || rejectionReason || 'Schedule conflict with another job').trim();
         await apiClient.post(`/providers/me/bookings/${bookingId}/reject`, {
@@ -370,18 +373,18 @@ export const ProviderDashboardView: React.FC = () => {
         await apiClient.patch(`/providers/me/bookings/${bookingId}/status`, {
           status: 'On The Way',
         });
-        triggerCurrentGps(bookingId, true);
+        try { triggerCurrentGps(bookingId, true); } catch (e) {}
       } else if (action === 'arrived') {
         await apiClient.patch(`/providers/me/bookings/${bookingId}/status`, {
           status: 'Arrived',
         });
-        triggerCurrentGps(bookingId, true);
+        try { triggerCurrentGps(bookingId, true); } catch (e) {}
       } else if (action === 'start') {
         try {
           await apiClient.post(`/providers/me/bookings/${bookingId}/start`, {
             otp_code: otpCode ? otpCode.trim() : undefined,
           });
-          triggerCurrentGps(bookingId, true);
+          try { triggerCurrentGps(bookingId, true); } catch (e) {}
           setStartingBooking(null);
           setStartOtp('');
           setStartOtpError(null);
@@ -417,9 +420,10 @@ export const ProviderDashboardView: React.FC = () => {
 
   const filteredBookings = bookings.filter((b) => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'pending') return b.status === 'Requested' || b.status === 'Assigned';
-    if (activeTab === 'active') return ['Accepted', 'On The Way', 'Arrived', 'Started'].includes(b.status);
-    if (activeTab === 'completed') return b.status === 'Completed';
+    const s = (b.status || '').toLowerCase().replace(/_/g, ' ').trim();
+    if (activeTab === 'pending') return s === 'requested' || s === 'assigned';
+    if (activeTab === 'active') return ['accepted', 'on the way', 'arrived', 'started'].includes(s);
+    if (activeTab === 'completed') return s === 'completed';
     return true;
   });
 
@@ -622,9 +626,65 @@ export const ProviderDashboardView: React.FC = () => {
                 Acquiring GPS fix...
               </div>
             )}
+            {(() => {
+              const s = (activeBooking.status || '').toLowerCase().replace(/_/g, ' ').trim();
+              if (s === 'accepted') {
+                return (
+                  <button
+                    onClick={() => handleBookingAction(activeBooking.id, 'on_the_way')}
+                    disabled={actionLoading === activeBooking.id}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 disabled:opacity-50"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>{actionLoading === activeBooking.id ? 'Updating...' : 'Start Trip (On The Way)'}</span>
+                  </button>
+                );
+              }
+              if (s === 'on the way') {
+                return (
+                  <button
+                    onClick={() => handleBookingAction(activeBooking.id, 'arrived')}
+                    disabled={actionLoading === activeBooking.id}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-teal-500 hover:bg-teal-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 disabled:opacity-50"
+                  >
+                    <MapPin className="w-4 h-4" />
+                    <span>{actionLoading === activeBooking.id ? 'Updating...' : 'Mark Arrived'}</span>
+                  </button>
+                );
+              }
+              if (s === 'arrived') {
+                return (
+                  <button
+                    onClick={() => {
+                      setStartingBooking(activeBooking);
+                      setStartOtp('');
+                      setStartOtpError(null);
+                    }}
+                    disabled={actionLoading === activeBooking.id}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 disabled:opacity-50"
+                  >
+                    <Play className="w-4 h-4" />
+                    <span>Start Service (Enter OTP)</span>
+                  </button>
+                );
+              }
+              if (s === 'started') {
+                return (
+                  <button
+                    onClick={() => handleBookingAction(activeBooking.id, 'complete')}
+                    disabled={actionLoading === activeBooking.id}
+                    className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>{actionLoading === activeBooking.id ? 'Completing...' : 'Complete Service'}</span>
+                  </button>
+                );
+              }
+              return null;
+            })()}
             <button
               onClick={() => triggerCurrentGps(activeBooking.id)}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
             >
               <Compass className="w-4 h-4" />
               <span>Ping GPS Now</span>
@@ -819,90 +879,105 @@ export const ProviderDashboardView: React.FC = () => {
 
                       {/* Action Buttons */}
                       <div className="flex gap-2 flex-wrap pt-2 border-t border-[#E5DEC9]/60">
-                        {(booking.status === 'Requested' || booking.status === 'Assigned') && (
-                          <>
-                            <button
-                              onClick={() => handleBookingAction(booking.id, 'accept')}
-                              disabled={actionLoading === booking.id}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-[#2F5233] text-white text-xs font-bold rounded-xl hover:bg-[#3D6B42] transition-colors disabled:opacity-50"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>{actionLoading === booking.id ? 'Accepting...' : 'Accept Job'}</span>
-                            </button>
-                            <button
-                              onClick={() => setRejectingBooking(booking)}
-                              disabled={actionLoading === booking.id}
-                              className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50"
-                            >
-                              Decline
-                            </button>
-                          </>
-                        )}
-                        {booking.status === 'Accepted' && (
-                          <button
-                            onClick={() => handleBookingAction(booking.id, 'on_the_way')}
-                            disabled={actionLoading === booking.id}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-sky-700 text-white text-xs font-bold rounded-xl hover:bg-sky-800 transition-colors disabled:opacity-50"
-                          >
-                            <Navigation className="w-3.5 h-3.5" />
-                            <span>{actionLoading === booking.id ? 'Updating...' : 'Start Trip (On The Way)'}</span>
-                          </button>
-                        )}
-                        {booking.status === 'On The Way' && (
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {import.meta.env.DEV && (
+                        {(() => {
+                          const s = (booking.status || '').toLowerCase().replace(/_/g, ' ').trim();
+                          if (s === 'requested' || s === 'assigned') {
+                            return (
+                              <>
+                                <button
+                                  onClick={() => handleBookingAction(booking.id, 'accept')}
+                                  disabled={actionLoading === booking.id}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-[#2F5233] text-white text-xs font-bold rounded-xl hover:bg-[#3D6B42] transition-colors disabled:opacity-50"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>{actionLoading === booking.id ? 'Accepting...' : 'Accept Job'}</span>
+                                </button>
+                                <button
+                                  onClick={() => setRejectingBooking(booking)}
+                                  disabled={actionLoading === booking.id}
+                                  className="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl hover:bg-rose-100 transition-colors disabled:opacity-50"
+                                >
+                                  Decline
+                                </button>
+                              </>
+                            );
+                          }
+                          if (s === 'accepted') {
+                            return (
                               <button
-                                onClick={() => handleDevSimulateRoute(booking)}
-                                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
-                                  devSimulatingBookingId === booking.id
-                                    ? 'bg-amber-600 text-white border-amber-700 animate-pulse'
-                                    : 'bg-slate-900 text-amber-300 border-amber-500/40 hover:bg-slate-800'
-                                }`}
+                                onClick={() => handleBookingAction(booking.id, 'on_the_way')}
+                                disabled={actionLoading === booking.id}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-sky-700 text-white text-xs font-bold rounded-xl hover:bg-sky-800 transition-colors disabled:opacity-50"
                               >
                                 <Navigation className="w-3.5 h-3.5" />
-                                <span>{devSimulatingBookingId === booking.id ? 'Pause DEV Sim' : 'DEV Sim Trip'}</span>
+                                <span>{actionLoading === booking.id ? 'Updating...' : 'Start Trip (On The Way)'}</span>
                               </button>
-                            )}
-                            <button
-                              onClick={() => handleBookingAction(booking.id, 'arrived')}
-                              disabled={actionLoading === booking.id}
-                              className="flex items-center gap-1.5 px-4 py-2 bg-teal-700 text-white text-xs font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
-                            >
-                              <MapPin className="w-3.5 h-3.5" />
-                              <span>{actionLoading === booking.id ? 'Updating...' : 'Mark Arrived'}</span>
-                            </button>
-                          </div>
-                        )}
-                        {booking.status === 'Arrived' && (
-                          <button
-                            onClick={() => {
-                              setStartingBooking(booking);
-                              setStartOtp('');
-                              setStartOtpError(null);
-                            }}
-                            disabled={actionLoading === booking.id}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-purple-700 text-white text-xs font-bold rounded-xl hover:bg-purple-800 transition-colors disabled:opacity-50"
-                          >
-                            <Play className="w-3.5 h-3.5" />
-                            <span>Start Service (Enter OTP)</span>
-                          </button>
-                        )}
-                        {booking.status === 'Started' && (
-                          <button
-                            onClick={() => handleBookingAction(booking.id, 'complete')}
-                            disabled={actionLoading === booking.id}
-                            className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>{actionLoading === booking.id ? 'Completing...' : 'Complete Service'}</span>
-                          </button>
-                        )}
+                            );
+                          }
+                          if (s === 'on the way') {
+                            return (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {import.meta.env.DEV && (
+                                  <button
+                                    onClick={() => handleDevSimulateRoute(booking)}
+                                    className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border transition-all ${
+                                      devSimulatingBookingId === booking.id
+                                        ? 'bg-amber-600 text-white border-amber-700 animate-pulse'
+                                        : 'bg-slate-900 text-amber-300 border-amber-500/40 hover:bg-slate-800'
+                                    }`}
+                                  >
+                                    <Navigation className="w-3.5 h-3.5" />
+                                    <span>{devSimulatingBookingId === booking.id ? 'Pause DEV Sim' : 'DEV Sim Trip'}</span>
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleBookingAction(booking.id, 'arrived')}
+                                  disabled={actionLoading === booking.id}
+                                  className="flex items-center gap-1.5 px-4 py-2 bg-teal-700 text-white text-xs font-bold rounded-xl hover:bg-teal-800 transition-colors disabled:opacity-50"
+                                >
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  <span>{actionLoading === booking.id ? 'Updating...' : 'Mark Arrived'}</span>
+                                </button>
+                              </div>
+                            );
+                          }
+                          if (s === 'arrived') {
+                            return (
+                              <button
+                                onClick={() => {
+                                  setStartingBooking(booking);
+                                  setStartOtp('');
+                                  setStartOtpError(null);
+                                }}
+                                disabled={actionLoading === booking.id}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-purple-700 text-white text-xs font-bold rounded-xl hover:bg-purple-800 transition-colors disabled:opacity-50"
+                              >
+                                <Play className="w-3.5 h-3.5" />
+                                <span>Start Service (Enter OTP)</span>
+                              </button>
+                            );
+                          }
+                          if (s === 'started') {
+                            return (
+                              <button
+                                onClick={() => handleBookingAction(booking.id, 'complete')}
+                                disabled={actionLoading === booking.id}
+                                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 text-white text-xs font-bold rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>{actionLoading === booking.id ? 'Completing...' : 'Complete Service'}</span>
+                              </button>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
+
           </div>
         </div>
 
@@ -1141,6 +1216,7 @@ export const ProviderDashboardView: React.FC = () => {
                 Enter 4-Digit Customer Start OTP
               </label>
               <input
+                data-testid="start-otp-input"
                 type="text"
                 maxLength={6}
                 value={startOtp}
@@ -1169,6 +1245,7 @@ export const ProviderDashboardView: React.FC = () => {
                 Cancel
               </button>
               <button
+                data-testid="verify-otp-btn"
                 type="button"
                 disabled={!startOtp.trim() || actionLoading === startingBooking.id}
                 onClick={async () => {

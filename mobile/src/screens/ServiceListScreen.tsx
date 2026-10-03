@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   SafeAreaView,
   TextInput,
+  RefreshControl,
 } from 'react-native';
+import { ArrowLeft, Search, Clock, Star, ChevronRight, ShieldCheck } from 'lucide-react-native';
 import { catalogApi, ServiceItem } from '../api/catalog';
 import { getServiceImage } from '../utils/serviceImages';
 import { formatRupee, formatCategoryDisplayName } from '../utils/formatters';
@@ -20,22 +22,19 @@ export const ServiceListScreen = ({ route, navigation }: any) => {
   const [filteredServices, setFilteredServices] = useState<ServiceItem[]>([]);
   const [searchQuery, setSearchQuery] = useState(search || '');
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    loadServices();
-  }, [category, subcategory]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const loadServices = async () => {
     try {
       const data = await catalogApi.getAllServices({
         category,
         subcategory,
+        q: searchQuery,
       });
       setServices(data);
-      if (search) {
-        setFilteredServices(
-          data.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()))
-        );
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        setFilteredServices(data.filter((s) => s.name.toLowerCase().includes(q)));
       } else {
         setFilteredServices(data);
       }
@@ -43,7 +42,17 @@ export const ServiceListScreen = ({ route, navigation }: any) => {
       console.warn('Failed to load services', err);
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
+  };
+
+  useEffect(() => {
+    loadServices();
+  }, [category, subcategory]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadServices();
   };
 
   const handleSearch = (text: string) => {
@@ -51,38 +60,45 @@ export const ServiceListScreen = ({ route, navigation }: any) => {
     if (!text.trim()) {
       setFilteredServices(services);
     } else {
-      const filtered = services.filter((s) =>
-        s.name.toLowerCase().includes(text.toLowerCase()) ||
-        (s.description && s.description.toLowerCase().includes(text.toLowerCase()))
+      const q = text.toLowerCase();
+      setFilteredServices(
+        services.filter((s) =>
+          s.name.toLowerCase().includes(q) ||
+          (s.description && s.description.toLowerCase().includes(q))
+        )
       );
-      setFilteredServices(filtered);
     }
   };
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E40AF" />
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.loadingText}>Loading services catalog...</Text>
       </SafeAreaView>
     );
   }
 
+  const title = subcategory || (category ? formatCategoryDisplayName(category) : 'All Services');
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>
-          {subcategory || (category ? formatCategoryDisplayName(category) : 'All Services')}
-        </Text>
-        <Text style={styles.subtitle}>{filteredServices.length} services available</Text>
+        <View style={styles.topRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+            <ArrowLeft size={18} color="#0F172A" />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title} numberOfLines={1}>{title}</Text>
+            <Text style={styles.subtitle}>{filteredServices.length} verified services</Text>
+          </View>
+        </View>
 
         <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Search size={16} color="#64748B" style={{ marginRight: 8 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search within services..."
+            placeholder="Search within this list..."
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={handleSearch}
@@ -94,10 +110,11 @@ export const ServiceListScreen = ({ route, navigation }: any) => {
         data={filteredServices}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => {
-          const imgUrl = getServiceImage(item.category, item.subcategory, item.name);
-          const price = item.final_price || item.base_price;
+          const imgUrl = item.image_url || getServiceImage(item.category, item.subcategory, item.name);
+          const price = item.base_price;
 
           return (
             <TouchableOpacity
@@ -105,23 +122,35 @@ export const ServiceListScreen = ({ route, navigation }: any) => {
               activeOpacity={0.85}
               onPress={() => navigation.navigate('ServiceDetail', { serviceId: item.id })}
             >
-              <Image source={{ uri: imgUrl }} style={styles.cardImage} />
-              <View style={styles.cardContent}>
-                <Text style={styles.categoryBadge}>{item.subcategory || formatCategoryDisplayName(item.category)}</Text>
-                <Text style={styles.serviceName} numberOfLines={2}>{item.name}</Text>
-                {item.description ? (
-                  <Text style={styles.serviceDescription} numberOfLines={2}>
-                    {item.description}
+              <Image source={{ uri: imgUrl }} style={styles.serviceImage} />
+              <View style={styles.cardBody}>
+                <View style={styles.cardHeaderRow}>
+                  <Text style={styles.serviceCategory}>
+                    {item.subcategory || formatCategoryDisplayName(item.category)}
                   </Text>
+                  <View style={styles.ratingPill}>
+                    <Star size={11} color="#EAB308" fill="#EAB308" />
+                    <Text style={styles.ratingText}>{item.rating || '4.9'}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.serviceName} numberOfLines={2}>{item.name}</Text>
+
+                {item.duration_minutes ? (
+                  <View style={styles.durationRow}>
+                    <Clock size={12} color="#64748B" />
+                    <Text style={styles.durationText}>{item.duration_minutes} mins standard duration</Text>
+                  </View>
                 ) : null}
 
-                <View style={styles.cardFooter}>
+                <View style={styles.cardBottomRow}>
                   <View>
-                    <Text style={styles.priceLabel}>Starting from</Text>
+                    <Text style={styles.startingAtText}>STARTING FROM</Text>
                     <Text style={styles.priceValue}>{formatRupee(price)}</Text>
                   </View>
-                  <View style={styles.actionPill}>
-                    <Text style={styles.actionText}>View & Book →</Text>
+                  <View style={styles.bookBtnPill}>
+                    <Text style={styles.bookBtnText}>View Details</Text>
+                    <ChevronRight size={14} color="#2563EB" />
                   </View>
                 </View>
               </View>
@@ -134,131 +163,87 @@ export const ServiceListScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FAF9F5',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#FAF9F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  safeArea: { flex: 1, backgroundColor: '#FAF9F5' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAF9F5' },
+  loadingText: { marginTop: 12, fontSize: 14, color: '#64748B', fontWeight: '600' },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingTop: 14,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   backBtn: {
-    marginBottom: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backBtnText: {
-    fontSize: 14,
-    color: '#2563EB',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 2,
-    marginBottom: 10,
-  },
+  title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  subtitle: { fontSize: 12, color: '#64748B', marginTop: 1 },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  searchIcon: {
-    fontSize: 14,
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#0F172A',
-  },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
+  searchInput: { flex: 1, fontSize: 13, color: '#0F172A', padding: 0 },
+  listContainer: { padding: 20, paddingBottom: 40 },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 2,
   },
-  cardImage: {
-    width: '100%',
-    height: 150,
-    backgroundColor: '#E2E8F0',
+  serviceImage: { width: '100%', height: 140, backgroundColor: '#F1F5F9' },
+  cardBody: { padding: 14 },
+  cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  serviceCategory: { fontSize: 11, fontWeight: '700', color: '#2563EB', textTransform: 'uppercase' },
+  ratingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FEF9C3',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  cardContent: {
-    padding: 16,
-  },
-  categoryBadge: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#2563EB',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  serviceName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 6,
-  },
-  serviceDescription: {
-    fontSize: 13,
-    color: '#64748B',
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  cardFooter: {
+  ratingText: { fontSize: 11, fontWeight: '800', color: '#854D0E' },
+  serviceName: { fontSize: 16, fontWeight: '800', color: '#0F172A', marginBottom: 6 },
+  durationRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 12 },
+  durationText: { fontSize: 12, color: '#64748B' },
+  cardBottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingTop: 12,
+    alignItems: 'center',
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  priceLabel: {
-    fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
-  },
-  priceValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#059669',
-  },
-  actionPill: {
+  startingAtText: { fontSize: 9, fontWeight: '800', color: '#64748B', letterSpacing: 0.5 },
+  priceValue: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  bookBtnPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     backgroundColor: '#EFF6FF',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
-  actionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E40AF',
-  },
+  bookBtnText: { fontSize: 12, fontWeight: '700', color: '#2563EB' },
 });

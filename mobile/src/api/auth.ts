@@ -1,36 +1,39 @@
 import apiClient from './client';
 
-export interface LoginResponse {
-  access_token: string;
-  token_type: string;
-  expires_in_minutes: number;
-  user_id: string;
+export interface CustomerRegisterPayload {
+  full_name: string;
   email: string;
-  role: string;
-  role_name?: string;
-  permissions?: string[];
+  password: string;
+  phone?: string;
+  preferences?: string[];
 }
 
-export interface UserSession {
+export interface CustomerTokenResponse {
+  access_token: string;
+  customer_id: string;
   user_id: string;
   email: string;
-  role: string;
-  role_name?: string;
-  permissions?: string[];
-  is_active: boolean;
+  full_name: string;
+  phone: string;
+  token_type?: string;
 }
 
 export const authApi = {
-  login: async (email: string, password: string): Promise<LoginResponse> => {
-    const res = await apiClient.post<LoginResponse>('/auth/login', {
-      email,
-      password,
-    });
+  /** POST /customer/auth/login */
+  login: async (email: string, password: string): Promise<CustomerTokenResponse> => {
+    const res = await apiClient.post<CustomerTokenResponse>('/customer/auth/login', { email, password });
     return res.data;
   },
 
-  getCurrentSession: async (): Promise<UserSession> => {
-    const res = await apiClient.get<UserSession>('/auth/me');
+  /** POST /customer/auth/register */
+  register: async (payload: CustomerRegisterPayload): Promise<CustomerTokenResponse> => {
+    const res = await apiClient.post<CustomerTokenResponse>('/customer/auth/register', payload);
+    return res.data;
+  },
+
+  /** GET /customer/auth/me */
+  getMe: async (): Promise<CustomerTokenResponse> => {
+    const res = await apiClient.get<CustomerTokenResponse>('/customer/auth/me');
     return res.data;
   },
 };

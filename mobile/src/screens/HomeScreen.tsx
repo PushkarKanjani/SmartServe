@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,34 +12,58 @@ import {
   SafeAreaView,
   Dimensions,
 } from 'react-native';
-import { catalogApi, ServiceItem } from '../api/catalog';
+import { 
+  Search, 
+  Sparkles, 
+  Clock, 
+  ChevronRight, 
+  ShieldCheck, 
+  Star, 
+  MapPin, 
+  Flame, 
+  AlertTriangle,
+  Radio,
+  KeyRound
+} from 'lucide-react-native';
+import { catalogApi, CategoryItem, ServiceItem } from '../api/catalog';
+import { bookingsApi, BookingItem } from '../api/bookings';
 import { getServiceImage } from '../utils/serviceImages';
 import { formatRupee, formatCategoryDisplayName } from '../utils/formatters';
 import { useAuth } from '../context/AuthContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - 48 - 12) / 2;
+const CATEGORY_CARD_WIDTH = (SCREEN_WIDTH - 40 - 12) / 2;
 
 export const HomeScreen = ({ navigation }: any) => {
   const { user } = useAuth();
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [popularServices, setPopularServices] = useState<ServiceItem[]>([]);
+  const [activeBooking, setActiveBooking] = useState<BookingItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [networkError, setNetworkError] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setNetworkError(false);
-      const [cats, svcs] = await Promise.all([
+      const [cats, svcs, bookings] = await Promise.all([
         catalogApi.getCategories(),
-        catalogApi.getAllServices(),
+        catalogApi.getAllServices({ limit: 10 }),
+        bookingsApi.getAllBookings().catch(() => [] as BookingItem[]),
       ]);
+
       setCategories(cats);
-      // Select popular active services
-      const active = svcs.filter((s) => s.status === 'active').slice(0, 6);
-      setPopularServices(active);
+      // Pick top trending services
+      setPopularServices(svcs.slice(0, 8));
+
+      // Find any ongoing active booking (Requested, Accepted, On The Way, Arrived, Started)
+      const ongoing = bookings.find((b) =>
+        ['requested', 'accepted', 'on the way', 'arrived', 'started'].includes(
+          (b.status || '').toLowerCase().trim()
+        )
+      );
+      setActiveBooking(ongoing || null);
     } catch (err) {
       console.warn('Home fetch error:', err);
       setNetworkError(true);
@@ -47,11 +71,11 @@ export const HomeScreen = ({ navigation }: any) => {
       setIsLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -70,7 +94,7 @@ export const HomeScreen = ({ navigation }: any) => {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E40AF" />
+        <ActivityIndicator size="large" color="#2563EB" />
         <Text style={styles.loadingText}>Loading SmartServe...</Text>
       </SafeAreaView>
     );
@@ -80,9 +104,10 @@ export const HomeScreen = ({ navigation }: any) => {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <View style={styles.errorCard}>
+          <AlertTriangle size={36} color="#DC2626" style={{ marginBottom: 12 }} />
           <Text style={styles.errorTitle}>Unable to connect to SmartServe</Text>
           <Text style={styles.errorSub}>
-            Please verify your backend connection or network settings.
+            Please verify that your phone is connected to the same Wi-Fi/LAN as your development server.
           </Text>
           <TouchableOpacity style={styles.retryBtn} onPress={fetchData}>
             <Text style={styles.retryBtnText}>Retry Connection</Text>
@@ -92,30 +117,34 @@ export const HomeScreen = ({ navigation }: any) => {
     );
   }
 
+  const activeStatusLower = (activeBooking?.status || '').toLowerCase();
+  const isInTransit = ['on the way', 'arrived'].includes(activeStatusLower);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
         showsVerticalScrollIndicator={false}
       >
         {/* Top Header */}
         <View style={styles.header}>
           <View>
             <Text style={styles.greetingText}>Welcome back,</Text>
-            <Text style={styles.userName}>{user?.email?.split('@')[0] || 'Customer'}</Text>
+            <Text style={styles.userName}>{user?.full_name || 'Customer'}</Text>
           </View>
           <View style={styles.badgePill}>
-            <Text style={styles.badgeText}>India 🇮🇳</Text>
+            <ShieldCheck size={14} color="#059669" />
+            <Text style={styles.badgeText}>Verified Account</Text>
           </View>
         </View>
 
         {/* Search Bar */}
         <View style={styles.searchBox}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Search size={18} color="#64748B" style={{ marginRight: 10 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search home cleaning, salon, AC repair..."
+            placeholder="Search cleaning, plumbing, AC repair..."
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -124,12 +153,63 @@ export const HomeScreen = ({ navigation }: any) => {
           />
         </View>
 
-        {/* Banner Promo */}
+        {/* Active Booking Hero Banner */}
+        {activeBooking && (
+          <TouchableOpacity
+            style={styles.activeBookingCard}
+            activeOpacity={0.9}
+            onPress={() => navigation.navigate('LiveTracking', { bookingId: activeBooking.id })}
+          >
+            <View style={styles.activeBookingHeader}>
+              <View style={styles.liveIndicatorRow}>
+                <Radio size={16} color="#2563EB" />
+                <Text style={styles.liveIndicatorText}>ACTIVE DISPATCH IN PROGRESS</Text>
+              </View>
+              <View style={[
+                styles.statusBadge,
+                isInTransit ? styles.transitBadge : styles.defaultBadge
+              ]}>
+                <Text style={[
+                  styles.statusBadgeText,
+                  isInTransit ? styles.transitBadgeText : styles.defaultBadgeText
+                ]}>
+                  {activeBooking.status.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.activeServiceName}>{activeBooking.service_name}</Text>
+            <Text style={styles.activeServiceRef}>{activeBooking.booking_reference} • {activeBooking.scheduled_time?.slice(0, 5)}</Text>
+
+            {activeBooking.provider_name ? (
+              <Text style={styles.activeProviderText}>
+                Technician: <Text style={{ fontWeight: '700', color: '#0F172A' }}>{activeBooking.provider_name}</Text>
+              </Text>
+            ) : null}
+
+            {activeBooking.otp_code && isInTransit && (
+              <View style={styles.otpPill}>
+                <KeyRound size={14} color="#7C3AED" />
+                <Text style={styles.otpPillText}>Start OTP: <Text style={{ fontWeight: '800' }}>{activeBooking.otp_code}</Text></Text>
+              </View>
+            )}
+
+            <View style={styles.trackCtaRow}>
+              <Text style={styles.trackCtaText}>Open Live GPS Tracking & Details</Text>
+              <ChevronRight size={16} color="#2563EB" />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Promo Hero Banner */}
         <View style={styles.promoCard}>
           <View style={styles.promoContent}>
-            <Text style={styles.promoTag}>SMARTSERVE VERIFIED</Text>
-            <Text style={styles.promoTitle}>Quality Services, At Your Doorstep</Text>
-            <Text style={styles.promoSub}>Professional background-verified technicians</Text>
+            <View style={styles.promoTagRow}>
+              <Sparkles size={13} color="#FFFFFF" />
+              <Text style={styles.promoTag}>SMARTSERVE VERIFIED</Text>
+            </View>
+            <Text style={styles.promoTitle}>Quality Home Services, Guaranteed</Text>
+            <Text style={styles.promoSub}>Upfront pricing • Certified specialists • Background verified</Text>
           </View>
         </View>
 
@@ -143,17 +223,17 @@ export const HomeScreen = ({ navigation }: any) => {
 
         <View style={styles.categoryGrid}>
           {categories.slice(0, 8).map((cat) => {
-            const cleanName = formatCategoryDisplayName(cat);
-            const imgUrl = getServiceImage(cat);
+            const cleanName = formatCategoryDisplayName(cat.name || cat.display_name);
+            const imgUrl = cat.image || getServiceImage(cat.name);
             return (
               <TouchableOpacity
-                key={cat}
+                key={cat.id || cat.name}
                 style={styles.categoryCard}
                 activeOpacity={0.8}
                 onPress={() =>
                   navigation.navigate('CatalogTab', {
                     screen: 'SubcategoryList',
-                    params: { category: cat },
+                    params: { category: cat.name, categoryName: cleanName },
                   })
                 }
               >
@@ -162,20 +242,26 @@ export const HomeScreen = ({ navigation }: any) => {
                   <Text style={styles.categoryName} numberOfLines={2}>
                     {cleanName}
                   </Text>
+                  {cat.service_count ? (
+                    <Text style={styles.categoryCount}>{cat.service_count} services</Text>
+                  ) : null}
                 </View>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* Popular Services Section */}
+        {/* Trending Services Section */}
         <View style={[styles.sectionHeader, { marginTop: 24 }]}>
-          <Text style={styles.sectionTitle}>Trending Services</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Flame size={18} color="#EA580C" />
+            <Text style={styles.sectionTitle}>Trending Services</Text>
+          </View>
         </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.horizontalScroll}>
           {popularServices.map((svc) => {
-            const imgUrl = getServiceImage(svc.category, svc.subcategory, svc.name);
+            const imgUrl = svc.image_url || getServiceImage(svc.category, svc.subcategory, svc.name);
             return (
               <TouchableOpacity
                 key={svc.id}
@@ -190,8 +276,13 @@ export const HomeScreen = ({ navigation }: any) => {
                     {svc.name}
                   </Text>
                   <View style={styles.trendingPriceRow}>
-                    <Text style={styles.priceValue}>{formatRupee(svc.final_price || svc.base_price)}</Text>
-                    <Text style={styles.durationBadge}>⏱ {svc.duration_minutes}m</Text>
+                    <Text style={styles.priceValue}>{formatRupee(svc.base_price)}</Text>
+                    {svc.duration_minutes ? (
+                      <View style={styles.durationPill}>
+                        <Clock size={11} color="#64748B" />
+                        <Text style={styles.durationText}>{svc.duration_minutes}m</Text>
+                      </View>
+                    ) : null}
                   </View>
                 </View>
               </TouchableOpacity>
@@ -210,7 +301,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
@@ -223,15 +314,19 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '600',
   },
   errorCard: {
     backgroundColor: '#FFFFFF',
     padding: 24,
-    borderRadius: 16,
+    borderRadius: 20,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
   },
   errorTitle: {
     fontSize: 18,
@@ -241,21 +336,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   errorSub: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    lineHeight: 18,
   },
   retryBtn: {
-    backgroundColor: '#1E40AF',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   retryBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   header: {
     flexDirection: 'row',
@@ -275,15 +371,20 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   badgePill: {
-    backgroundColor: '#EEF2F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065F46',
   },
   searchBox: {
     flexDirection: 'row',
@@ -291,51 +392,159 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 18,
+    marginBottom: 16,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 1,
   },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 10,
-  },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: '#0F172A',
+    padding: 0,
+  },
+  activeBookingCard: {
+    backgroundColor: '#EFF6FF',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#93C5FD',
+    padding: 16,
+    marginBottom: 16,
+  },
+  activeBookingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  liveIndicatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  liveIndicatorText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#1D4ED8',
+    letterSpacing: 0.5,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  defaultBadge: {
+    backgroundColor: '#DBEAFE',
+  },
+  defaultBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#1E40AF',
+  },
+  transitBadge: {
+    backgroundColor: '#FFEDD5',
+  },
+  transitBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#C2410C',
+  },
+  activeServiceName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 2,
+  },
+  activeServiceRef: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  activeProviderText: {
+    fontSize: 13,
+    color: '#475569',
+    marginBottom: 8,
+  },
+  otpPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F5F3FF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    alignSelf: 'flex-start',
+    marginBottom: 10,
+  },
+  otpPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6D28D9',
+  },
+  trackCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#BFDBFE',
+  },
+  trackCtaText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#2563EB',
   },
   promoCard: {
     backgroundColor: '#1E3A8A',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 18,
     marginBottom: 24,
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 3,
   },
   promoContent: {
-    maxWidth: '90%',
+    gap: 6,
+  },
+  promoTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
   },
   promoTag: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#93C5FD',
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
   promoTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginTop: 2,
   },
   promoSub: {
-    fontSize: 13,
-    color: '#E0E7FF',
-    lineHeight: 18,
+    fontSize: 12,
+    color: '#BFDBFE',
+    fontWeight: '500',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -345,25 +554,24 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
   },
   seeAllText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#2563EB',
   },
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 12,
   },
   categoryCard: {
-    width: CARD_WIDTH,
+    width: CATEGORY_CARD_WIDTH,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
-    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
@@ -375,31 +583,35 @@ const styles = StyleSheet.create({
   categoryImage: {
     width: '100%',
     height: 100,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
   },
   categoryInfo: {
     padding: 10,
-    minHeight: 52,
-    justifyContent: 'center',
   },
   categoryName: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
+    fontWeight: '700',
+    color: '#0F172A',
     lineHeight: 18,
+  },
+  categoryCount: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 2,
   },
   horizontalScroll: {
     marginHorizontal: -20,
     paddingHorizontal: 20,
   },
   trendingCard: {
-    width: 220,
+    width: 200,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    overflow: 'hidden',
+    borderRadius: 16,
     marginRight: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    overflow: 'hidden',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
@@ -408,8 +620,8 @@ const styles = StyleSheet.create({
   },
   trendingImage: {
     width: '100%',
-    height: 120,
-    backgroundColor: '#E2E8F0',
+    height: 115,
+    backgroundColor: '#F1F5F9',
   },
   trendingInfo: {
     padding: 12,
@@ -422,7 +634,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   trendingName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 8,
@@ -435,11 +647,20 @@ const styles = StyleSheet.create({
   priceValue: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#059669',
+    color: '#0F172A',
   },
-  durationBadge: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
+  durationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  durationText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
   },
 });

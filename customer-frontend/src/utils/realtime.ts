@@ -10,10 +10,12 @@
  *   - Periodic heartbeat ping keeps the stream active.
  */
 
+import { getApiBaseUrl } from '../api/client';
+
 type MessageHandler = (data: any) => void;
 
 export function getWebSocketUrl(channels: string[] = []): string {
-  const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+  const rawApiUrl = getApiBaseUrl();
   const isHttps = rawApiUrl.startsWith('https:') || (typeof window !== 'undefined' && window.location.protocol === 'https:');
   const wsProtocol = isHttps ? 'wss:' : 'ws:';
   const hostDomain = rawApiUrl.replace(/^https?:\/\//, '').replace(/\/api\/v1\/?$/, '');

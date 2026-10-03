@@ -1,81 +1,153 @@
 import apiClient from './client';
 
+export interface SubcategorySummary {
+  name: string;
+  service_count: number;
+  active_count: number;
+}
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  slug: string;
+  display_name?: string;
+  order?: number;
+  image?: string;
+  subcategories_count?: number;
+  service_count?: number;
+  active_count?: number;
+  subcategories?: SubcategorySummary[];
+}
+
+export interface AddonItem {
+  addon_id: string;
+  name: string;
+  price: number;
+  description?: string;
+}
+
+export interface ServiceProcessStep {
+  step_number: number;
+  title: string;
+  description: string;
+  duration_minutes: number;
+  is_key_step?: boolean;
+}
+
+export interface ServiceFeatureItem {
+  title: string;
+  description: string;
+}
+
+export interface ServiceFAQ {
+  question: string;
+  answer: string;
+}
+
 export interface ServiceItem {
   id: string;
   name: string;
   category: string;
-  subcategory: string;
-  sub_subcategory?: string | null;
-  base_price: number;
-  final_price?: number | null;
-  surge_pct?: number | null;
-  discount_pct?: number | null;
-  duration_minutes: number;
+  category_slug?: string;
+  subcategory?: string;
+  subcategory_slug?: string;
   description?: string;
-  status: string;
-  image_url?: string;
-  includes?: string[];
-  excludes?: string[];
-  faqs?: Array<{ question: string; answer: string }>;
+  distinct_features?: any;
   features?: string[];
+  included?: string[];
+  excluded?: string[];
+  highlights?: string[];
+  base_price: number;
+  max_demand_increase?: number;
+  max_discount?: number;
+  duration_minutes?: number;
+  rating?: number;
+  review_count?: number;
+  is_emergency?: boolean;
+  is_emergency_eligible?: boolean;
+  image_url?: string;
+  suggested_addons?: AddonItem[];
+  process_steps?: ServiceProcessStep[];
+  service_features?: ServiceFeatureItem[];
+  tools_materials?: string[];
+  customer_setup?: string[];
+  aftercare?: string[];
+  expected_results?: string[];
+  important_notes?: string[];
   warranty?: string;
+  faqs?: ServiceFAQ[];
+  tips?: string[];
+  dos?: string[];
+  donts?: string[];
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ProviderSlotDetail {
+  slot_id: string;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  display_time: string;
+  is_available: boolean;
+  available_times: string[];
+}
+
+export interface EligibleProvider {
+  provider_id: string;
+  full_name: string;
+  category?: string;
+  skills?: string;
+  experience_years: number;
+  reliability_score: number;
+  acceptance_rate: number;
+  service_area?: string;
+  available_slots: string[];
+  structured_slots?: ProviderSlotDetail[];
+  is_available: boolean;
 }
 
 export const catalogApi = {
-  getAllServices: async (params?: { category?: string; subcategory?: string; search?: string }): Promise<ServiceItem[]> => {
-    try {
-      const res = await apiClient.get<{ items: ServiceItem[] }>('/services/', { params });
-      if (res.data && res.data.items) {
-        return res.data.items;
-      }
-      if (Array.isArray(res.data)) {
-        return res.data;
-      }
-    } catch (e) {
-      // Fallback
-      const res = await apiClient.get<ServiceItem[]>('/admin/catalog/services', { params });
-      return res.data;
-    }
-    return [];
+  /** GET /customer/catalog/categories */
+  getCategories: async (): Promise<CategoryItem[]> => {
+    const res = await apiClient.get<CategoryItem[]>('/customer/catalog/categories');
+    return Array.isArray(res.data) ? res.data : [];
   },
 
+  /** GET /customer/catalog/services */
+  getAllServices: async (params?: {
+    category?: string;
+    subcategory?: string;
+    q?: string;
+    search?: string;
+    emergency_only?: boolean;
+    limit?: number;
+  }): Promise<ServiceItem[]> => {
+    const res = await apiClient.get<ServiceItem[]>('/customer/catalog/services', {
+      params: {
+        category: params?.category,
+        subcategory: params?.subcategory,
+        q: params?.q || params?.search,
+        emergency_only: params?.emergency_only,
+      },
+    });
+    return Array.isArray(res.data) ? res.data : [];
+  },
+
+  /** GET /customer/catalog/services/{id} */
   getServiceById: async (id: string): Promise<ServiceItem> => {
-    try {
-      const res = await apiClient.get<ServiceItem>(`/services/${id}`);
-      return res.data;
-    } catch (e) {
-      const res = await apiClient.get<ServiceItem>(`/admin/catalog/services/${id}`);
-      return res.data;
-    }
+    const res = await apiClient.get<ServiceItem>(`/customer/catalog/services/${id}`);
+    return res.data;
   },
 
-  getCategories: async (): Promise<string[]> => {
+  /** GET /customer/catalog/services/{id}/eligible-providers */
+  getEligibleProviders: async (serviceId: string): Promise<EligibleProvider[]> => {
     try {
-      const res = await apiClient.get<Array<{ category: string }>>('/services/categories');
-      if (Array.isArray(res.data)) {
-        const names = res.data.map((c) => (typeof c === 'string' ? c : c.category)).filter(Boolean);
-        return Array.from(new Set(names));
-      }
-    } catch (e) {
-      // Fallback
+      const res = await apiClient.get<EligibleProvider[]>(`/customer/catalog/services/${serviceId}/eligible-providers`);
+      return Array.isArray(res.data) ? res.data : [];
+    } catch {
+      return [];
     }
-
-    // Default static full list of SmartServe categories
-    return [
-      '1. Beauty, Salon & Spa',
-      '2. Cleaning & Home Cleaning',
-      '3. Painting, Waterproofing & Home Improvement',
-      '4. AC, Appliance & Electronics Repair',
-      '5. Electrician, Plumber, Carpenter & Home Repairs',
-      '6. Smart Home & Security',
-      '7. Domestic Help & Cooking',
-      '8. Education, Teachers & Coaching',
-      '9. Health, Fitness & Wellness',
-      '10. Events, Photography & Entertainment',
-      '11. Pet Services',
-      '12. Technology & Digital Services',
-      '13. Professional & Business Services',
-      '14. Moving, Delivery & Local Assistance',
-    ];
   },
 };

@@ -17,13 +17,12 @@ export const ProfileScreen = () => {
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out of SmartServe?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: () => logout(),
-      },
+      { text: 'Sign Out', style: 'destructive', onPress: () => logout() },
     ]);
   };
+
+  const displayName = user?.full_name || user?.email?.split('@')[0] || 'SmartServe User';
+  const avatarLetter = displayName.charAt(0).toUpperCase();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -31,30 +30,59 @@ export const ProfileScreen = () => {
         {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>
-              {user?.email?.charAt(0).toUpperCase() || 'U'}
-            </Text>
+            <Text style={styles.avatarText}>{avatarLetter}</Text>
           </View>
-          <Text style={styles.userName}>{user?.email?.split('@')[0] || 'SmartServe User'}</Text>
+          <Text style={styles.userName}>{displayName}</Text>
           <Text style={styles.userEmail}>{user?.email || ''}</Text>
+          {user?.phone ? (
+            <Text style={styles.userPhone}>{user.phone}</Text>
+          ) : null}
           <View style={styles.rolePill}>
-            <Text style={styles.roleText}>{user?.role_name || user?.role || 'Customer'}</Text>
+            <Text style={styles.roleText}>Customer</Text>
           </View>
         </View>
 
-        {/* Section: Account & Security */}
+        {/* Account Info */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Account & Security</Text>
-          
+          <Text style={styles.sectionTitle}>Account Details</Text>
+
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>User ID</Text>
-            <Text style={styles.infoValue} numberOfLines={1}>{user?.user_id || 'N/A'}</Text>
+            <Text style={styles.infoLabel}>Full Name</Text>
+            <Text style={styles.infoValue}>{user?.full_name || 'N/A'}</Text>
           </View>
           <View style={styles.divider} />
-          
+
           <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>API Environment</Text>
-            <Text style={styles.infoValue}>{API_BASE_URL.includes('10.0.2.2') ? 'Android Dev (10.0.2.2)' : 'SmartServe Cloud'}</Text>
+            <Text style={styles.infoLabel}>Email</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{user?.email || 'N/A'}</Text>
+          </View>
+          <View style={styles.divider} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Phone</Text>
+            <Text style={styles.infoValue}>{user?.phone || 'N/A'}</Text>
+          </View>
+          <View style={styles.divider} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Customer ID</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{user?.customer_id?.slice(0, 12)}...</Text>
+          </View>
+        </View>
+
+        {/* App Info */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Application</Text>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Version</Text>
+            <Text style={styles.infoValue}>1.0.0 (Phase 2)</Text>
+          </View>
+          <View style={styles.divider} />
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Backend</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>{API_BASE_URL}</Text>
           </View>
           <View style={styles.divider} />
 
@@ -64,29 +92,7 @@ export const ProfileScreen = () => {
           </View>
         </View>
 
-        {/* Section: App Information */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>About Application</Text>
-          
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Application</Text>
-            <Text style={styles.infoValue}>SmartServe Android</Text>
-          </View>
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Version</Text>
-            <Text style={styles.infoValue}>1.0.0 (Build 1)</Text>
-          </View>
-          <View style={styles.divider} />
-
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Package ID</Text>
-            <Text style={styles.infoValue}>com.smartserve.app</Text>
-          </View>
-        </View>
-
-        {/* Sign Out Button */}
+        {/* Sign Out */}
         <TouchableOpacity style={styles.logoutBtn} activeOpacity={0.85} onPress={handleLogout}>
           <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
@@ -96,14 +102,8 @@ export const ProfileScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FAF9F5',
-  },
-  scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
-  },
+  safeArea: { flex: 1, backgroundColor: '#FAF9F5' },
+  scrollContent: { padding: 20, paddingBottom: 40 },
   profileCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -127,34 +127,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 2,
-  },
-  userEmail: {
-    fontSize: 13,
-    color: '#64748B',
-    marginBottom: 10,
-  },
+  avatarText: { fontSize: 28, fontWeight: 'bold', color: '#FFFFFF' },
+  userName: { fontSize: 20, fontWeight: '800', color: '#0F172A', marginBottom: 2 },
+  userEmail: { fontSize: 13, color: '#64748B', marginBottom: 2 },
+  userPhone: { fontSize: 13, color: '#64748B', marginBottom: 10 },
   rolePill: {
     backgroundColor: '#EFF6FF',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
+    marginTop: 8,
   },
-  roleText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E40AF',
-    textTransform: 'uppercase',
-  },
+  roleText: { fontSize: 12, fontWeight: '700', color: '#1E40AF', textTransform: 'uppercase' },
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -163,32 +147,11 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: '#64748B',
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1E293B',
-    maxWidth: '55%',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 4,
-  },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#0F172A', marginBottom: 12 },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
+  infoLabel: { fontSize: 13, color: '#64748B' },
+  infoValue: { fontSize: 13, fontWeight: '600', color: '#1E293B', maxWidth: '55%', textAlign: 'right' },
+  divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 4 },
   logoutBtn: {
     backgroundColor: '#FEF2F2',
     borderColor: '#FCA5A5',
@@ -198,9 +161,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 8,
   },
-  logoutText: {
-    color: '#DC2626',
-    fontSize: 15,
-    fontWeight: '700',
-  },
+  logoutText: { color: '#DC2626', fontSize: 15, fontWeight: '700' },
 });

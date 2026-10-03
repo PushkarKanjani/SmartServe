@@ -743,6 +743,127 @@ def complete_booking(
     return _serialize_booking_response(updated)
 
 
+@router.post(
+    "/providers/me/bookings/{booking_id}/on-the-way",
+    response_model=ProviderBookingResponse,
+    summary="Mark provider on the way to customer location",
+)
+def mark_booking_on_the_way(
+    booking_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    from app.core.websockets import broadcast_realtime
+
+    updated = transition_booking_status(
+        db=db,
+        booking_id=booking_id,
+        next_status="On The Way",
+        user=current_user,
+    )
+
+    cust_id = str(updated.customer_id) if updated.customer_id else None
+    cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+
+    channels = ["dashboard", "bookings", "admin", f"booking_{updated.id}", f"admin_booking_{updated.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if cust_user_id:
+        channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
+    channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
+
+    status_msg = {
+        "type": "BOOKING_STATUS_UPDATED",
+        "event": "booking.updated",
+        "event_type": "booking.updated",
+        "booking_id": str(updated.id),
+        "status": "On The Way",
+        "otp_code": updated.otp_code,
+        "booking": {
+            "id": str(updated.id),
+            "booking_reference": updated.booking_reference,
+            "customer_id": cust_id,
+            "provider_id": str(current_user.id),
+            "status": "On The Way",
+            "otp_code": updated.otp_code,
+        },
+        "data": {
+            "id": str(updated.id),
+            "status": "On The Way",
+            "otp_code": updated.otp_code,
+        }
+    }
+    broadcast_realtime(channels, status_msg)
+    return _serialize_booking_response(updated)
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/start-trip",
+    response_model=ProviderBookingResponse,
+    summary="Alias for on-the-way: start provider trip to customer location",
+)
+def start_booking_trip(
+    booking_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    return mark_booking_on_the_way(booking_id=booking_id, current_user=current_user, db=db)
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/arrived",
+    response_model=ProviderBookingResponse,
+    summary="Mark provider arrived at customer location",
+)
+def mark_booking_arrived(
+    booking_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    from app.core.websockets import broadcast_realtime
+
+    updated = transition_booking_status(
+        db=db,
+        booking_id=booking_id,
+        next_status="Arrived",
+        user=current_user,
+    )
+
+    cust_id = str(updated.customer_id) if updated.customer_id else None
+    cust_user_id = str(updated.customer.user_id) if updated.customer and hasattr(updated.customer, 'user_id') else None
+
+    channels = ["dashboard", "bookings", "admin", f"booking_{updated.id}", f"admin_booking_{updated.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if cust_user_id:
+        channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
+    channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
+
+    status_msg = {
+        "type": "BOOKING_STATUS_UPDATED",
+        "event": "booking.updated",
+        "event_type": "booking.updated",
+        "booking_id": str(updated.id),
+        "status": "Arrived",
+        "otp_code": updated.otp_code,
+        "booking": {
+            "id": str(updated.id),
+            "booking_reference": updated.booking_reference,
+            "customer_id": cust_id,
+            "provider_id": str(current_user.id),
+            "status": "Arrived",
+            "otp_code": updated.otp_code,
+        },
+        "data": {
+            "id": str(updated.id),
+            "status": "Arrived",
+            "otp_code": updated.otp_code,
+        }
+    }
+    broadcast_realtime(channels, status_msg)
+    return _serialize_booking_response(updated)
+
+
 @router.patch(
     "/providers/me/bookings/{booking_id}/status",
     response_model=ProviderBookingResponse,
@@ -756,10 +877,17 @@ def update_booking_status(
 ):
     from app.core.websockets import broadcast_realtime
 
+    target_st = payload.target_status
+    if not target_st:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Status field is required for transition."
+        )
+
     updated = transition_booking_status(
         db=db,
         booking_id=booking_id,
-        next_status=payload.status,
+        next_status=target_st,
         user=current_user,
         reason=payload.reason,
         otp_code=payload.otp_code,
@@ -782,21 +910,25 @@ def update_booking_status(
         "event_type": "booking.updated",
         "booking_id": str(updated.id),
         "status": updated.status,
+        "otp_code": updated.otp_code,
         "booking": {
             "id": str(updated.id),
             "booking_reference": updated.booking_reference,
             "customer_id": cust_id,
             "provider_id": str(current_user.id),
             "status": updated.status,
+            "otp_code": updated.otp_code,
         },
         "data": {
             "id": str(updated.id),
             "status": updated.status,
+            "otp_code": updated.otp_code,
         }
     }
     broadcast_realtime(channels, status_msg)
 
     return _serialize_booking_response(updated)
+
 
 
 from pydantic import BaseModel

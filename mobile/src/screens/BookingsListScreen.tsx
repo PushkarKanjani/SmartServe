@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,20 +8,28 @@ import {
   ActivityIndicator,
   SafeAreaView,
   RefreshControl,
+  Image,
 } from 'react-native';
+import { 
+  Calendar, 
+  Clock, 
+  ChevronRight, 
+  KeyRound, 
+  User, 
+  RefreshCw,
+  Plus
+} from 'lucide-react-native';
 import { bookingsApi, BookingItem } from '../api/bookings';
 import { formatRupee, formatCategoryDisplayName } from '../utils/formatters';
+import { getServiceImage } from '../utils/serviceImages';
 
-export const BookingsListScreen = () => {
+export const BookingsListScreen = ({ navigation }: any) => {
   const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [filterTab, setFilterTab] = useState<'all' | 'active' | 'completed' | 'cancelled'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadBookings();
-  }, []);
-
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async () => {
     try {
       const data = await bookingsApi.getAllBookings();
       setBookings(data);
@@ -31,106 +39,187 @@ export const BookingsListScreen = () => {
       setIsLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadBookings();
+    // Auto-sync polling every 5 seconds to keep live with Web and PostgreSQL
+    const interval = setInterval(loadBookings, 5000);
+    return () => clearInterval(interval);
+  }, [loadBookings]);
 
   const onRefresh = () => {
     setRefreshing(true);
     loadBookings();
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
+  const filteredBookings = bookings.filter((b) => {
+    const st = (b.status || '').toLowerCase().trim();
+    if (filterTab === 'active') {
+      return ['requested', 'assigned', 'accepted', 'on the way', 'arrived', 'started'].includes(st);
+    }
+    if (filterTab === 'completed') {
+      return ['completed', 'paid'].includes(st);
+    }
+    if (filterTab === 'cancelled') {
+      return ['cancelled', 'rejected'].includes(st);
+    }
+    return true;
+  });
+
+  const getStatusBadgeStyle = (statusStr: string) => {
+    const s = (statusStr || '').toLowerCase().trim();
+    switch (s) {
+      case 'requested':
+        return { bg: '#FEF3C7', text: '#B45309', border: '#FDE68A' };
+      case 'accepted':
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' };
+      case 'on the way':
+        return { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA' };
+      case 'arrived':
+        return { bg: '#FAF5FF', text: '#7E22CE', border: '#E9D5FF' };
+      case 'started':
+        return { bg: '#EEF2FF', text: '#4338CA', border: '#C7D2FE' };
       case 'completed':
-        return { bg: '#DCFCE7', text: '#15803D' };
-      case 'in_progress':
-      case 'in progress':
-        return { bg: '#FEF3C7', text: '#B45309' };
+      case 'paid':
+        return { bg: '#ECFDF5', text: '#065F46', border: '#A7F3D0' };
       case 'cancelled':
-        return { bg: '#FEE2E2', text: '#B91C1C' };
+      case 'rejected':
+        return { bg: '#FEF2F2', text: '#B91C1C', border: '#FECACA' };
       default:
-        return { bg: '#EFF6FF', text: '#1D4ED8' };
+        return { bg: '#F1F5F9', text: '#475569', border: '#CBD5E1' };
     }
   };
 
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E40AF" />
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.loadingText}>Fetching bookings from backend...</Text>
       </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* Header Bar */}
       <View style={styles.header}>
-        <Text style={styles.title}>My Bookings</Text>
-        <Text style={styles.subtitle}>Track your upcoming and past service appointments</Text>
+        <View>
+          <Text style={styles.title}>My Service Bookings</Text>
+          <Text style={styles.subtitle}>Track live technician dispatches and status updates</Text>
+        </View>
+        <TouchableOpacity style={styles.refreshIconBtn} onPress={onRefresh} activeOpacity={0.7}>
+          <RefreshCw size={16} color="#475569" />
+        </TouchableOpacity>
       </View>
 
-      {bookings.length === 0 ? (
+      {/* Filter Tabs matching Customer Web */}
+      <View style={styles.tabsRow}>
+        {[
+          { key: 'all', label: `All (${bookings.length})` },
+          { key: 'active', label: 'Active' },
+          { key: 'completed', label: 'Completed' },
+          { key: 'cancelled', label: 'Cancelled' },
+        ].map((tab) => {
+          const isActive = filterTab === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tabButton, isActive && styles.tabButtonActive]}
+              onPress={() => setFilterTab(tab.key as any)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Bookings List */}
+      {filteredBookings.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📅</Text>
+          <Calendar size={48} color="#94A3B8" style={{ marginBottom: 12 }} />
           <Text style={styles.emptyTitle}>No Bookings Found</Text>
           <Text style={styles.emptySubtitle}>
-            When you schedule a service, your booking details will appear here.
+            You have no {filterTab !== 'all' ? filterTab : ''} bookings recorded in your account.
           </Text>
+          <TouchableOpacity
+            style={styles.bookFirstBtn}
+            onPress={() => navigation.navigate('CatalogTab')}
+            activeOpacity={0.85}
+          >
+            <Plus size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+            <Text style={styles.bookFirstText}>Explore Services</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
-          data={bookings}
-          keyExtractor={(item) => item.id || item.booking_reference}
+          data={filteredBookings}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContainer}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => {
-            const badge = getStatusColor(item.status);
+            const badge = getStatusBadgeStyle(item.status);
+            const stLower = (item.status || '').toLowerCase().trim();
+            const isInTransit = ['on the way', 'arrived'].includes(stLower);
+            const imgUrl = getServiceImage(item.category, item.subcategory, item.service_name);
 
             return (
-              <View style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <View>
-                    <Text style={styles.refCode}>{item.booking_reference || 'REF-N/A'}</Text>
-                    <Text style={styles.serviceName}>{item.service_name}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
-                    <Text style={[styles.statusText, { color: badge.text }]}>
-                      {item.status?.toUpperCase() || 'SCHEDULED'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.divider} />
-
-                <View style={styles.cardDetails}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Category</Text>
-                    <Text style={styles.detailValue}>{formatCategoryDisplayName(item.category)}</Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Schedule</Text>
-                    <Text style={styles.detailValue}>
-                      {item.scheduled_date} • {item.scheduled_time}
-                    </Text>
-                  </View>
-                  {item.provider_name ? (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Provider</Text>
-                      <Text style={styles.detailValue}>👤 {item.provider_name}</Text>
+              <TouchableOpacity
+                style={styles.card}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('LiveTracking', { bookingId: item.id })}
+              >
+                <View style={styles.cardTop}>
+                  <Image source={{ uri: imgUrl }} style={styles.serviceThumbnail} />
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.refRow}>
+                      <Text style={styles.refCode}>{item.booking_reference}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
+                        <Text style={[styles.statusText, { color: badge.text }]}>
+                          {item.status.toUpperCase()}
+                        </Text>
+                      </View>
                     </View>
-                  ) : null}
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Address</Text>
-                    <Text style={styles.detailValue} numberOfLines={1}>
-                      📍 {item.service_address}
-                    </Text>
+
+                    <Text style={styles.serviceName} numberOfLines={1}>{item.service_name}</Text>
+
+                    <View style={styles.metaRow}>
+                      <Clock size={12} color="#64748B" />
+                      <Text style={styles.metaText}>{item.scheduled_date} at {item.scheduled_time?.slice(0, 5)}</Text>
+                    </View>
+
+                    {item.provider_name ? (
+                      <View style={styles.metaRow}>
+                        <User size={12} color="#64748B" />
+                        <Text style={styles.metaText}>
+                          Provider: <Text style={{ color: '#0F172A', fontWeight: '700' }}>{item.provider_name}</Text>
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.awaitingProviderText}>Technician assignment in progress...</Text>
+                    )}
+
+                    {item.otp_code && isInTransit && (
+                      <View style={styles.otpPill}>
+                        <KeyRound size={12} color="#7C3AED" />
+                        <Text style={styles.otpText}>Start OTP: <Text style={{ fontWeight: '800' }}>{item.otp_code}</Text></Text>
+                      </View>
+                    )}
                   </View>
                 </View>
 
-                <View style={styles.cardFooter}>
-                  <Text style={styles.totalLabel}>Total Price</Text>
-                  <Text style={styles.totalAmount}>{formatRupee(item.total_amount)}</Text>
+                <View style={styles.cardBottom}>
+                  <Text style={styles.priceText}>{formatRupee(item.total_price || item.total_amount)}</Text>
+                  <View style={styles.viewDetailRow}>
+                    <Text style={styles.viewDetailText}>Live Dispatch & Details</Text>
+                    <ChevronRight size={14} color="#2563EB" />
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           }}
         />
@@ -140,99 +229,87 @@ export const BookingsListScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FAF9F5',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#FAF9F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  safeArea: { flex: 1, backgroundColor: '#FAF9F5' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAF9F5' },
+  loadingText: { marginTop: 12, fontSize: 14, color: '#64748B', fontWeight: '600' },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 12,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0F172A',
+  title: { fontSize: 22, fontWeight: '800', color: '#0F172A' },
+  subtitle: { fontSize: 12, color: '#64748B', marginTop: 2 },
+  refreshIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 2,
-    marginBottom: 8,
-  },
-  listContainer: {
+  tabsRow: {
+    flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
+    gap: 8,
+    marginBottom: 12,
   },
+  tabButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tabButtonActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#2563EB',
+  },
+  tabButtonText: { fontSize: 12, fontWeight: '600', color: '#64748B' },
+  tabButtonTextActive: { color: '#2563EB', fontWeight: '800' },
+  listContainer: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    padding: 14,
+    marginBottom: 12,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 6,
-    elevation: 2,
+    elevation: 1,
   },
-  cardHeader: {
+  cardTop: { flexDirection: 'row', gap: 12 },
+  serviceThumbnail: { width: 68, height: 68, borderRadius: 12, backgroundColor: '#F1F5F9' },
+  refRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  refCode: { fontSize: 11, fontWeight: '800', color: '#64748B', fontFamily: 'monospace' },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
+  statusText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.3 },
+  serviceName: { fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
+  metaText: { fontSize: 11, color: '#64748B' },
+  awaitingProviderText: { fontSize: 11, color: '#D97706', fontStyle: 'italic', marginBottom: 3 },
+  otpPill: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  refCode: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  serviceName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginTop: 2,
-  },
-  statusBadge: {
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F5F3FF',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#DDD6FE',
+    alignSelf: 'flex-start',
+    marginTop: 4,
   },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 12,
-  },
-  cardDetails: {
-    gap: 6,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  detailLabel: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  detailValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#1E293B',
-    maxWidth: '65%',
-  },
-  cardFooter: {
+  otpText: { fontSize: 11, fontWeight: '700', color: '#7C3AED' },
+  cardBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -241,36 +318,19 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
-  totalLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  totalAmount: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#059669',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  priceText: { fontSize: 16, fontWeight: '800', color: '#0F172A' },
+  viewDetailRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  viewDetailText: { fontSize: 12, fontWeight: '700', color: '#2563EB' },
+  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, marginTop: 40 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
+  emptySubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 20 },
+  bookFirstBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: 32,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
+  bookFirstText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });

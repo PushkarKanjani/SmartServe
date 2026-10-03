@@ -54,6 +54,34 @@ TERMINAL_STATES = {
 }
 
 
+STATUS_NORMALIZATION_MAP: Dict[str, str] = {
+    "requested": BookingStatus.REQUESTED.value,
+    "assigned": BookingStatus.ASSIGNED.value,
+    "accepted": BookingStatus.ACCEPTED.value,
+    "on_the_way": BookingStatus.ON_THE_WAY.value,
+    "on the way": BookingStatus.ON_THE_WAY.value,
+    "ontheway": BookingStatus.ON_THE_WAY.value,
+    "arrived": BookingStatus.ARRIVED.value,
+    "started": BookingStatus.STARTED.value,
+    "completed": BookingStatus.COMPLETED.value,
+    "paid": BookingStatus.PAID.value,
+    "cancelled": BookingStatus.CANCELLED.value,
+    "canceled": BookingStatus.CANCELLED.value,
+    "rejected": BookingStatus.REJECTED.value,
+    "declined": BookingStatus.REJECTED.value,
+    "expired": BookingStatus.EXPIRED.value,
+}
+
+
+def normalize_status(val: Any) -> str:
+    if val is None:
+        return ""
+    if hasattr(val, "value"):
+        val = val.value
+    cleaned = str(val).strip().lower().replace("-", "_")
+    return STATUS_NORMALIZATION_MAP.get(cleaned, str(val).strip())
+
+
 def get_current_status_val(booking: Booking) -> str:
     if hasattr(booking.status, "value"):
         return str(booking.status.value)
@@ -83,7 +111,8 @@ def transition_booking_status(
                 detail="Forbidden: You cannot transition a booking assigned to another provider.",
             )
 
-    curr_status = get_current_status_val(booking)
+    curr_status = normalize_status(get_current_status_val(booking))
+    next_status_normalized = normalize_status(next_status)
 
     # 2. Check if current state is terminal
     if curr_status in TERMINAL_STATES:
@@ -94,19 +123,24 @@ def transition_booking_status(
 
     # 3. Enforce Strict State Machine Transition Rules
     allowed_next = ALLOWED_TRANSITIONS.get(curr_status, set())
-    if next_status not in allowed_next:
+    if next_status_normalized not in allowed_next:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"Invalid state transition: Cannot transition booking from '{curr_status}' to '{next_status}'. "
+                f"Invalid state transition: Cannot transition booking from '{curr_status}' to '{next_status_normalized}'. "
                 f"Allowed transitions from '{curr_status}' are: {list(allowed_next) or 'None (terminal)'}."
             ),
         )
 
-    # 4. Enforce OTP Verification BEFORE Service Starts (Phase 1 Requirement)
-    if next_status == BookingStatus.ARRIVED.value:
+    # Use normalized status for all subsequent checks and persistence
+    next_status = next_status_normalized
+
+    # 4. Enforce OTP Generation & Verification BEFORE Service Starts
+    if next_status in [BookingStatus.ON_THE_WAY.value, BookingStatus.ARRIVED.value]:
         if not booking.otp_code or len(str(booking.otp_code).strip()) != 4 or not str(booking.otp_code).strip().isdigit():
             booking.otp_code = f"{uuid.uuid4().int % 9000 + 1000}"
+
+    if next_status == BookingStatus.ARRIVED.value:
         # Append arrival timeline event
         tl_arrived = {
             "event": "Provider arrived at service location",

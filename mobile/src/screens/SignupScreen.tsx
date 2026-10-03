@@ -13,30 +13,43 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
-export const LoginScreen = ({ navigation }: any) => {
-  const { login } = useAuth();
+export const SignupScreen = ({ navigation }: any) => {
+  const { register } = useAuth();
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage('Please enter both your email and password.');
+  const handleRegister = async () => {
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      setErrorMessage('Please fill in your full name, email, and password.');
       return;
     }
+    if (password !== confirmPassword) {
+      setErrorMessage('Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long.');
+      return;
+    }
+
     setErrorMessage(null);
     setIsLoading(true);
+
     try {
-      await login(email.trim(), password);
+      await register(fullName.trim(), email.trim(), password, phone.trim() || undefined);
     } catch (err: any) {
       if (err.response?.data?.detail) {
         setErrorMessage(err.response.data.detail);
       } else if (err.message?.includes('Network Error') || !err.response) {
-        setErrorMessage('Unable to connect to SmartServe backend. Please check your network.');
+        setErrorMessage('Unable to connect to SmartServe. Check your network.');
       } else {
-        setErrorMessage('Invalid credentials. Please verify and try again.');
+        setErrorMessage('Registration failed. Please try again.');
       }
     } finally {
       setIsLoading(false);
@@ -50,7 +63,7 @@ export const LoginScreen = ({ navigation }: any) => {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          {/* Header Branding */}
+          {/* Header */}
           <View style={styles.brandHeader}>
             <View style={styles.logoBadge}>
               <Text style={styles.logoLetter}>S</Text>
@@ -59,14 +72,14 @@ export const LoginScreen = ({ navigation }: any) => {
               <Text style={styles.brandSmart}>Smart</Text>
               <Text style={styles.brandServe}>Serve</Text>
             </View>
-            <Text style={styles.portalSubtitle}>Customer Portal</Text>
+            <Text style={styles.portalSubtitle}>Create Your Account</Text>
           </View>
 
           {/* Form Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Sign In</Text>
+            <Text style={styles.cardTitle}>Sign Up</Text>
             <Text style={styles.cardDescription}>
-              Enter your credentials to access your SmartServe account.
+              Join SmartServe to book trusted home services instantly.
             </Text>
 
             {errorMessage ? (
@@ -74,6 +87,18 @@ export const LoginScreen = ({ navigation }: any) => {
                 <Text style={styles.errorText}>{errorMessage}</Text>
               </View>
             ) : null}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Full Name</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Priya Sharma"
+                placeholderTextColor="#94A3B8"
+                value={fullName}
+                onChangeText={setFullName}
+                autoCapitalize="words"
+              />
+            </View>
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Email Address</Text>
@@ -90,6 +115,18 @@ export const LoginScreen = ({ navigation }: any) => {
             </View>
 
             <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Phone Number (Optional)</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="+91 98765 43210"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
               <View style={styles.passwordLabelRow}>
                 <Text style={styles.inputLabel}>Password</Text>
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
@@ -98,7 +135,7 @@ export const LoginScreen = ({ navigation }: any) => {
               </View>
               <TextInput
                 style={styles.textInput}
-                placeholder="••••••••"
+                placeholder="Min. 6 characters"
                 placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
@@ -107,42 +144,40 @@ export const LoginScreen = ({ navigation }: any) => {
               />
             </View>
 
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Confirm Password</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Re-enter your password"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+              />
+            </View>
+
             <TouchableOpacity
               style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-              onPress={handleLogin}
+              onPress={handleRegister}
               disabled={isLoading}
               activeOpacity={0.8}
             >
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.submitButtonText}>Sign In to SmartServe</Text>
+                <Text style={styles.submitButtonText}>Create Account</Text>
               )}
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickFillButton}
-              onPress={() => {
-                setEmail('ananya.rao@example.com');
-                setPassword('CustomerPass123!');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillText}>⚡ Quick-Fill Customer Account (Ananya Rao)</Text>
-            </TouchableOpacity>
           </View>
 
-          {/* Sign Up Link */}
-          <TouchableOpacity style={styles.signupLink} onPress={() => navigation.navigate('Signup')}>
-            <Text style={styles.signupText}>
-              New to SmartServe?{' '}
-              <Text style={styles.signupHighlight}>Create an Account</Text>
+          {/* Sign In Link */}
+          <TouchableOpacity style={styles.signinLink} onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.signinText}>
+              Already have an account?{' '}
+              <Text style={styles.signinHighlight}>Sign In</Text>
             </Text>
           </TouchableOpacity>
-
-          <View style={styles.securityFooter}>
-            <Text style={styles.securityText}>🔒 256-Bit Encrypted Session • SmartServe</Text>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -152,22 +187,27 @@ export const LoginScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#FAF9F5' },
   container: { flex: 1 },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 },
-  brandHeader: { alignItems: 'center', marginBottom: 28 },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+  },
+  brandHeader: { alignItems: 'center', marginBottom: 24 },
   logoBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     backgroundColor: '#1E40AF',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
-  logoLetter: { fontSize: 28, fontWeight: '800', color: '#FFFFFF' },
-  wordmarkRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 4 },
-  brandSmart: { fontSize: 26, fontWeight: '800', color: '#0F172A' },
-  brandServe: { fontSize: 26, fontWeight: '800', color: '#2563EB' },
-  portalSubtitle: { fontSize: 14, fontWeight: '500', color: '#64748B' },
+  logoLetter: { fontSize: 26, fontWeight: '800', color: '#FFFFFF' },
+  wordmarkRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 2 },
+  brandSmart: { fontSize: 24, fontWeight: '800', color: '#0F172A' },
+  brandServe: { fontSize: 24, fontWeight: '800', color: '#2563EB' },
+  portalSubtitle: { fontSize: 13, fontWeight: '500', color: '#64748B' },
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
@@ -191,7 +231,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: { color: '#DC2626', fontSize: 13, fontWeight: '500' },
-  inputGroup: { marginBottom: 18 },
+  inputGroup: { marginBottom: 16 },
   passwordLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -217,27 +257,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    shadowColor: '#1E40AF',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 2,
   },
   submitButtonDisabled: { opacity: 0.7 },
   submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  quickFillButton: {
-    marginTop: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    alignItems: 'center',
-  },
-  quickFillText: { color: '#1D4ED8', fontSize: 12, fontWeight: '700' },
-  signupLink: { marginTop: 24, alignItems: 'center' },
-  signupText: { fontSize: 14, color: '#64748B' },
-  signupHighlight: { color: '#2563EB', fontWeight: '700' },
-  securityFooter: { marginTop: 20, alignItems: 'center' },
-  securityText: { fontSize: 12, color: '#94A3B8', fontWeight: '500' },
+  signinLink: { marginTop: 24, alignItems: 'center' },
+  signinText: { fontSize: 14, color: '#64748B' },
+  signinHighlight: { color: '#2563EB', fontWeight: '700' },
 });

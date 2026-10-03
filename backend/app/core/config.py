@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     KAFKA_CONSUMER_GROUP: str = os.getenv("KAFKA_CONSUMER_GROUP", "smartserve-backend-group")
     KAFKA_ENABLED: bool = os.getenv("KAFKA_ENABLED", "true").lower() in ("true", "1", "yes")
 
+    # AI Support Configuration
+    MAX_AI_SUPPORT_MESSAGES: int = int(os.getenv("MAX_AI_SUPPORT_MESSAGES", "5"))
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_MODEL: str = os.getenv("OPENROUTER_MODEL", "openrouter/free")
+
     class Config:
         case_sensitive = True
         env_file = ".env"

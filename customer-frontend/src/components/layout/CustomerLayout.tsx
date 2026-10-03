@@ -3,6 +3,7 @@ import { useLocation, Link } from 'react-router-dom';
 import { CustomerSidebar } from './CustomerSidebar';
 import { CustomerFooter } from './CustomerFooter';
 import { BackendPulse } from '../common/BackendPulse';
+import { AISupportAssistant } from '../common/AISupportAssistant';
 import { Menu } from 'lucide-react';
 
 interface CustomerLayoutProps {
@@ -118,6 +119,9 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
 
         {/* Customer Footer */}
         <CustomerFooter />
+
+        {/* Floating AI Support Assistant */}
+        <AISupportAssistant role="customer" />
       </div>
     </div>
   );

@@ -595,17 +595,18 @@ class ProviderServiceDomain:
             .all()
         )
         today_count = sum(1 for b in bookings if b.scheduled_time and b.scheduled_time.date() == today)
-        active_count = sum(1 for b in bookings if b.status in ["Accepted", "Started"])
+        active_statuses = ["Accepted", "On The Way", "Arrived", "Started"]
+        active_count = sum(1 for b in bookings if b.status in active_statuses)
         completed_count = sum(1 for b in bookings if b.status == "Completed")
-        pending_count = sum(1 for b in bookings if b.status == "Requested")
+        pending_count = sum(1 for b in bookings if b.status in ["Requested", "Assigned"])
         total_earnings = sum(Decimal(str(b.total_price or 0)) for b in bookings if b.status == "Completed")
         pipeline = [
             b for b in bookings
-            if b.scheduled_time and b.scheduled_time.date() >= today and b.status in ["Requested", "Accepted", "Started"]
+            if b.scheduled_time and b.scheduled_time.date() >= today and b.status in ["Requested", "Assigned", "Accepted", "On The Way", "Arrived", "Started"]
         ]
         urgent_alerts = sum(
             1 for b in bookings
-            if (b.emergency_flag == "EMERGENCY" and b.status in ["Requested", "Accepted"])
+            if (b.emergency_flag == "EMERGENCY" and b.status in ["Requested", "Assigned", "Accepted"])
         )
 
         recent_activity = []

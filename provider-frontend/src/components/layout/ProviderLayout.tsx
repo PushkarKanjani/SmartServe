@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { apiClient } from '../../api/client';
 import { BackendPulse } from '../common/BackendPulse';
+import { AISupportAssistant } from '../common/AISupportAssistant';
 
 export const ProviderLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -286,6 +287,9 @@ export const ProviderLayout: React.FC = () => {
         <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">
           <Outlet />
         </main>
+
+        {/* Floating AI Support Assistant */}
+        <AISupportAssistant role="provider" />
       </div>
     </div>
   );

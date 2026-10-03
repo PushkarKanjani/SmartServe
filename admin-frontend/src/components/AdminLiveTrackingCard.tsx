@@ -257,8 +257,8 @@ export const AdminLiveTrackingCard: React.FC<AdminLiveTrackingCardProps> = ({
   ) => {
     if (!providerMarkerRef.current || !mapRef.current) return;
 
-    // 1. Log Location Update Received (Requirement)
-    console.log(`[TRACKING]\nlocation update received:\nlat=${targetLat}\nlng=${targetLng}\ntimestamp=${providerLocation?.updated_at || new Date().toISOString()}`);
+    // 1. Log Location Update Received (Standardized GPS Format)
+    console.log(`GPS RECEIVED:\nlat=${targetLat}\nlng=${targetLng}\nspeed=${telemetrySpeed !== undefined && telemetrySpeed !== null ? telemetrySpeed : 'null'}\nheading=${telemetryHeading !== undefined && telemetryHeading !== null ? telemetryHeading : 'null'}\ntimestamp=${providerLocation?.updated_at || new Date().toISOString()}`);
 
     let snappedLat = targetLat;
     let snappedLng = targetLng;
@@ -311,6 +311,7 @@ export const AdminLiveTrackingCard: React.FC<AdminLiveTrackingCardProps> = ({
     if (!currentPosRef.current) {
       currentPosRef.current = { lat: snappedLat, lng: snappedLng };
       providerMarkerRef.current.setLatLng([snappedLat, snappedLng]);
+      console.log(`MARKER UPDATE:\noldLat=${snappedLat}\noldLng=${snappedLng}\nnewLat=${snappedLat}\nnewLng=${snappedLng}`);
       if (travelledCoords.length > 0 && remainingCoords.length > 0) {
         updateRouteLayers(travelledCoords, remainingCoords);
       }
@@ -320,11 +321,11 @@ export const AdminLiveTrackingCard: React.FC<AdminLiveTrackingCardProps> = ({
     const startLat = currentPosRef.current.lat;
     const startLng = currentPosRef.current.lng;
 
-    // 2. Log Provider Marker Update (Requirement)
-    console.log(`[TRACKING]\nprovider marker update:\nfrom=${startLat.toFixed(5)},${startLng.toFixed(5)}\nto=${snappedLat.toFixed(5)},${snappedLng.toFixed(5)}`);
+    // 2. Log Provider Marker Update (Requirement format)
+    console.log(`MARKER UPDATE:\noldLat=${startLat}\noldLng=${startLng}\nnewLat=${snappedLat}\nnewLng=${snappedLng}`);
 
-    // If identical coordinates received repeatedly, do NOT pretend to move
-    if (Math.abs(startLat - snappedLat) < 1e-6 && Math.abs(startLng - snappedLng) < 1e-6) {
+    // If oldLat == newLat AND oldLng == newLng: the provider marker MUST NOT move.
+    if (Math.abs(startLat - snappedLat) < 1e-7 && Math.abs(startLng - snappedLng) < 1e-7) {
       return;
     }
 

@@ -82,3 +82,32 @@ export const sendBookingChatMessage = async (bookingId: string, message_text: st
   const res = await apiClient.post<TicketMessageItem>(`/providers/me/bookings/${bookingId}/chat/messages`, { message_text });
   return res.data;
 };
+
+// ── Limited AI Support Assistant ──────────────────────────
+export interface AIChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AIChatRequestPayload {
+  message: string;
+  history?: AIChatMessage[];
+  booking_id?: string | null;
+}
+
+export interface AIChatResponseData {
+  response: string;
+  escalated: boolean;
+  escalation_reason?: string | null;
+  ticket_id?: string | null;
+  ticket_reference?: string | null;
+  message_count: number;
+  max_messages: number;
+  status: 'success' | 'escalated' | 'unavailable';
+}
+
+export const sendAIChatMessage = async (payload: AIChatRequestPayload): Promise<AIChatResponseData> => {
+  const res = await apiClient.post<AIChatResponseData>('/support/ai/chat', payload);
+  return res.data;
+};
+

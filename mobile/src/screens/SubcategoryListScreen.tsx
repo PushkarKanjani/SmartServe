@@ -9,12 +9,13 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import { ArrowLeft, ChevronRight, Layers } from 'lucide-react-native';
 import { catalogApi, ServiceItem } from '../api/catalog';
 import { getServiceImage } from '../utils/serviceImages';
 import { formatCategoryDisplayName } from '../utils/formatters';
 
 export const SubcategoryListScreen = ({ route, navigation }: any) => {
-  const { category } = route.params;
+  const { category, categoryName } = route.params;
   const [subcategories, setSubcategories] = useState<Array<{ name: string; count: number }>>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -42,19 +43,24 @@ export const SubcategoryListScreen = ({ route, navigation }: any) => {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#1E40AF" />
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={styles.loadingText}>Loading subcategories...</Text>
       </SafeAreaView>
     );
   }
 
+  const title = categoryName || formatCategoryDisplayName(category);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backBtnText}>← Categories</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+          <ArrowLeft size={18} color="#0F172A" />
         </TouchableOpacity>
-        <Text style={styles.title}>{formatCategoryDisplayName(category)}</Text>
-        <Text style={styles.subtitle}>{subcategories.length} specialized subcategories</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title} numberOfLines={1}>{title}</Text>
+          <Text style={styles.subtitle}>{subcategories.length} specialized service groups</Text>
+        </View>
       </View>
 
       <FlatList
@@ -78,11 +84,13 @@ export const SubcategoryListScreen = ({ route, navigation }: any) => {
             >
               <Image source={{ uri: imgUrl }} style={styles.cardImage} />
               <View style={styles.cardOverlay}>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.cardTitle}>{item.name}</Text>
-                  <Text style={styles.cardCount}>{item.count} services available</Text>
+                  <Text style={styles.cardCount}>{item.count} certified services</Text>
                 </View>
-                <Text style={styles.cardAction}>View Services →</Text>
+                <View style={styles.arrowBadge}>
+                  <ChevronRight size={16} color="#2563EB" />
+                </View>
               </View>
             </TouchableOpacity>
           );
@@ -93,84 +101,61 @@ export const SubcategoryListScreen = ({ route, navigation }: any) => {
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FAF9F5',
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#FAF9F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  safeArea: { flex: 1, backgroundColor: '#FAF9F5' },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FAF9F5' },
+  loadingText: { marginTop: 12, fontSize: 14, color: '#64748B', fontWeight: '600' },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
   backBtn: {
-    marginBottom: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backBtnText: {
-    fontSize: 14,
-    color: '#2563EB',
-    fontWeight: '600',
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 2,
-    marginBottom: 8,
-  },
-  listContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
+  title: { fontSize: 18, fontWeight: '800', color: '#0F172A' },
+  subtitle: { fontSize: 12, color: '#64748B', marginTop: 1 },
+  listContainer: { padding: 20, paddingBottom: 40 },
   card: {
-    height: 120,
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 12,
+    height: 110,
     backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    marginBottom: 12,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    position: 'relative',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 2,
   },
-  cardImage: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: '#E2E8F0',
-  },
+  cardImage: { width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 },
   cardOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(15, 23, 42, 0.55)',
-    padding: 16,
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    paddingHorizontal: 18,
   },
-  cardTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  cardCount: {
-    fontSize: 12,
-    color: '#E2E8F0',
-    marginTop: 2,
-  },
-  cardAction: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#93C5FD',
+  cardTitle: { fontSize: 16, fontWeight: '800', color: '#FFFFFF', marginBottom: 2 },
+  cardCount: { fontSize: 12, color: '#CBD5E1' },
+  arrowBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

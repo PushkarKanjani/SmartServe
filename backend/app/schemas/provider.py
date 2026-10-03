@@ -265,9 +265,14 @@ class ProviderBookingResponse(BaseModel):
 
 
 class BookingStatusUpdatePayload(BaseModel):
-    status: str = Field(..., description="Target booking status (Accepted, Rejected, Started, Completed)")
+    status: Optional[str] = Field(None, description="Target booking status (Accepted, Rejected, Started, Completed, On The Way, Arrived)")
+    next_status: Optional[str] = Field(None, description="Alternative target status field")
     reason: Optional[str] = Field(None, description="Reason for status change")
     otp_code: Optional[str] = Field(None, description="Customer OTP verification code")
+
+    @property
+    def target_status(self) -> str:
+        return self.status or self.next_status or ""
 
 
 class BookingStartPayload(BaseModel):

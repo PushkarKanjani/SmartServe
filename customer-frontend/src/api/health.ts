@@ -10,7 +10,13 @@ export interface HealthCheckResult {
 }
 
 export const checkBackendHealth = async (): Promise<HealthCheckResult> => {
-  const backendBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+  let backendBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1') {
+      backendBase = `http://${host}:8000`;
+    }
+  }
   
   let systemOnline = false;
   let statusCode: number | undefined;

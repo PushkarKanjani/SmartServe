@@ -7,7 +7,6 @@ import { formatCurrencyINR } from '../utils/formatters';
 import { getCategoryImageUrl, getServiceImage } from '../utils/serviceImages';
 import { 
   Search, 
-  Sparkles, 
   ArrowRight, 
   Calendar, 
   Clock, 
@@ -16,6 +15,8 @@ import {
   Tag,
   ChevronRight
 } from 'lucide-react';
+
+import { HomePromoCarousel } from '../components/home/HomePromoCarousel';
 
 export const CustomerHome: React.FC = () => {
   const navigate = useNavigate();
@@ -60,52 +61,32 @@ export const CustomerHome: React.FC = () => {
     }
   };
 
-  const userName = user?.full_name ? user.full_name.split(' ')[0] : 'Guest';
-
   return (
     <div className="space-y-12 font-sans max-w-7xl mx-auto">
       
-      {/* HERO BANNER & SEARCH */}
-      <div className="relative rounded-3xl overflow-hidden bg-[#2F5233] text-white p-8 sm:p-12 lg:p-16 border border-[#3D6B42] shadow-sm">
-        {/* Subtle decorative gold ambient glow */}
-        <div className="absolute top-0 right-0 -mr-24 -mt-24 w-96 h-96 bg-[#C9A15A]/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-20 w-80 h-80 bg-[#7A9E6E]/20 rounded-full blur-3xl pointer-events-none" />
+      {/* 1. AUTO-SCROLLING PROMOTIONAL CAROUSEL & SEARCH */}
+      <div className="space-y-4">
+        <HomePromoCarousel />
 
-        <div className="relative z-10 max-w-2xl space-y-6">
-          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#FAF7F0]/15 text-[#FAF7F0] border border-[#FAF7F0]/25 text-xs font-bold uppercase tracking-wider backdrop-blur-xs">
-            <Sparkles className="w-3.5 h-3.5 text-[#C9A15A]" />
-            Verified Home & Urban Services
-          </span>
-
-          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal tracking-tight leading-[1.15] text-white">
-            Welcome back, {userName}! <br />
-            <span className="text-[#C9A15A] italic">What service do you need today?</span>
-          </h1>
-
-          <p className="text-sm sm:text-base text-[#FAF7F0]/80 font-normal leading-relaxed">
-            Book certified expert technicians, deep cleaning teams, salon stylists, and home specialists with fixed, upfront pricing.
-          </p>
-
-          <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 p-2 bg-[#FAF7F0] rounded-2xl shadow-md border border-[#E5DEC9]">
-            <div className="flex-1 flex items-center gap-3 px-3">
-              <Search className="w-5 h-5 text-[#1F2A1E]/40 flex-shrink-0" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search AC repair, bridal makeup, sofa cleaning, plumbing..."
-                className="w-full h-12 bg-transparent text-[#1F2A1E] placeholder-[#1F2A1E]/40 font-medium text-sm focus:outline-none"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-sm rounded-xl transition-all shadow-xs flex items-center gap-2 flex-shrink-0 cursor-pointer"
-            >
-              <span>Search</span>
-              <ArrowRight className="w-4 h-4 text-[#C9A15A]" />
-            </button>
-          </form>
-        </div>
+        <form onSubmit={handleSearchSubmit} className="flex items-center gap-2 p-2 bg-white rounded-2xl shadow-xs border border-[#E5DEC9] transition-all focus-within:border-[#2F5233]/60 focus-within:shadow-sm">
+          <div className="flex-1 flex items-center gap-3 px-3">
+            <Search className="w-5 h-5 text-[#1F2A1E]/40 flex-shrink-0" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search AC repair, salon, deep cleaning, electrician, plumbing, pest control..."
+              className="w-full h-11 bg-transparent text-[#1F2A1E] placeholder-[#1F2A1E]/45 font-medium text-sm focus:outline-none"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-6 py-2.5 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-sm rounded-xl transition-all shadow-xs flex items-center gap-2 flex-shrink-0 cursor-pointer"
+          >
+            <span>Search</span>
+            <ArrowRight className="w-4 h-4 text-[#C9A15A]" />
+          </button>
+        </form>
       </div>
 
       {/* ACTIVE BOOKINGS BANNER */}

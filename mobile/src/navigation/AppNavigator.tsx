@@ -1,11 +1,16 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 
 import { useAuth } from '../context/AuthContext';
+
+// Auth screens
 import { LoginScreen } from '../screens/LoginScreen';
+import { SignupScreen } from '../screens/SignupScreen';
+
+// Main app screens
 import { HomeScreen } from '../screens/HomeScreen';
 import { CatalogScreen } from '../screens/CatalogScreen';
 import { SubcategoryListScreen } from '../screens/SubcategoryListScreen';
@@ -13,85 +18,106 @@ import { ServiceListScreen } from '../screens/ServiceListScreen';
 import { ServiceDetailScreen } from '../screens/ServiceDetailScreen';
 import { BookingModalScreen } from '../screens/BookingModalScreen';
 import { BookingsListScreen } from '../screens/BookingsListScreen';
+import { LiveTrackingScreen } from '../screens/LiveTrackingScreen';
+import { SupportScreen } from '../screens/SupportScreen';
+import { SupportDetailScreen } from '../screens/SupportDetailScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
 const RootStack = createNativeStackNavigator();
+const AuthStack = createNativeStackNavigator();
 const CatalogStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const CatalogNavigator = () => {
-  return (
-    <CatalogStack.Navigator screenOptions={{ headerShown: false }}>
-      <CatalogStack.Screen name="CatalogRoot" component={CatalogScreen} />
-      <CatalogStack.Screen name="SubcategoryList" component={SubcategoryListScreen} />
-      <CatalogStack.Screen name="ServiceList" component={ServiceListScreen} />
-    </CatalogStack.Navigator>
-  );
-};
+const AuthNavigator = () => (
+  <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Screen name="Login" component={LoginScreen} />
+    <AuthStack.Screen name="Signup" component={SignupScreen} />
+  </AuthStack.Navigator>
+);
 
-const MainTabNavigator = () => {
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: '#2563EB',
-        tabBarInactiveTintColor: '#64748B',
-        tabBarLabelStyle: styles.tabBarLabel,
+const CatalogNavigator = () => (
+  <CatalogStack.Navigator screenOptions={{ headerShown: false }}>
+    <CatalogStack.Screen name="CatalogRoot" component={CatalogScreen} />
+    <CatalogStack.Screen name="SubcategoryList" component={SubcategoryListScreen} />
+    <CatalogStack.Screen name="ServiceList" component={ServiceListScreen} />
+  </CatalogStack.Navigator>
+);
+
+import { Home, LayoutGrid, CalendarDays, Headphones, User } from 'lucide-react-native';
+
+const MainTabNavigator = () => (
+  <Tab.Navigator
+    screenOptions={{
+      headerShown: false,
+      tabBarStyle: styles.tabBar,
+      tabBarActiveTintColor: '#1E40AF',
+      tabBarInactiveTintColor: '#94A3B8',
+      tabBarLabelStyle: styles.tabBarLabel,
+    }}
+  >
+    <Tab.Screen
+      name="HomeTab"
+      component={HomeScreen}
+      options={{
+        tabBarLabel: 'Home',
+        tabBarIcon: ({ color, size }) => <Home size={22} color={color} />,
       }}
-    >
-      <Tab.Screen
-        name="HomeTab"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <Text style={{ fontSize: 20, color }}>{focused ? '🏠' : '🏡'}</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="CatalogTab"
-        component={CatalogNavigator}
-        options={{
-          tabBarLabel: 'Catalog',
-          tabBarIcon: ({ color, focused }) => (
-            <Text style={{ fontSize: 20, color }}>{focused ? '📦' : '📑'}</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="BookingsTab"
-        component={BookingsListScreen}
-        options={{
-          tabBarLabel: 'Bookings',
-          tabBarIcon: ({ color, focused }) => (
-            <Text style={{ fontSize: 20, color }}>{focused ? '📅' : '🗓️'}</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="ProfileTab"
-        component={ProfileScreen}
-        options={{
-          tabBarLabel: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <Text style={{ fontSize: 20, color }}>{focused ? '👤' : '👤'}</Text>
-          ),
-        }}
-      />
-    </Tab.Navigator>
-  );
-};
+    />
+    <Tab.Screen
+      name="CatalogTab"
+      component={CatalogNavigator}
+      options={{
+        tabBarLabel: 'Services',
+        tabBarIcon: ({ color, size }) => <LayoutGrid size={22} color={color} />,
+      }}
+    />
+    <Tab.Screen
+      name="BookingsTab"
+      component={BookingsListScreen}
+      options={{
+        tabBarLabel: 'Bookings',
+        tabBarIcon: ({ color, size }) => <CalendarDays size={22} color={color} />,
+      }}
+    />
+    <Tab.Screen
+      name="SupportTab"
+      component={SupportScreen}
+      options={{
+        tabBarLabel: 'Support',
+        tabBarIcon: ({ color, size }) => <Headphones size={22} color={color} />,
+      }}
+    />
+    <Tab.Screen
+      name="ProfileTab"
+      component={ProfileScreen}
+      options={{
+        tabBarLabel: 'Profile',
+        tabBarIcon: ({ color, size }) => <User size={22} color={color} />,
+      }}
+    />
+  </Tab.Navigator>
+);
 
 export const AppNavigator = () => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={styles.splashContainer}>
+        <View style={styles.splashLogo}>
+          <Text style={styles.splashLogoText}>S</Text>
+        </View>
+        <Text style={styles.splashBrand}>SmartServe</Text>
+        <ActivityIndicator color="#1E40AF" style={{ marginTop: 24 }} />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         {!user ? (
-          <RootStack.Screen name="Login" component={LoginScreen} />
+          <RootStack.Screen name="Auth" component={AuthNavigator} />
         ) : (
           <>
             <RootStack.Screen name="Main" component={MainTabNavigator} />
@@ -105,6 +131,16 @@ export const AppNavigator = () => {
               component={BookingModalScreen}
               options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
             />
+            <RootStack.Screen
+              name="LiveTracking"
+              component={LiveTrackingScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
+            <RootStack.Screen
+              name="SupportDetail"
+              component={SupportDetailScreen}
+              options={{ animation: 'slide_from_right' }}
+            />
           </>
         )}
       </RootStack.Navigator>
@@ -117,12 +153,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    height: 60,
+    height: 64,
     paddingBottom: 8,
     paddingTop: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 10,
   },
   tabBarLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
+  splashContainer: {
+    flex: 1,
+    backgroundColor: '#FAF9F5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splashLogo: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    backgroundColor: '#1E40AF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    shadowColor: '#1E40AF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  splashLogoText: { fontSize: 36, fontWeight: '800', color: '#FFFFFF' },
+  splashBrand: { fontSize: 28, fontWeight: '800', color: '#0F172A', letterSpacing: -0.5 },
 });

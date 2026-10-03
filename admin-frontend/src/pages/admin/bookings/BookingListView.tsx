@@ -101,6 +101,22 @@ export const BookingListView: React.FC = () => {
           prev.map((b) => (String(b.id).toLowerCase() === targetId ? { ...b, status: 'Accepted' } : b))
         );
         getBookingsList().then((data) => setBookings(data)).catch(() => {});
+      } else if (
+        type === 'BOOKING_STATUS_UPDATED' ||
+        type === 'BOOKING_STARTED' ||
+        type === 'BOOKING_COMPLETED' ||
+        type === 'booking.updated' ||
+        type === 'booking.started' ||
+        type === 'booking.completed'
+      ) {
+        const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
+        const newStatus = payload.status || payload.booking?.status;
+        if (targetId && newStatus) {
+          setBookings((prev) =>
+            prev.map((b) => (String(b.id).toLowerCase() === targetId ? { ...b, status: newStatus } : b))
+          );
+        }
+        getBookingsList().then((data) => setBookings(data)).catch(() => {});
       } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
         const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
         const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Rejected by provider';
@@ -121,8 +137,14 @@ export const BookingListView: React.FC = () => {
       }
     });
 
+    // Fallback polling interval to guarantee real-time sync even if WebSocket is disconnected
+    const fallbackPoll = setInterval(() => {
+      fetchBookingsData();
+    }, 3000);
+
     return () => {
       unsubscribeWs();
+      clearInterval(fallbackPoll);
     };
   }, []);
 

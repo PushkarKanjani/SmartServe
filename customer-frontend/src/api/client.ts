@@ -1,6 +1,17 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+export function getApiBaseUrl(): string {
+  // If loaded in a browser/WebView, dynamically match the host IP
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const host = window.location.hostname;
+    if (host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:8000/api/v1`;
+    }
+  }
+  return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+}
+
+export const baseURL = getApiBaseUrl();
 
 export const apiClient = axios.create({
   baseURL,

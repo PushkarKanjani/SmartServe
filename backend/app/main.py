@@ -81,21 +81,25 @@ async def validation_exception_handler(request, exc: RequestValidationError):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|192\.168\.[0-9]+\.[0-9]+|172\.[0-9]+\.[0-9]+\.[0-9]+|10\.[0-9]+\.[0-9]+\.[0-9]+)(:[0-9]+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+from app.api.v1.ai_support import router as ai_support_router
+
 # Mount API Routers
 app.include_router(api_v1_router)
 app.include_router(customer_router, prefix=settings.API_V1_PREFIX)
+app.include_router(ai_support_router)
 app.include_router(ws_router)
 app.include_router(ws_router, prefix=settings.API_V1_PREFIX)
 
 
 
 @app.get("/health", tags=["System"])
+@app.get("/api/v1/health", tags=["System"])
 def health_check():
     return {
         "status": "healthy",

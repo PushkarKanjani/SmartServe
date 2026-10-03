@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getCustomerBookings, BookingDetail } from '../api/bookings';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
-import { Calendar, Clock, ChevronRight, Loader2, Plus, AlertCircle, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, ChevronRight, Loader2, Plus, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
 import { subscribeToRealtime } from '../utils/realtime';
 
 export const CustomerBookings: React.FC = () => {
@@ -57,10 +57,20 @@ export const CustomerBookings: React.FC = () => {
         type === 'BOOKING_CREATED' ||
         type === 'BOOKING_ACCEPTED' ||
         type === 'BOOKING_REJECTED' ||
+        type === 'BOOKING_STATUS_UPDATED' ||
+        type === 'BOOKING_STARTED' ||
+        type === 'BOOKING_COMPLETED' ||
         type === 'booking.created' ||
         type === 'booking.accepted' ||
-        type === 'booking.rejected'
+        type === 'booking.rejected' ||
+        type === 'booking.updated' ||
+        type === 'booking.started' ||
+        type === 'booking.completed'
       ) {
+        const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
+        const newStatus = payload.status || payload.booking?.status;
+        const newOtp = payload.otp_code || payload.booking?.otp_code;
+
         if (type === 'BOOKING_CREATED' || type === 'booking.created') {
           if (payload.booking) {
             const newBooking = { ...payload.booking, id: String(payload.booking_id || payload.booking?.id) };
@@ -71,44 +81,43 @@ export const CustomerBookings: React.FC = () => {
             });
           }
           getCustomerBookings().then((data) => setBookings(data)).catch(() => {});
-        } else if (type === 'BOOKING_ACCEPTED' || type === 'booking.accepted') {
-          const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
-          setBookings((prev) =>
-            prev.map((b) => (String(b.id).toLowerCase() === targetId ? { ...b, status: 'Accepted' } : b))
-          );
-          getCustomerBookings().then((data) => {
-            setBookings(data.map((fresh) => (String(fresh.id).toLowerCase() === targetId ? { ...fresh, status: 'Accepted' } : fresh)));
-          }).catch(() => {});
-        } else if (type === 'BOOKING_REJECTED' || type === 'booking.rejected') {
-          const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
-          const reason = payload.reason || payload.rejection_reason || payload.cancellation_reason || 'Provider unavailable';
+        } else if (targetId && newStatus) {
           setBookings((prev) =>
             prev.map((b) =>
               String(b.id).toLowerCase() === targetId
-                ? { ...b, status: 'Rejected', cancellation_reason: reason, rejection_reason: reason } as any
+                ? {
+                    ...b,
+                    status: newStatus,
+                    ...(newOtp ? { otp_code: newOtp } : {}),
+                    ...(payload.reason ? { cancellation_reason: payload.reason, rejection_reason: payload.reason } : {}),
+                  }
                 : b
             )
           );
-          getCustomerBookings().then((data) => {
-            setBookings(data.map((fresh) => (String(fresh.id).toLowerCase() === targetId ? { ...fresh, status: 'Rejected', cancellation_reason: reason } : fresh)));
-          }).catch(() => {});
+          getCustomerBookings().then((data) => setBookings(data)).catch(() => {});
         } else {
           getCustomerBookings().then((data) => setBookings(data)).catch(() => {});
         }
       }
     });
 
+    // Fallback polling interval to guarantee real-time sync even if WebSocket is disconnected
+    const fallbackPoll = setInterval(() => {
+      getCustomerBookings().then((data) => setBookings(data)).catch(() => {});
+    }, 3000);
+
     return () => {
       unsubscribeWs();
+      clearInterval(fallbackPoll);
     };
   }, []);
 
   const filteredBookings = bookings.filter((b) => {
     if (statusFilter === 'all') return true;
-    const st = b.status.toLowerCase();
-    if (statusFilter === 'active') return st === 'requested' || st === 'assigned' || st === 'accepted' || st === 'started';
-    if (statusFilter === 'completed') return st === 'completed' || st === 'paid';
-    if (statusFilter === 'cancelled') return st === 'cancelled' || st === 'rejected';
+    const st = (b.status || '').toLowerCase().replace(/_/g, ' ').trim();
+    if (statusFilter === 'active') return ['requested', 'assigned', 'accepted', 'on the way', 'arrived', 'started'].includes(st);
+    if (statusFilter === 'completed') return ['completed', 'paid'].includes(st);
+    if (statusFilter === 'cancelled') return ['cancelled', 'rejected'].includes(st);
     return true;
   });
 
@@ -232,6 +241,13 @@ export const CustomerBookings: React.FC = () => {
                       </span>
                       <span>• Provider: <strong className="text-slate-700">{b.provider_name || 'Assigned Soon'}</strong></span>
                     </div>
+
+                    {b.otp_code && ['accepted', 'on the way', 'arrived'].includes(stLower) && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-bold w-fit mt-1">
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span>Start OTP: {b.otp_code}</span>
+                      </div>
+                    )}
 
                     {(b.cancellation_reason || (b as any).rejection_reason) && (
                       <div className="text-xs text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 mt-1 inline-block">
