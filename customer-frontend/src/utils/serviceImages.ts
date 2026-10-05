@@ -1,17 +1,17 @@
 /**
  * SmartServe Shared Service & Category Photography
- * SINGLE SOURCE OF TRUTH: Directly imported and re-exported from Admin Catalog Master
- * Source: admin-frontend/src/utils/serviceImages.ts
+ * SINGLE SOURCE OF TRUTH: Directly imported and re-exported from repository shared utility
+ * Source: shared/serviceImages.ts
  *
  * There is NO independently maintained duplicate photography dictionary here.
  * Customer consumes the EXACT same image mappings and resolver as Admin.
  */
 
-export * from '../../../admin-frontend/src/utils/serviceImages';
+export * from '../../../shared/serviceImages';
 import {
   getServiceImage as adminGetServiceImage,
   DEFAULT_SERVICE_IMAGE
-} from '../../../admin-frontend/src/utils/serviceImages';
+} from '../../../shared/serviceImages';
 
 export function getCategoryImageUrl(categoryName?: string | null): string {
   if (!categoryName) return DEFAULT_SERVICE_IMAGE;

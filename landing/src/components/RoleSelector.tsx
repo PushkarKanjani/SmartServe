@@ -23,6 +23,9 @@ function CheckIcon({ color }: { color: string }) {
   );
 }
 
+const customerUrl = import.meta.env.VITE_CUSTOMER_URL || 'http://localhost:5174';
+const providerUrl = import.meta.env.VITE_PROVIDER_URL || 'http://localhost:5175';
+
 export default function RoleSelector() {
   return (
     <section
@@ -175,7 +178,7 @@ export default function RoleSelector() {
             </div>
 
             <a
-              href="http://localhost:5174"
+              href={customerUrl}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -295,7 +298,7 @@ export default function RoleSelector() {
             </div>
 
             <a
-              href="http://localhost:5175"
+              href={providerUrl}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import ssl
 from typing import Optional, Union, Dict, Any
 from aiokafka import AIOKafkaProducer
 from app.core.config import settings
@@ -24,12 +25,27 @@ class KafkaProducerService:
 
         try:
             self._loop = asyncio.get_running_loop()
-            self._producer = AIOKafkaProducer(
-                bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-                value_serializer=lambda v: json.dumps(v, default=str).encode("utf-8"),
-                request_timeout_ms=5000,
-                retry_backoff_ms=500,
-            )
+
+            producer_kwargs: Dict[str, Any] = {
+                "bootstrap_servers": settings.KAFKA_BOOTSTRAP_SERVERS,
+                "value_serializer": lambda v: json.dumps(v, default=str).encode("utf-8"),
+                "request_timeout_ms": 5000,
+                "retry_backoff_ms": 500,
+            }
+
+            protocol = (settings.KAFKA_SECURITY_PROTOCOL or "PLAINTEXT").upper()
+            if protocol in ("SASL_SSL", "SASL_PLAINTEXT", "SSL"):
+                producer_kwargs["security_protocol"] = protocol
+                if "SASL" in protocol:
+                    producer_kwargs["sasl_mechanism"] = (settings.KAFKA_SASL_MECHANISM or "PLAIN").upper()
+                    if settings.KAFKA_SASL_USERNAME:
+                        producer_kwargs["sasl_plain_username"] = settings.KAFKA_SASL_USERNAME
+                    if settings.KAFKA_SASL_PASSWORD:
+                        producer_kwargs["sasl_plain_password"] = settings.KAFKA_SASL_PASSWORD
+                if "SSL" in protocol:
+                    producer_kwargs["ssl_context"] = ssl.create_default_context()
+
+            self._producer = AIOKafkaProducer(**producer_kwargs)
             await self._producer.start()
             self._is_running = True
             logger.info(f"[Kafka Producer] Successfully connected to broker at {settings.KAFKA_BOOTSTRAP_SERVERS}")

@@ -1,14 +1,20 @@
 import axios from 'axios';
 
 export function getApiBaseUrl(): string {
-  // If loaded in a browser/WebView, dynamically match the host IP
+  // 1. First use VITE_API_BASE_URL when configured
+  const configuredUrl = import.meta.env.VITE_API_BASE_URL;
+  if (configuredUrl && typeof configuredUrl === 'string' && configuredUrl.trim() !== '') {
+    return configuredUrl.trim().replace(/\/$/, '');
+  }
+
+  // 2. Only if VITE_API_BASE_URL is not configured, use local-development fallback
   if (typeof window !== 'undefined' && window.location && window.location.hostname) {
     const host = window.location.hostname;
     if (host !== 'localhost' && host !== '127.0.0.1') {
       return `http://${host}:8000/api/v1`;
     }
   }
-  return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+  return 'http://127.0.0.1:8000/api/v1';
 }
 
 export const baseURL = getApiBaseUrl();

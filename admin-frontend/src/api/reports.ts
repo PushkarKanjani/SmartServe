@@ -1,4 +1,4 @@
-import { apiClient } from './client';
+import { apiClient, baseURL as API_BASE_URL } from './client';
 
 export interface DailyTrendItem {
   day: string;
@@ -62,8 +62,6 @@ export const getServiceDemandReport = async (): Promise<ServiceDemandReportItem[
   const response = await apiClient.get<ServiceDemandReportItem[]>('/admin/reports/service-demand');
   return response.data;
 };
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
 export const downloadExcelReport = async (): Promise<void> => {
   const token = localStorage.getItem('smartserve_token');

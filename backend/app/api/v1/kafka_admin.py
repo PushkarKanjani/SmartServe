@@ -20,6 +20,8 @@ def get_kafka_status():
         "enabled": settings.KAFKA_ENABLED,
         "bootstrap_servers": settings.KAFKA_BOOTSTRAP_SERVERS,
         "consumer_group": settings.KAFKA_CONSUMER_GROUP,
+        "security_protocol": settings.KAFKA_SECURITY_PROTOCOL,
+        "sasl_mechanism": settings.KAFKA_SASL_MECHANISM if "SASL" in (settings.KAFKA_SECURITY_PROTOCOL or "").upper() else None,
         "producer_connected": kafka_producer._is_running,
         "consumer_connected": kafka_consumer.is_running(),
         "topics": KafkaTopics.ALL_TOPICS,

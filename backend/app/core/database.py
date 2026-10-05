@@ -9,18 +9,31 @@ from app.core.config import settings
 def compile_jsonb_sqlite(type_, compiler, **kw):
     return "JSON"
 
+import re
+from urllib.parse import quote_plus
+
 database_url = settings.DATABASE_URL
 if database_url.startswith("postgresql") and "+psycopg2" not in database_url and "+asyncpg" not in database_url:
     database_url = database_url.replace("postgresql://", "postgresql+psycopg2://")
 
+# Handle passwords containing special characters like '@'
+m = re.match(r'^(postgres(?:ql)?(?:\+[a-zA-Z0-9_-]+)?:\/\/)([^:]+):(.*)@([^@:]+)(?::(\d+))?\/(.*)$', database_url)
+if m:
+    scheme, user, pwd, host, port, db = m.groups()
+    if "@" in pwd:
+        encoded_pwd = quote_plus(pwd)
+        port_part = f":{port}" if port else ""
+        database_url = f"{scheme}{user}:{encoded_pwd}@{host}{port_part}/{db}"
+
 def get_engine():
+    timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "15" if os.getenv("ENVIRONMENT") == "production" else "5"))
     try:
         if "postgresql" in database_url:
             engine_test = create_engine(
                 database_url,
                 pool_pre_ping=True,
                 pool_recycle=300,
-                connect_args={"connect_timeout": 3},
+                connect_args={"connect_timeout": timeout},
             )
             with engine_test.connect():
                 pass
@@ -30,6 +43,8 @@ def get_engine():
         else:
             return create_engine(database_url)
     except Exception as e:
+        if os.getenv("ENVIRONMENT") == "production":
+            raise e
         sqlite_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "smartserve_dev.db"))
         return create_engine(
             f"sqlite:///{sqlite_path}",

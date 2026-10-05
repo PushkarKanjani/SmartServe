@@ -5,25 +5,27 @@ from app.core.database import Base, engine
 from app.api.v1.router import api_v1_router
 from app.api.v1.customer import router as customer_router
 
-# Auto-create tables for local development mode
-Base.metadata.create_all(bind=engine)
-try:
-    from app.seed_admins import seed_initial_admins
-    seed_initial_admins()
-except Exception:
-    pass
-
-try:
-    from app.seed_providers import seed_initial_providers
-    seed_initial_providers()
-except Exception:
-    pass
-
-try:
-    from app.seed_bookings import seed_operational_bookings
-    seed_operational_bookings()
-except Exception:
-    pass
+# Auto-create tables and initial seeders only in non-production development mode
+if settings.ENVIRONMENT != "production":
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass
+    try:
+        from app.seed_admins import seed_initial_admins
+        seed_initial_admins()
+    except Exception:
+        pass
+    try:
+        from app.seed_providers import seed_initial_providers
+        seed_initial_providers()
+    except Exception:
+        pass
+    try:
+        from app.seed_bookings import seed_operational_bookings
+        seed_operational_bookings()
+    except Exception:
+        pass
 
 from contextlib import asynccontextmanager
 from fastapi.exceptions import RequestValidationError

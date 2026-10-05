@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import ssl
 from collections import deque
 from typing import Optional, Set, Dict, Any
 from aiokafka import AIOKafkaConsumer
@@ -69,13 +70,29 @@ class KafkaConsumerService:
                     f"[Kafka Consumer] Connecting to {settings.KAFKA_BOOTSTRAP_SERVERS} "
                     f"as group '{settings.KAFKA_CONSUMER_GROUP}' for topics {KafkaTopics.ALL_TOPICS}"
                 )
+                consumer_kwargs: Dict[str, Any] = {
+                    "bootstrap_servers": settings.KAFKA_BOOTSTRAP_SERVERS,
+                    "group_id": settings.KAFKA_CONSUMER_GROUP,
+                    "auto_offset_reset": "latest",
+                    "enable_auto_commit": True,
+                    "value_deserializer": lambda v: json.loads(v.decode("utf-8")),
+                }
+
+                protocol = (settings.KAFKA_SECURITY_PROTOCOL or "PLAINTEXT").upper()
+                if protocol in ("SASL_SSL", "SASL_PLAINTEXT", "SSL"):
+                    consumer_kwargs["security_protocol"] = protocol
+                    if "SASL" in protocol:
+                        consumer_kwargs["sasl_mechanism"] = (settings.KAFKA_SASL_MECHANISM or "PLAIN").upper()
+                        if settings.KAFKA_SASL_USERNAME:
+                            consumer_kwargs["sasl_plain_username"] = settings.KAFKA_SASL_USERNAME
+                        if settings.KAFKA_SASL_PASSWORD:
+                            consumer_kwargs["sasl_plain_password"] = settings.KAFKA_SASL_PASSWORD
+                    if "SSL" in protocol:
+                        consumer_kwargs["ssl_context"] = ssl.create_default_context()
+
                 self._consumer = AIOKafkaConsumer(
                     *KafkaTopics.ALL_TOPICS,
-                    bootstrap_servers=settings.KAFKA_BOOTSTRAP_SERVERS,
-                    group_id=settings.KAFKA_CONSUMER_GROUP,
-                    auto_offset_reset="latest",
-                    enable_auto_commit=True,
-                    value_deserializer=lambda v: json.loads(v.decode("utf-8")),
+                    **consumer_kwargs
                 )
                 await self._consumer.start()
                 retry_delay = 2.0

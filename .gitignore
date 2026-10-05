@@ -73,6 +73,7 @@ scratch/
 !backend/backup/**
 *.zip
 *.db
+*.dump
 *.sqlite
 *.sqlite3
 !backend/scripts/*.py

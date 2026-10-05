@@ -10,11 +10,28 @@ export interface HealthCheckResult {
 }
 
 export const checkBackendHealth = async (): Promise<HealthCheckResult> => {
-  let backendBase = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-    const host = window.location.hostname;
-    if (host !== 'localhost' && host !== '127.0.0.1') {
-      backendBase = `http://${host}:8000`;
+  let backendBase = '';
+
+  // 1. First priority: VITE_BACKEND_URL
+  const configuredBackend = import.meta.env.VITE_BACKEND_URL;
+  if (configuredBackend && typeof configuredBackend === 'string' && configuredBackend.trim() !== '') {
+    backendBase = configuredBackend.trim().replace(/\/$/, '');
+  } else {
+    // 2. Second priority: derive root from VITE_API_BASE_URL
+    const configuredApi = import.meta.env.VITE_API_BASE_URL;
+    if (configuredApi && typeof configuredApi === 'string' && configuredApi.trim() !== '') {
+      backendBase = configuredApi.trim().replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
+    } else {
+      // 3. Local-development fallback: match local LAN host IP
+      if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+        const host = window.location.hostname;
+        if (host !== 'localhost' && host !== '127.0.0.1') {
+          backendBase = `http://${host}:8000`;
+        }
+      }
+      if (!backendBase) {
+        backendBase = 'http://localhost:8000';
+      }
     }
   }
   
