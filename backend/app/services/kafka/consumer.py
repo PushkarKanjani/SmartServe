@@ -1,15 +1,16 @@
 import asyncio
 import json
 import logging
-import ssl
 from collections import deque
 from typing import Optional, Set, Dict, Any
+
 from aiokafka import AIOKafkaConsumer
 
 from app.core.config import settings
 from app.core.websockets import ws_manager
 from app.services.kafka.topics import KafkaTopics
 from app.services.kafka.store import kafka_event_store
+from app.services.kafka.transport import build_kafka_kwargs
 
 logger = logging.getLogger("smartserve.kafka.consumer")
 
@@ -54,45 +55,36 @@ class KafkaConsumerService:
             try:
                 await self._consumer.stop()
             except Exception as exc:
-                logger.warning(f"[Kafka Consumer] Error closing consumer: {exc}")
+                logger.warning("[Kafka Consumer] Error closing consumer: %s", exc)
             finally:
                 self._consumer = None
 
         logger.info("[Kafka Consumer] Background consumer stopped.")
 
     async def _run_consumer_loop(self):
-        """Main resilient consumer loop with retry backoff."""
+        """Main resilient consumer loop with exponential retry backoff."""
         retry_delay = 2.0
 
         while self._is_running:
             try:
                 logger.info(
-                    f"[Kafka Consumer] Connecting to {settings.KAFKA_BOOTSTRAP_SERVERS} "
-                    f"as group '{settings.KAFKA_CONSUMER_GROUP}' for topics {KafkaTopics.ALL_TOPICS}"
+                    "[Kafka Consumer] Connecting to %s... as group '%s' for topics %s",
+                    settings.KAFKA_BOOTSTRAP_SERVERS[:16],
+                    settings.KAFKA_CONSUMER_GROUP,
+                    KafkaTopics.ALL_TOPICS,
                 )
-                consumer_kwargs: Dict[str, Any] = {
-                    "bootstrap_servers": settings.KAFKA_BOOTSTRAP_SERVERS,
-                    "group_id": settings.KAFKA_CONSUMER_GROUP,
+
+                consumer_kwargs = build_kafka_kwargs()
+                consumer_kwargs.update({
+                    "group_id": settings.KAFKA_CONSUMER_GROUP,  # fixed — no random suffix
                     "auto_offset_reset": "latest",
                     "enable_auto_commit": True,
                     "value_deserializer": lambda v: json.loads(v.decode("utf-8")),
-                }
-
-                protocol = (settings.KAFKA_SECURITY_PROTOCOL or "PLAINTEXT").upper()
-                if protocol in ("SASL_SSL", "SASL_PLAINTEXT", "SSL"):
-                    consumer_kwargs["security_protocol"] = protocol
-                    if "SASL" in protocol:
-                        consumer_kwargs["sasl_mechanism"] = (settings.KAFKA_SASL_MECHANISM or "PLAIN").upper()
-                        if settings.KAFKA_SASL_USERNAME:
-                            consumer_kwargs["sasl_plain_username"] = settings.KAFKA_SASL_USERNAME
-                        if settings.KAFKA_SASL_PASSWORD:
-                            consumer_kwargs["sasl_plain_password"] = settings.KAFKA_SASL_PASSWORD
-                    if "SSL" in protocol:
-                        consumer_kwargs["ssl_context"] = ssl.create_default_context()
+                })
 
                 self._consumer = AIOKafkaConsumer(
                     *KafkaTopics.ALL_TOPICS,
-                    **consumer_kwargs
+                    **consumer_kwargs,
                 )
                 await self._consumer.start()
                 retry_delay = 2.0
@@ -107,10 +99,12 @@ class KafkaConsumerService:
                 logger.info("[Kafka Consumer] Consumer loop cancelled.")
                 break
             except Exception as exc:
+                safe_exc = str(exc).replace(settings.KAFKA_SASL_PASSWORD or "", "***")
                 logger.warning(
-                    f"[Kafka Consumer] Consumer encountered error: {exc}. Retrying in {retry_delay:.1f}s..."
+                    "[Kafka Consumer] Consumer error: %s. Retrying in %.1fs...",
+                    safe_exc, retry_delay,
                 )
-                kafka_event_store.record_error(str(exc))
+                kafka_event_store.record_error(safe_exc)
                 if self._consumer:
                     try:
                         await self._consumer.stop()
@@ -133,21 +127,19 @@ class KafkaConsumerService:
             if event_id:
                 if event_id in self._processed_event_ids:
                     logger.info(
-                        f"[Kafka Consumer IDEMPOTENT] Duplicate event received and safely skipped: "
-                        f"ID={event_id} | Topic={topic}"
+                        "[Kafka Consumer IDEMPOTENT] Duplicate skipped: ID=%s | Topic=%s",
+                        event_id, topic,
                     )
                     kafka_event_store.record_duplicate(topic, event_id)
                     return
 
-                # Record event_id to prevent duplicates
                 self._processed_event_ids.add(event_id)
                 self._processed_event_order.append(event_id)
-                # Purge old IDs if set gets too large
                 if len(self._processed_event_ids) > 10000:
                     oldest_id = self._processed_event_order.popleft()
                     self._processed_event_ids.discard(oldest_id)
 
-            # Record event in monitoring store
+            # Record in monitoring store
             kafka_event_store.record_consumed(topic, data)
 
             event_type = data.get("event_type", topic)
@@ -155,7 +147,7 @@ class KafkaConsumerService:
             ticket_id = data.get("ticket_id")
             payload = data.get("payload", {})
 
-            # 2. Topic-specific asynchronous processing
+            # Topic-specific dispatch
             if topic == KafkaTopics.BOOKING_CREATED or event_type == "booking.created":
                 await self._handle_booking_created(data, booking_id, payload)
             elif topic == KafkaTopics.BOOKING_ACCEPTED or event_type == "booking.accepted":
@@ -171,37 +163,33 @@ class KafkaConsumerService:
             elif topic == KafkaTopics.SUPPORT_MESSAGE or event_type == "support.message":
                 await self._handle_support_message(data, ticket_id, booking_id, payload)
             else:
-                logger.info(f"[Kafka Consumer] Received unhandled topic '{topic}': {data}")
+                logger.info("[Kafka Consumer] Unhandled topic '%s': %s", topic, data)
 
         except Exception as exc:
-            logger.error(f"[Kafka Consumer] Failed to process message from topic '{topic}': {exc}", exc_info=True)
+            logger.error(
+                "[Kafka Consumer] Failed to process message from topic '%s': %s",
+                topic, exc, exc_info=True,
+            )
             kafka_event_store.record_error(str(exc))
 
+    # ─── Event handlers ───────────────────────────────────────────────────────
+
     async def _handle_booking_created(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
-        """
-        Provider service consumes booking.created -> receives booking request.
-        Admin service consumes booking.created -> displays booking from PostgreSQL.
-        """
         provider_id = event.get("receiver_id") or payload.get("provider_id")
         provider_name = payload.get("provider_name", "Service Provider")
         customer_name = payload.get("customer_name", "Customer")
         service_name = payload.get("service_name", "Service")
         booking_ref = payload.get("booking_reference", booking_id)
 
-        # 1. Provider Service Consumer Log & Notification
         logger.info(
-            f"[Kafka Consumer -> Provider Service] Received booking.created event: "
-            f"Booking #{booking_ref} assigned to Provider '{provider_name}' (ID: {provider_id}) | "
-            f"Service: '{service_name}' | Customer: '{customer_name}'"
+            "[Kafka Consumer -> Provider Service] booking.created: #%s assigned to '%s' | Service: '%s' | Customer: '%s'",
+            booking_ref, provider_name, service_name, customer_name,
+        )
+        logger.info(
+            "[Kafka Consumer -> Admin Service] booking.created: #%s created. Admin oversight queue updated.",
+            booking_ref,
         )
 
-        # 2. Admin Service Consumer Log
-        logger.info(
-            f"[Kafka Consumer -> Admin Service] Received booking.created event: "
-            f"New booking #{booking_ref} created in PostgreSQL. Admin oversight queue updated."
-        )
-
-        # 3. Real-time broadcast to WebSockets
         broadcast_msg = {
             "event_id": event.get("event_id"),
             "type": "BOOKING_CREATED",
@@ -216,8 +204,7 @@ class KafkaConsumerService:
         if booking_id:
             channels.append(f"booking_{booking_id}")
         if provider_id:
-            channels.append(f"provider_{provider_id}")
-            channels.append(f"user_{provider_id}")
+            channels.extend([f"provider_{provider_id}", f"user_{provider_id}"])
         customer_id = payload.get("customer_id") or event.get("customer_id")
         if customer_id:
             channels.append(f"customer_{customer_id}")
@@ -232,27 +219,19 @@ class KafkaConsumerService:
             })
 
     async def _handle_booking_accepted(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
-        """
-        Customer receives the updated Accepted status.
-        Admin receives the updated Accepted status.
-        """
         customer_id = event.get("receiver_id") or payload.get("customer_id")
         provider_name = payload.get("provider_name", "Service Provider")
         booking_ref = payload.get("booking_reference", booking_id)
 
-        # 1. Customer Service Consumer Log
         logger.info(
-            f"[Kafka Consumer -> Customer Service] Received booking.accepted event: "
-            f"Booking #{booking_ref} accepted by Provider '{provider_name}'. Notifying Customer #{customer_id}."
+            "[Kafka Consumer -> Customer Service] booking.accepted: #%s accepted by '%s'. Notifying Customer #%s.",
+            booking_ref, provider_name, customer_id,
+        )
+        logger.info(
+            "[Kafka Consumer -> Admin Service] booking.accepted: #%s status → Accepted.",
+            booking_ref,
         )
 
-        # 2. Admin Service Consumer Log
-        logger.info(
-            f"[Kafka Consumer -> Admin Service] Received booking.accepted event: "
-            f"Booking #{booking_ref} status updated to 'Accepted' in PostgreSQL."
-        )
-
-        # 3. Real-time broadcast
         broadcast_msg = {
             "event_id": event.get("event_id"),
             "type": "BOOKING_ACCEPTED",
@@ -267,41 +246,33 @@ class KafkaConsumerService:
         if booking_id:
             channels.append(f"booking_{booking_id}")
         if customer_id:
-            channels.append(f"customer_{customer_id}")
-            channels.append(f"user_{customer_id}")
+            channels.extend([f"customer_{customer_id}", f"user_{customer_id}"])
         customer_user_id = payload.get("customer_user_id")
         if customer_user_id:
-            channels.append(f"customer_{customer_user_id}")
-            channels.append(f"user_{customer_user_id}")
+            channels.extend([f"customer_{customer_user_id}", f"user_{customer_user_id}"])
         provider_id = payload.get("provider_id") or event.get("sender_id")
         if provider_id:
-            channels.append(f"provider_{provider_id}")
-            channels.append(f"user_{provider_id}")
+            channels.extend([f"provider_{provider_id}", f"user_{provider_id}"])
         await ws_manager.broadcast_to_channels(channels, broadcast_msg)
 
     async def _handle_booking_rejected(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
-        """
-        Customer receives rejection/cancellation + reason.
-        Admin receives rejection + reason.
-        """
         customer_id = event.get("receiver_id") or payload.get("customer_id")
-        reason = payload.get("reason") or payload.get("rejection_reason") or payload.get("cancellation_reason", "Provider unavailable")
+        reason = (
+            payload.get("reason")
+            or payload.get("rejection_reason")
+            or payload.get("cancellation_reason", "Provider unavailable")
+        )
         booking_ref = payload.get("booking_reference", booking_id)
 
-        # 1. Customer Service Consumer Log
         logger.info(
-            f"[Kafka Consumer -> Customer Service] Received booking.rejected event: "
-            f"Booking #{booking_ref} rejected by partner. Reason: '{reason}'. "
-            f"Notifying Customer #{customer_id}."
+            "[Kafka Consumer -> Customer Service] booking.rejected: #%s rejected. Reason: '%s'. Customer #%s.",
+            booking_ref, reason, customer_id,
+        )
+        logger.info(
+            "[Kafka Consumer -> Admin Service] booking.rejected: #%s → Rejected. Reason: '%s'.",
+            booking_ref, reason,
         )
 
-        # 2. Admin Service Consumer Log
-        logger.info(
-            f"[Kafka Consumer -> Admin Service] Received booking.rejected event: "
-            f"Booking #{booking_ref} marked Rejected in PostgreSQL. Reason: '{reason}' recorded."
-        )
-
-        # 3. Real-time broadcast
         broadcast_msg = {
             "event_id": event.get("event_id"),
             "type": "BOOKING_REJECTED",
@@ -319,28 +290,25 @@ class KafkaConsumerService:
         if booking_id:
             channels.append(f"booking_{booking_id}")
         if customer_id:
-            channels.append(f"customer_{customer_id}")
-            channels.append(f"user_{customer_id}")
+            channels.extend([f"customer_{customer_id}", f"user_{customer_id}"])
         customer_user_id = payload.get("customer_user_id")
         if customer_user_id:
-            channels.append(f"customer_{customer_user_id}")
-            channels.append(f"user_{customer_user_id}")
+            channels.extend([f"customer_{customer_user_id}", f"user_{customer_user_id}"])
         provider_id = payload.get("provider_id") or event.get("sender_id")
         if provider_id:
-            channels.append(f"provider_{provider_id}")
-            channels.append(f"user_{provider_id}")
+            channels.extend([f"provider_{provider_id}", f"user_{provider_id}"])
         await ws_manager.broadcast_to_channels(channels, broadcast_msg)
 
     async def _handle_booking_started(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
-        """Customer and Admin receive booking.started status update."""
         customer_id = event.get("receiver_id") or payload.get("customer_id")
         provider_name = payload.get("provider_name", "Service Provider")
         booking_ref = payload.get("booking_reference", booking_id)
 
         logger.info(
-            f"[Kafka Consumer -> Customer & Admin] Received booking.started event: "
-            f"Booking #{booking_ref} started by Provider '{provider_name}'."
+            "[Kafka Consumer -> Customer & Admin] booking.started: #%s started by '%s'.",
+            booking_ref, provider_name,
         )
+
         broadcast_msg = {
             "event_id": event.get("event_id"),
             "type": "BOOKING_STARTED",
@@ -355,28 +323,25 @@ class KafkaConsumerService:
         if booking_id:
             channels.append(f"booking_{booking_id}")
         if customer_id:
-            channels.append(f"customer_{customer_id}")
-            channels.append(f"user_{customer_id}")
+            channels.extend([f"customer_{customer_id}", f"user_{customer_id}"])
         customer_user_id = payload.get("customer_user_id")
         if customer_user_id:
-            channels.append(f"customer_{customer_user_id}")
-            channels.append(f"user_{customer_user_id}")
+            channels.extend([f"customer_{customer_user_id}", f"user_{customer_user_id}"])
         provider_id = payload.get("provider_id") or event.get("sender_id")
         if provider_id:
-            channels.append(f"provider_{provider_id}")
-            channels.append(f"user_{provider_id}")
+            channels.extend([f"provider_{provider_id}", f"user_{provider_id}"])
         await ws_manager.broadcast_to_channels(channels, broadcast_msg)
 
     async def _handle_booking_completed(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
-        """Customer and Admin receive booking.completed status update."""
         customer_id = event.get("receiver_id") or payload.get("customer_id")
         provider_name = payload.get("provider_name", "Service Provider")
         booking_ref = payload.get("booking_reference", booking_id)
 
         logger.info(
-            f"[Kafka Consumer -> Customer & Admin] Received booking.completed event: "
-            f"Booking #{booking_ref} completed by Provider '{provider_name}'."
+            "[Kafka Consumer -> Customer & Admin] booking.completed: #%s completed by '%s'.",
+            booking_ref, provider_name,
         )
+
         broadcast_msg = {
             "event_id": event.get("event_id"),
             "type": "BOOKING_COMPLETED",
@@ -391,20 +356,16 @@ class KafkaConsumerService:
         if booking_id:
             channels.append(f"booking_{booking_id}")
         if customer_id:
-            channels.append(f"customer_{customer_id}")
-            channels.append(f"user_{customer_id}")
+            channels.extend([f"customer_{customer_id}", f"user_{customer_id}"])
         customer_user_id = payload.get("customer_user_id")
         if customer_user_id:
-            channels.append(f"customer_{customer_user_id}")
-            channels.append(f"user_{customer_user_id}")
+            channels.extend([f"customer_{customer_user_id}", f"user_{customer_user_id}"])
         provider_id = payload.get("provider_id") or event.get("sender_id")
         if provider_id:
-            channels.append(f"provider_{provider_id}")
-            channels.append(f"user_{provider_id}")
+            channels.extend([f"provider_{provider_id}", f"user_{provider_id}"])
         await ws_manager.broadcast_to_channels(channels, broadcast_msg)
 
     async def _handle_provider_location_updated(self, event: Dict[str, Any], booking_id: Optional[str], payload: Dict[str, Any]):
-        """Customer live map and Admin monitor receive real-time GPS coordinate update."""
         customer_id = event.get("receiver_id") or payload.get("customer_id")
         provider_id = event.get("sender_id") or payload.get("provider_id")
         lat = payload.get("latitude")
@@ -430,17 +391,16 @@ class KafkaConsumerService:
         if booking_id:
             channels.append(f"booking_{booking_id}")
         if customer_id:
-            channels.append(f"customer_{customer_id}")
-            channels.append(f"user_{customer_id}")
+            channels.extend([f"customer_{customer_id}", f"user_{customer_id}"])
         await ws_manager.broadcast_to_channels(channels, broadcast_msg)
 
-    async def _handle_support_message(self, event: Dict[str, Any], ticket_id: Optional[str], booking_id: Optional[str], payload: Dict[str, Any]):
-        """
-        For Customer <-> Provider and Provider <-> Admin messages:
-        Save message to PostgreSQL first (done by REST).
-        Appropriate consumers receive the update.
-        Super Admin monitors Customer <-> Provider conversations.
-        """
+    async def _handle_support_message(
+        self,
+        event: Dict[str, Any],
+        ticket_id: Optional[str],
+        booking_id: Optional[str],
+        payload: Dict[str, Any],
+    ):
         sender_role = payload.get("sender_role", "User")
         sender_name = payload.get("sender_name", sender_role.title())
         message_text = payload.get("message_text", "")
@@ -449,17 +409,14 @@ class KafkaConsumerService:
         customer_user_id = payload.get("customer_user_id")
 
         logger.info(
-            f"[Kafka Consumer -> Support/Chat Service] Received support.message on Ticket #{ticket_id}: "
-            f"From [{sender_role}] '{sender_name}': '{message_text[:80]}' (Booking: {booking_id})"
+            "[Kafka Consumer -> Support] support.message on Ticket #%s: [%s] '%s': '%s' (Booking: %s)",
+            ticket_id, sender_role, sender_name, message_text[:80], booking_id,
         )
-
-        # Super Admin Monitoring Notice
         logger.info(
-            f"[Kafka Consumer -> Super Admin Monitor] Audited conversation update on Ticket #{ticket_id}. "
-            f"Super Admin visibility active. Sender: {sender_role} ({sender_name})."
+            "[Kafka Consumer -> Super Admin Monitor] Conversation update on Ticket #%s audited.",
+            ticket_id,
         )
 
-        # Standardize payload message fields for frontend ingestion
         msg_obj = {
             "id": payload.get("message_id") or payload.get("id") or event.get("event_id"),
             "ticket_id": ticket_id,
@@ -474,7 +431,6 @@ class KafkaConsumerService:
             "created_at": payload.get("created_at") or event.get("timestamp") or "",
         }
 
-        # Real-time WebSocket broadcast to relevant parties
         broadcast_msg = {
             "event_id": event.get("event_id"),
             "type": "NEW_SUPPORT_MESSAGE",
@@ -488,8 +444,7 @@ class KafkaConsumerService:
         if ticket_id:
             channels.append(f"ticket_{ticket_id}")
         if booking_id:
-            channels.append(f"booking_{booking_id}")
-            channels.append(f"booking_chat_{booking_id}")
+            channels.extend([f"booking_{booking_id}", f"booking_chat_{booking_id}"])
         if sender_id:
             channels.extend([f"user_{sender_id}", f"provider_{sender_id}", f"customer_{sender_id}"])
         if receiver_id:

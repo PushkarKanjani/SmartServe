@@ -70,11 +70,48 @@ def test_customer_booking_creation():
     assert srv_res.status_code == 200
     services = srv_res.json()
     assert len(services) > 0
-    service_id = services[0]["id"]
+    from datetime import datetime, timedelta, time
+    from app.core.database import SessionLocal
+    from app.models import Provider, ProviderService, Availability, User
+    
+    future_date = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
+    fd_obj = (datetime.now() + timedelta(days=2)).date()
+
+    db = SessionLocal()
+    v_providers = db.query(Provider).join(User, Provider.user_id == User.id).filter(
+        Provider.is_verified == True, User.is_active == True
+    ).all()
+    prov = next((p for p in v_providers if len(p.services) > 0), None)
+    if prov:
+        service_id = str(prov.services[0].service_id)
+        # Clear any existing booking for this slot date to prevent conflict rejection
+        from app.models import Booking
+        db.query(Booking).filter(
+            Booking.provider_id == prov.user_id,
+            Booking.scheduled_time >= datetime.combine(fd_obj, time.min),
+            Booking.scheduled_time <= datetime.combine(fd_obj, time.max),
+        ).delete(synchronize_session=False)
+
+        slot = db.query(Availability).filter(
+            Availability.provider_id == prov.user_id,
+            Availability.slot_date == fd_obj
+        ).first()
+        if not slot:
+            db.add(Availability(
+                provider_id=prov.user_id,
+                slot_date=fd_obj,
+                start_time=time(9, 0),
+                end_time=time(18, 0),
+                status="FREE"
+            ))
+        else:
+            slot.status = "FREE"
+        db.commit()
+    db.close()
 
     booking_payload = {
         "service_id": service_id,
-        "scheduled_date": "2026-09-15",
+        "scheduled_date": future_date,
         "scheduled_time": "11:00",
         "address_line1": "Flat 101, Test Residency, Sector 18",
         "city": "Noida",

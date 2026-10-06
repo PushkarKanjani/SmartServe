@@ -11,20 +11,55 @@ from app.services.kafka import (
 router = APIRouter(prefix="/kafka", tags=["Kafka Operations & Diagnostics"])
 
 
+def mask_bootstrap(host: str) -> str:
+    if not host:
+        return ""
+    if len(host) <= 8:
+        return host[:4] + "***"
+    return host[:8] + "***"
+
+
+def sanitize_text(text: str) -> str:
+    if not text:
+        return ""
+    for secret in [
+        getattr(settings, "KAFKA_SASL_PASSWORD", ""),
+        getattr(settings, "JWT_SECRET_KEY", ""),
+        getattr(settings, "JWT_SECRET", ""),
+        getattr(settings, "OPENROUTER_API_KEY", ""),
+    ]:
+        if secret and len(secret) > 3:
+            text = text.replace(secret, "[REDACTED]")
+    return text
+
+
 @router.get("/status")
 def get_kafka_status():
     """Retrieve operational status, broker configuration, and event counts for Kafka."""
     summary = kafka_event_store.get_summary()
+    last_err_raw = getattr(kafka_producer, "last_error", None)
+    last_err = sanitize_text(last_err_raw) if last_err_raw else None
+    is_prod_conn = getattr(kafka_producer, "_is_running", False)
+    is_cons_conn = kafka_consumer.is_running()
+
     return {
-        "status": "healthy" if kafka_producer._is_running else "degraded",
+        "status": "healthy" if is_prod_conn else "degraded",
+        "kafka_enabled": settings.KAFKA_ENABLED,
         "enabled": settings.KAFKA_ENABLED,
-        "bootstrap_servers": settings.KAFKA_BOOTSTRAP_SERVERS,
-        "consumer_group": settings.KAFKA_CONSUMER_GROUP,
         "security_protocol": settings.KAFKA_SECURITY_PROTOCOL,
-        "sasl_mechanism": settings.KAFKA_SASL_MECHANISM if "SASL" in (settings.KAFKA_SECURITY_PROTOCOL or "").upper() else None,
-        "producer_connected": kafka_producer._is_running,
-        "consumer_connected": kafka_consumer.is_running(),
+        "sasl_mechanism": (
+            settings.KAFKA_SASL_MECHANISM
+            if "SASL" in (settings.KAFKA_SECURITY_PROTOCOL or "").upper()
+            else None
+        ),
+        "bootstrap_configured": bool(settings.KAFKA_BOOTSTRAP_SERVERS),
+        "bootstrap_servers_masked": mask_bootstrap(settings.KAFKA_BOOTSTRAP_SERVERS),
+        "producer_connected": is_prod_conn,
+        "consumer_connected": is_cons_conn,
+        "consumer_group": settings.KAFKA_CONSUMER_GROUP,
+        "expected_topics": KafkaTopics.ALL_TOPICS,
         "topics": KafkaTopics.ALL_TOPICS,
+        "last_error": last_err,
         "metrics": summary,
     }
 

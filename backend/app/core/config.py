@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     KAFKA_CONSUMER_GROUP: str = os.getenv("KAFKA_CONSUMER_GROUP", "smartserve-backend-group")
     KAFKA_ENABLED: bool = os.getenv("KAFKA_ENABLED", "true").lower() in ("true", "1", "yes")
     KAFKA_SECURITY_PROTOCOL: str = os.getenv("KAFKA_SECURITY_PROTOCOL", "PLAINTEXT")
-    KAFKA_SASL_MECHANISM: str = os.getenv("KAFKA_SASL_MECHANISM", "PLAIN")
+    KAFKA_SASL_MECHANISM: str = os.getenv("KAFKA_SASL_MECHANISM", "")
     KAFKA_SASL_USERNAME: str = os.getenv("KAFKA_SASL_USERNAME", "")
     KAFKA_SASL_PASSWORD: str = os.getenv("KAFKA_SASL_PASSWORD", "")
 

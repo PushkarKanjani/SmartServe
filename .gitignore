@@ -21,7 +21,10 @@ htmlcov/
 .env.development
 .env.test
 .env.production
+.env.supabase
+backend/.env
 !.env.example
+!backend/.env.example
 
 # Credentials, Keys & Secrets (NEVER COMMIT)
 *credentials*
@@ -93,6 +96,8 @@ verify_*.js
 verify_*.py
 test_*.js
 test_*.py
+!backend/scripts/test_redpanda_connection.py
+!backend/tests/*.py
 final_*.js
 comprehensive_*.js
 inspect_*.js
