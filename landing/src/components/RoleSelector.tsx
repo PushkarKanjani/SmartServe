@@ -23,8 +23,8 @@ function CheckIcon({ color }: { color: string }) {
   );
 }
 
-const customerUrl = import.meta.env.VITE_CUSTOMER_URL || 'http://localhost:5174';
-const providerUrl = import.meta.env.VITE_PROVIDER_URL || 'http://localhost:5175';
+const customerUrl = import.meta.env.VITE_CUSTOMER_URL || 'https://smartserve-customer-alpha.vercel.app';
+const providerUrl = import.meta.env.VITE_PROVIDER_URL || 'https://smartserve-provider.vercel.app';
 
 export default function RoleSelector() {
   return (
