@@ -40,18 +40,18 @@ export const BackendPulse: React.FC = () => {
       <span className="relative flex h-2 w-2">
         <span
           className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-            isOnline ? 'bg-emerald-400' : 'bg-rose-400'
+            checking ? 'bg-amber-400' : isOnline ? 'bg-emerald-400' : 'bg-rose-400'
           }`}
         />
         <span
           className={`relative inline-flex rounded-full h-2 w-2 ${
-            isOnline ? 'bg-emerald-500' : 'bg-rose-500'
+            checking ? 'bg-amber-500' : isOnline ? 'bg-emerald-500' : 'bg-rose-500'
           }`}
         />
       </span>
 
       <span className="font-mono text-[11px] text-[#1F2A1E]/70 hidden sm:inline">
-        {checking ? 'Checking Backend...' : isOnline ? 'Backend Live' : 'Backend Disconnected'}
+        {checking ? 'Connecting to Network...' : isOnline ? 'Network Active' : 'Reconnecting to Network...'}
       </span>
 
       <Activity className="w-3.5 h-3.5 text-[#1F2A1E]/40" />

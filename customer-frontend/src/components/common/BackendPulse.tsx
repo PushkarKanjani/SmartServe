@@ -48,7 +48,7 @@ export const BackendPulse: React.FC = () => {
       </span>
 
       <span className="font-mono text-[11px] text-slate-600 hidden sm:inline">
-        {checking ? 'Checking Backend...' : health?.isOnline ? 'Cloud Backend Live' : 'Backend Disconnected'}
+        {checking ? 'Connecting to Network...' : health?.isOnline ? 'Network Active' : 'Reconnecting to Network...'}
       </span>
 
       <Activity className="w-3.5 h-3.5 text-slate-400" />
