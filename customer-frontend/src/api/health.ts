@@ -22,15 +22,20 @@ export const checkBackendHealth = async (): Promise<HealthCheckResult> => {
     if (configuredApi && typeof configuredApi === 'string' && configuredApi.trim() !== '') {
       backendBase = configuredApi.trim().replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
     } else {
-      // 3. Local-development fallback: match local LAN host IP
-      if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-        const host = window.location.hostname;
-        if (host !== 'localhost' && host !== '127.0.0.1') {
-          backendBase = `http://${host}:8000`;
+      // 3. Production & Vercel fallback
+      if (import.meta.env.PROD || (typeof window !== 'undefined' && window.location && window.location.hostname.includes('vercel.app'))) {
+        backendBase = 'https://smartserve-api-de3f.onrender.com';
+      } else {
+        // 4. Local-development fallback: match local LAN host IP
+        if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+          const host = window.location.hostname;
+          if (host !== 'localhost' && host !== '127.0.0.1') {
+            backendBase = `http://${host}:8000`;
+          }
         }
-      }
-      if (!backendBase) {
-        backendBase = 'http://localhost:8000';
+        if (!backendBase) {
+          backendBase = 'http://localhost:8000';
+        }
       }
     }
   }
