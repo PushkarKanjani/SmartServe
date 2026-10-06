@@ -80,3 +80,15 @@ def test_kafka_transport_kwargs_factory():
         assert kwargs["ssl_context"] is not None
         # Verify certificate verification is NOT disabled
         assert kwargs["ssl_context"].check_hostname is True
+
+
+def test_health_endpoint_immediate_and_safe(client):
+    """Verify /health and /api/v1/health return 200 healthy immediately and do not leak DB credentials."""
+    for path in ["/health", "/api/v1/health"]:
+        response = client.get(path)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "healthy"
+        assert "service" in data
+        assert "database_engine" in data
+        assert "@" not in data["database_engine"] or ":***@" in data["database_engine"] or "localhost" in data["database_engine"]

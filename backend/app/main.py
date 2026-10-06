@@ -27,6 +27,7 @@ if settings.ENVIRONMENT != "production":
     except Exception:
         pass
 
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -36,17 +37,23 @@ from app.api.v1.ws import router as ws_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Start Kafka producer & background consumer
-    try:
-        await kafka_producer.start()
-    except Exception as e:
-        print(f"[Lifespan Startup] Kafka producer start warning: {e}")
-    try:
-        await kafka_consumer.start()
-    except Exception as e:
-        print(f"[Lifespan Startup] Kafka consumer start warning: {e}")
+    # Startup: Spawn Kafka producer & consumer non-blockingly as background tasks.
+    # This ensures Uvicorn immediately begins accepting HTTP connections and serving
+    # the /health endpoint without waiting for broker connections on cold boot.
+    producer_task = asyncio.create_task(kafka_producer.start())
+    consumer_task = asyncio.create_task(kafka_consumer.start())
     yield
-    # Shutdown
+    # Shutdown: Cleanly cancel pending connection attempts and stop services
+    try:
+        if not producer_task.done():
+            producer_task.cancel()
+    except Exception:
+        pass
+    try:
+        if not consumer_task.done():
+            consumer_task.cancel()
+    except Exception:
+        pass
     try:
         await kafka_consumer.stop()
     except Exception:
@@ -103,11 +110,16 @@ app.include_router(ws_router, prefix=settings.API_V1_PREFIX)
 @app.get("/health", tags=["System"])
 @app.get("/api/v1/health", tags=["System"])
 def health_check():
+    db_desc = (
+        engine.url.render_as_string(hide_password=True)
+        if hasattr(engine.url, "render_as_string")
+        else str(engine.url)
+    )
     return {
         "status": "healthy",
         "service": settings.APP_NAME,
         "environment": settings.ENVIRONMENT,
-        "database_engine": str(engine.url),
+        "database_engine": db_desc,
     }
 
 
