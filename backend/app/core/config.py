@@ -41,6 +41,10 @@ class Settings(BaseSettings):
             "http://127.0.0.1:5175",
             "http://localhost:5176",
             "http://127.0.0.1:5176",
+            "https://smartserve-customer-alpha.vercel.app",
+            "https://smartserve-provider.vercel.app",
+            "https://smartserve-landing-ten.vercel.app",
+            "https://smartserve-admin-flax.vercel.app",
         ]
         if v is None:
             return default_origins

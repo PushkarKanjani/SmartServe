@@ -7,13 +7,11 @@ export function getApiBaseUrl(): string {
     return configuredUrl.trim().replace(/\/$/, '');
   }
 
-  // 2. Only if VITE_API_BASE_URL is not configured, use local-development fallback
-  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-    const host = window.location.hostname;
-    if (host !== 'localhost' && host !== '127.0.0.1') {
-      return `http://${host}:8000/api/v1`;
-    }
+  // 2. Production fallback
+  if (import.meta.env.PROD || (typeof window !== 'undefined' && window.location && window.location.hostname.includes('vercel.app'))) {
+    return 'https://smartserve-api-de3f.onrender.com/api/v1';
   }
+
   return 'http://127.0.0.1:8000/api/v1';
 }
 

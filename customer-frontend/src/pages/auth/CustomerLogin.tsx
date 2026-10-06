@@ -11,7 +11,7 @@ export const CustomerLogin: React.FC = () => {
   const { showToast } = useToast();
 
   const [email, setEmail] = useState('customer@example.com');
-  const [password, setPassword] = useState('CustomerPassword123!');
+  const [password, setPassword] = useState('CustomerPass123!');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -204,6 +204,23 @@ export const CustomerLogin: React.FC = () => {
                   <span>Login to SmartServe</span>
                 )}
               </button>
+            </div>
+
+            {/* Quick Demo Credentials Helper */}
+            <div 
+              onClick={() => {
+                setEmail('customer@example.com');
+                setPassword('CustomerPass123!');
+                setErrorMessage(null);
+              }}
+              className="mt-4 p-3 bg-white hover:bg-[#FAF7F0] transition-colors rounded-xl border border-[#E5DEC9] text-xs cursor-pointer group"
+              title="Click to autofill customer demo credentials"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-bold text-[#1F2A1E]/70 uppercase tracking-wider text-[10px]">Customer Demo Login</span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 group-hover:bg-emerald-100 transition-colors">Click to Auto-fill</span>
+              </div>
+              <p className="text-[11px] text-[#1F2A1E]/60 font-mono">customer@example.com / CustomerPass123!</p>
             </div>
 
             {/* Sign Up Link */}

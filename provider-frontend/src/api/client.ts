@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+const configuredUrl = import.meta.env.VITE_API_BASE_URL;
+const API_BASE_URL = configuredUrl && configuredUrl.trim() !== ''
+  ? configuredUrl.trim().replace(/\/$/, '')
+  : (import.meta.env.PROD || (typeof window !== 'undefined' && window.location && window.location.hostname.includes('vercel.app')))
+    ? 'https://smartserve-api-de3f.onrender.com/api/v1'
+    : 'http://127.0.0.1:8000/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
