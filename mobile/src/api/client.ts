@@ -1,5 +1,5 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getSecureItem } from '../utils/secureStore';
 import { API_BASE_URL } from '../config/api';
 
 const apiClient = axios.create({
@@ -7,17 +7,17 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
 apiClient.interceptors.request.use(async (config) => {
   try {
-    const token = await AsyncStorage.getItem('smartserve_token');
+    const token = await getSecureItem('smartserve_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-  } catch (err) {
-    console.error('Failed to retrieve token from storage', err);
+  } catch {
+    // Avoid logging sensitive token data
   }
   return config;
 });

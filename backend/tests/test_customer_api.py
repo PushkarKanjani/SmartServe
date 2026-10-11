@@ -60,7 +60,7 @@ def test_customer_auth_flow():
 def test_customer_booking_creation():
     login_payload = {
         "email": "customer@example.com",
-        "password": "Password123!",
+        "password": "CustomerPass123!",
     }
     res_login = client.post("/api/v1/customer/auth/login", json=login_payload)
     token = res_login.json()["access_token"]
@@ -72,10 +72,45 @@ def test_customer_booking_creation():
     assert len(services) > 0
     service_id = services[0]["id"]
 
+    from datetime import datetime, timedelta
+    from app.core.database import SessionLocal
+    from app.models.provider import Availability, ProviderService
+    from app.models.service import Service
+    from app.models.booking import Booking
+    from sqlalchemy import func
+
+    db = SessionLocal()
+    all_free = db.query(Availability).filter(
+        Availability.slot_date >= (datetime.now() + timedelta(days=2)).date(),
+        Availability.status == "FREE"
+    ).all()
+    target_sid, target_d, target_t = None, None, None
+    for slot in all_free:
+        ps = db.query(ProviderService).filter(ProviderService.provider_id == slot.provider_id).first()
+        if not ps:
+            continue
+        srv = db.query(Service).filter(Service.id == ps.service_id, Service.is_active == True).first()
+        if not srv:
+            continue
+        slot_dt = datetime.combine(slot.slot_date, slot.start_time)
+        conflict = db.query(Booking).filter(
+            Booking.provider_id == slot.provider_id,
+            Booking.status.in_(["Requested", "Assigned", "Accepted", "Started"]),
+            Booking.scheduled_time.isnot(None),
+            func.abs(func.extract("epoch", Booking.scheduled_time - slot_dt)) < 3600
+        ).first()
+        if not conflict:
+            target_sid = str(srv.id)
+            target_d = slot.slot_date.strftime("%Y-%m-%d")
+            target_t = slot.start_time.strftime("%H:%M")
+            break
+    db.close()
+
+    service_id = target_sid or service_id
     booking_payload = {
         "service_id": service_id,
-        "scheduled_date": "2026-09-15",
-        "scheduled_time": "11:00",
+        "scheduled_date": target_d or (datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d"),
+        "scheduled_time": target_t or "10:00",
         "address_line1": "Flat 101, Test Residency, Sector 18",
         "city": "Noida",
         "pincode": "201301",

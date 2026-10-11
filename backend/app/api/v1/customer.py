@@ -1,16 +1,21 @@
 import os
 import re
 import uuid
-from datetime import datetime
+import secrets
+import hashlib
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
-from sqlalchemy import func
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File, Request
+from sqlalchemy import func, update
 from sqlalchemy.orm import Session
+from app.core.config import settings
 from app.core.dependencies import get_db, get_current_customer
-from app.core.security import hash_password, verify_password, create_access_token
+from app.core.security import hash_password, verify_password, create_access_token, decode_access_token
 from app.models.user import User, UserSession
+from app.models.security import PasswordResetToken
+
 from app.models.customer import (
     Customer,
     Booking,
@@ -48,6 +53,9 @@ from app.schemas.customer_schemas import (
 )
 
 router = APIRouter(prefix="/customer", tags=["Customer API"])
+
+from app.api.v1.oauth import router as oauth_router
+router.include_router(oauth_router)
 
 
 
@@ -93,27 +101,84 @@ def register_customer(payload: CustomerRegisterPayload, db: Session = Depends(ge
     )
 
 
+# In-memory store for secure, single-use, time-limited password reset tokens
+_password_reset_store: Dict[str, Dict[str, Any]] = {}
+
+
 # 2. POST /customer/auth/login
 @router.post("/auth/login", response_model=CustomerTokenResponse)
 def login_customer(payload: CustomerLoginPayload, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email, User.role == "customer").first()
-    if not user or not verify_password(payload.password, user.hashed_password):
-        # Allow dev fallback if user not in DB yet
-        token = create_access_token({"sub": "00000000-0000-0000-0000-000000001001", "role": "customer", "customer_id": "00000000-0000-0000-0000-000000001002"})
-        return CustomerTokenResponse(
-            access_token=token,
-            customer_id="00000000-0000-0000-0000-000000001002",
-            user_id="00000000-0000-0000-0000-000000001001",
-            email=payload.email,
-            full_name=payload.email.split("@")[0].title() or "Pushkar Kanjani",
-            phone="+91 9876543210",
+    clean_email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == clean_email, User.role == "customer").first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials. Please verify your email and password.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
+
+    pwd_hash = user.password_hash or user.hashed_password
+    if not pwd_hash or not verify_password(payload.password, pwd_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials. Please verify your email and password.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive or suspended.",
+        )
+
+    if user.is_2fa_enabled:
+        totp_code = (payload.totp_code or "").strip()
+        rec_code = (payload.recovery_code or "").strip()
+        if not totp_code and not rec_code:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Two-factor authentication code required.",
+                headers={"X-2FA-Required": "true", "WWW-Authenticate": "Bearer"},
+            )
+
+        from app.services import security_service
+        is_2fa_valid = False
+        if totp_code:
+            is_2fa_valid = security_service.verify_totp_2fa(db, user, totp_code)
+
+        if not is_2fa_valid and rec_code:
+            is_2fa_valid = security_service.verify_recovery_code(db, user, rec_code)
+
+        if not is_2fa_valid:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid two-factor authentication code.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
 
     customer = db.query(Customer).filter(Customer.user_id == user.id).first()
     customer_id = str(customer.id) if customer else str(user.id)
     full_name = customer.full_name if customer else user.email.split("@")[0].title()
 
-    token = create_access_token({"sub": str(user.id), "role": "customer", "customer_id": customer_id})
+    token_jti = f"jwt_{uuid.uuid4().hex}"
+    token = create_access_token({
+        "sub": str(user.id),
+        "role": "customer",
+        "customer_id": customer_id,
+        "email": user.email,
+        "jti": token_jti,
+    })
+
+    try:
+        from app.services import security_service
+        security_service.create_active_session(
+            db, user_id=user.id, token_jti=token_jti,
+            ip_address="127.0.0.1", user_agent="Customer Client",
+            expires_in_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+    except Exception:
+        pass
+
     return CustomerTokenResponse(
         access_token=token,
         customer_id=customer_id,
@@ -144,31 +209,180 @@ def get_auth_me(current_customer: Customer = Depends(get_current_customer)):
 
 # 4. POST /customer/auth/logout
 @router.post("/auth/logout")
-def logout_customer():
+def logout_customer(
+    request: Request,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db)
+):
+    """Invalidate customer active session and revoke JWT access."""
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "").strip() if auth_header.startswith("Bearer ") else None
+    if token:
+        payload = decode_access_token(token)
+        jti = payload.get("jti") if payload else None
+        if jti:
+            from app.models.session import ActiveSession
+            sess = db.query(ActiveSession).filter(ActiveSession.token_jti == jti).first()
+            if sess:
+                sess.is_revoked = True
+                db.commit()
     return {"status": "ok", "message": "Signed out successfully"}
+
+
+def create_password_reset_token(db: Session, user: User, raw_token: Optional[str] = None) -> str:
+    """Generate and persist a single-use SHA-256 hashed password reset token."""
+    if not raw_token:
+        raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(minutes=15)
+
+    # Invalidate any existing unused reset tokens for this user
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.is_used == False
+    ).update({"is_used": True, "used_at": now}, synchronize_session=False)
+
+    reset_record = PasswordResetToken(
+        id=uuid.uuid4(),
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+        is_used=False
+    )
+    db.add(reset_record)
+    db.commit()
+
+    return raw_token
 
 
 # 5. POST /customer/auth/forgot-password
 @router.post("/auth/forgot-password")
-def forgot_password(payload: ForgotPasswordPayload):
+def forgot_password(payload: ForgotPasswordPayload, db: Session = Depends(get_db)):
+    """Generate time-limited secure reset token and return generic confirmation to prevent user enumeration."""
+    clean_email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == clean_email, User.role == "customer").first()
+    if user:
+        create_password_reset_token(db, user)
+        try:
+            from app.services import email_service
+            email_service.send_email_dispatch(
+                db,
+                recipient_email=user.email,
+                subject="SmartServe Password Reset Instructions",
+                body_text="A password reset was requested. Please use your secure link within 15 minutes.",
+                template_key="password_reset",
+                actor_email="system@smartserve.com"
+            )
+        except Exception:
+            pass
     return {"status": "ok", "message": "If the email exists, reset instructions have been sent."}
 
 
 # 6. POST /customer/auth/reset-password
 @router.post("/auth/reset-password")
-def reset_password(payload: ResetPasswordPayload):
+def reset_password(payload: ResetPasswordPayload, db: Session = Depends(get_db)):
+    """Verify single-use reset token and update password hash securely using atomic updates."""
+    clean_token = (payload.token or "").strip()
+    if not clean_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset token is invalid or has expired."
+        )
+
+    if not payload.new_password or len(payload.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 8 characters long."
+        )
+
+    token_hash = hashlib.sha256(clean_token.encode("utf-8")).hexdigest()
+    now = datetime.now(timezone.utc)
+
+    # Atomic single-use update: only 1 concurrent execution can succeed
+    stmt = (
+        update(PasswordResetToken)
+        .where(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.is_used == False,
+            PasswordResetToken.expires_at > now,
+        )
+        .values(is_used=True, used_at=now)
+    )
+    res = db.execute(stmt)
+    if res.rowcount == 0:
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset token is invalid or has expired."
+        )
+
+    token_record = db.query(PasswordResetToken).filter(PasswordResetToken.token_hash == token_hash).first()
+    if not token_record:
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password reset token is invalid or has expired."
+        )
+
+    user = db.query(User).filter(User.id == token_record.user_id).first()
+    if not user:
+        db.commit()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found.")
+
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+
+    # Revoke all active sessions to invalidate any stolen or active JWT sessions
+    try:
+        from app.services.security_service import revoke_all_user_sessions
+        revoke_all_user_sessions(db, user.id)
+    except Exception:
+        pass
+
+    try:
+        from app.repositories import audit_repository
+        audit_repository.create_audit_log(
+            db, actor_id=user.id, actor_email=user.email, actor_role="customer",
+            action="Password Reset Completed", risk_level="Info",
+            target_resource=str(user.id),
+        )
+    except Exception:
+        pass
     return {"status": "ok", "message": "Password reset successfully."}
+
 
 
 # 7. POST /customer/auth/change-password
 @router.post("/auth/change-password")
 def change_password(payload: ChangePasswordPayload, current_customer: Customer = Depends(get_current_customer), db: Session = Depends(get_db)):
+    if not payload.new_password or len(payload.new_password) < 8:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password must be at least 8 characters long.")
     user = db.query(User).filter(User.id == current_customer.user_id).first()
-    if user:
-        if not verify_password(payload.current_password, user.hashed_password):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
-        user.hashed_password = hash_password(payload.new_password)
-        db.commit()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User account not found.")
+    pwd_hash = user.password_hash or user.hashed_password
+    if not pwd_hash or not verify_password(payload.current_password, pwd_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    user.password_hash = hash_password(payload.new_password)
+    db.commit()
+
+    # Invalidate all active sessions for this user on password change
+    try:
+        from app.services.security_service import revoke_all_user_sessions
+        revoke_all_user_sessions(db, user.id)
+    except Exception:
+        pass
+
+    try:
+        from app.repositories import audit_repository
+        audit_repository.create_audit_log(
+            db, actor_id=user.id, actor_email=user.email, actor_role="customer",
+            action="Password Changed", risk_level="Info",
+            target_resource=str(user.id),
+        )
+    except Exception:
+        pass
     return {"status": "ok", "message": "Password updated successfully"}
 
 
@@ -1115,6 +1329,13 @@ def cancel_booking(
             detail="Forbidden: You cannot cancel a booking belonging to another customer",
         )
 
+    curr_status = str(record.status.value if hasattr(record.status, "value") else record.status).upper()
+    if curr_status in ["COMPLETED", "PAID", "CANCELLED", "REJECTED"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot cancel booking with current status '{record.status}'."
+        )
+
     record.status = "CANCELLED"
     record.cancellation_reason = effective_reason
     db.commit()
@@ -1487,14 +1708,54 @@ def get_recommendations(db: Session = Depends(get_db)):
 
 # 28. POST /customer/uploads/image
 @router.post("/uploads/image")
-async def upload_image(file: UploadFile = File(...)):
+async def upload_image(
+    file: UploadFile = File(...),
+    current_customer: Customer = Depends(get_current_customer),
+):
+    """
+    Secure customer image upload:
+    - Enforces authentication
+    - Validates file extensions (JPEG, PNG, WebP)
+    - Validates MIME type and magic bytes
+    - Enforces 5MB maximum file size
+    - Sanitizes filename with UUID (prevents path traversal)
+    """
+    ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+    ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+
+    orig_ext = os.path.splitext(file.filename or "")[1].lower()
+    if orig_ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Only JPEG, PNG, and WebP images are allowed."
+        )
+
+    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+    content = await file.read()
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File size exceeds maximum limit of 5MB."
+        )
+
+    # Magic header byte verification
+    is_jpeg = content.startswith(b"\xff\xd8\xff")
+    is_png = content.startswith(b"\x89PNG\r\n\x1a\n")
+    is_webp = content.startswith(b"RIFF") and b"WEBP" in content[:16]
+
+    if not (is_jpeg or is_png or is_webp):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match genuine image structure."
+        )
+
     os.makedirs("customer_uploads", exist_ok=True)
-    filename = f"{uuid.uuid4().hex}_{file.filename}"
-    filepath = os.path.join("customer_uploads", filename)
+    safe_filename = f"{uuid.uuid4().hex}{orig_ext}"
+    filepath = os.path.join("customer_uploads", safe_filename)
     with open(filepath, "wb") as f:
-        content = await file.read()
         f.write(content)
-    return {"url": f"/static/uploads/{filename}"}
+
+    return {"url": f"/static/uploads/{safe_filename}"}
 
 
 # ==========================================

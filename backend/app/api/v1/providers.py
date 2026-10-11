@@ -5,7 +5,10 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import AuthUser, require_provider
+from app.models.user import User
 from app.models.customer import Booking
+from app.schemas.security_ext import TotpSetupResponse, TotpVerifyRequest
+
 from app.services.provider.provider_service import ProviderServiceDomain
 from app.services.booking.state_machine import transition_booking_status
 from app.schemas.provider import (
@@ -1477,3 +1480,55 @@ def send_my_booking_chat_message(
         attachment_url=msg.attachment_url,
         created_at=msg.created_at.isoformat() if msg.created_at else "",
     )
+
+
+# =====================================================================
+# PROVIDER 2FA PRIVILEGED ACCOUNT SECURITY
+# =====================================================================
+@router.post("/providers/me/2fa/setup", response_model=TotpSetupResponse, summary="Setup TOTP 2FA for Provider")
+def setup_provider_2fa(
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db)
+):
+    from app.services import security_service
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found")
+    res = security_service.setup_totp_2fa(db, user)
+    return TotpSetupResponse(
+        secret=res["secret"],
+        provisioning_uri=res["provisioning_uri"],
+        recovery_codes=res.get("recovery_codes")
+    )
+
+
+@router.post("/providers/me/2fa/verify", summary="Verify TOTP 2FA code and enable 2FA for Provider")
+def verify_provider_2fa(
+    req: TotpVerifyRequest,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db)
+):
+    from app.services import security_service
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found")
+    is_valid = security_service.verify_totp_2fa(db, user, req.code)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail="Invalid TOTP 2FA verification code")
+    return {"status": "success", "message": "Provider 2FA verification successful and enabled."}
+
+
+@router.post("/providers/me/2fa/disable", summary="Disable TOTP 2FA for Provider")
+def disable_provider_2fa(
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db)
+):
+    from app.models.security import TwoFactorRecoveryCode
+    user = db.query(User).filter(User.id == current_user.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User account not found")
+    user.is_2fa_enabled = False
+    user.totp_secret = None
+    db.query(TwoFactorRecoveryCode).filter(TwoFactorRecoveryCode.user_id == user.id).delete(synchronize_session=False)
+    db.commit()
+    return {"status": "success", "message": "Provider 2FA disabled successfully."}

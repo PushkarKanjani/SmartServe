@@ -1,9 +1,11 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 
 class TotpSetupResponse(BaseModel):
     secret: str
     provisioning_uri: str
+    recovery_codes: Optional[List[str]] = None
+
 
 class TotpVerifyRequest(BaseModel):
     code: str

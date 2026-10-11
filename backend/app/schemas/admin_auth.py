@@ -5,6 +5,9 @@ from pydantic import BaseModel, EmailStr, Field
 class AdminLoginRequest(BaseModel):
     email: EmailStr
     password: str
+    totp_code: Optional[str] = None
+    recovery_code: Optional[str] = None
+
 
 class TokenResponse(BaseModel):
     access_token: str

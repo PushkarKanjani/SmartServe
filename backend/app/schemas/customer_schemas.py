@@ -16,6 +16,8 @@ class CustomerRegisterPayload(BaseModel):
 class CustomerLoginPayload(BaseModel):
     email: EmailStr
     password: str
+    totp_code: Optional[str] = None
+    recovery_code: Optional[str] = None
 
 
 class CustomerTokenResponse(BaseModel):

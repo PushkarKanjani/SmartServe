@@ -60,8 +60,10 @@ def rbac_users(db_session: Session):
     amit_provider = db_session.query(Provider).filter(Provider.user_id == amit_user.id).first()
     amit_token = create_access_token({"sub": str(amit_user.id), "role": "provider", "email": amit_user.email})
 
-    # Provider Pooja Sharma
-    pooja_user = db_session.query(User).filter(User.email == "pooja.sharma.demo@gmail.com").first()
+    # Provider Pooja Sharma / Pooja Verma
+    pooja_user = db_session.query(User).filter(
+        (User.email == "pooja.sharma.demo@gmail.com") | (User.email == "pooja.beauty@smartserve.com")
+    ).first()
     assert pooja_user is not None, "Pooja user must exist"
     pooja_provider = db_session.query(Provider).filter(Provider.user_id == pooja_user.id).first()
     pooja_token = create_access_token({"sub": str(pooja_user.id), "role": "provider", "email": pooja_user.email})

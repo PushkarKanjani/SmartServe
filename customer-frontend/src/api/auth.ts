@@ -11,6 +11,8 @@ export interface CustomerRegisterPayload {
 export interface CustomerLoginPayload {
   email: string;
   password: string;
+  totp_code?: string;
+  recovery_code?: string;
 }
 
 export interface CustomerTokenResponse {
@@ -68,5 +70,41 @@ export const forgotPassword = async (email: string): Promise<{ status: string }>
 
 export const resetPassword = async (token: string, new_password: string): Promise<{ status: string }> => {
   const res = await apiClient.post<{ status: string }>('/customer/auth/reset-password', { token, new_password });
+  return res.data;
+};
+
+export interface OAuthProvidersResponse {
+  google: { configured: boolean; name: string };
+  apple: { configured: boolean; name: string };
+  github: { configured: boolean; name: string };
+}
+
+export interface OAuthAuthorizeResponse {
+  provider: string;
+  authorization_url: string;
+  state: string;
+}
+
+export const getOAuthProviders = async (): Promise<OAuthProvidersResponse> => {
+  const res = await apiClient.get<OAuthProvidersResponse>('/customer/auth/oauth/providers');
+  return res.data;
+};
+
+export const initiateOAuth = async (provider: 'google' | 'apple' | 'github'): Promise<OAuthAuthorizeResponse> => {
+  const res = await apiClient.get<OAuthAuthorizeResponse>(`/customer/auth/oauth/${provider}/authorize`);
+  return res.data;
+};
+
+export const submitOAuthCallback = async (
+  provider: string,
+  code: string,
+  state: string,
+  redirect_uri?: string
+): Promise<CustomerTokenResponse> => {
+  const res = await apiClient.post<CustomerTokenResponse>(`/customer/auth/oauth/${provider}/callback`, {
+    code,
+    state,
+    redirect_uri,
+  });
   return res.data;
 };

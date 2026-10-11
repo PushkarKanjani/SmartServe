@@ -126,6 +126,9 @@ def get_permissions_matrix(
     admin: User = Depends(require_admin)
 ):
     """Return standard RBAC system permission matrix."""
+    return SYSTEM_PERMISSION_MATRIX
+
+
 @router.get("/me", response_model=AdminDetailResponse)
 def get_current_admin_profile(
     db: Session = Depends(get_db),
@@ -254,6 +257,8 @@ def create_admin_account(
     }
 
 @router.patch("/{admin_id}/role")
+@router.post("/{admin_id}/role")
+@router.put("/{admin_id}/role")
 def update_admin_role(
     admin_id: str,
     req: AdminRoleUpdateRequest,
@@ -307,9 +312,9 @@ def update_admin_account_status(
     admin_id: str,
     req: AccountStatusRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin)
+    admin: User = Depends(require_permission("admins:manage"))
 ):
-    """Suspend or reactivate an administrator account."""
+    """Suspend or reactivate an administrator account with strict permission check."""
     try:
         a_uuid = uuid.UUID(admin_id)
     except ValueError:
@@ -324,6 +329,14 @@ def update_admin_account_status(
 
     target_user.is_active = req.is_active
     db.commit()
+
+    # If deactivating, revoke all active sessions immediately
+    if not req.is_active:
+        try:
+            from app.services.security_service import revoke_all_user_sessions
+            revoke_all_user_sessions(db, target_user.id)
+        except Exception:
+            pass
 
     action_str = "Reactivated" if req.is_active else "Suspended"
     audit_repository.create_audit_log(

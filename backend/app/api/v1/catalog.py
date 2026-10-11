@@ -625,6 +625,24 @@ def export_catalog_excel(
         headers={"Content-Disposition": "attachment; filename=SmartServe_Catalog_Export.xlsx"}
     )
 
+MAX_EXCEL_SIZE = 10 * 1024 * 1024  # 10 MB
+
+def _validate_excel_contents(contents: bytes, filename: str):
+    """Validate uploaded Excel document size and magic header bytes."""
+    if len(contents) > MAX_EXCEL_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="Excel file size exceeds the 10MB maximum limit."
+        )
+    # .xlsx is OpenXML ZIP (PK\x03\x04); legacy .xls is OLE Compound Doc (\xd0\xcf\x11\xe0)
+    is_xlsx = contents.startswith(b"PK\x03\x04")
+    is_xls = contents.startswith(b"\xd0\xcf\x11\xe0")
+    if not (is_xlsx or is_xls):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match genuine Excel (.xlsx / .xls) structure."
+        )
+
 @router.post("/preview-import-excel")
 async def preview_import_catalog_excel(
     file: UploadFile = File(...),
@@ -632,10 +650,11 @@ async def preview_import_catalog_excel(
     admin: User = Depends(require_admin)
 ):
     """Preview and validate uploaded Excel catalog spreadsheet without modifying database."""
-    if not file.filename.endswith(('.xlsx', '.xls')):
-        raise HTTPException(status_code=400, detail="Only Excel files (.xlsx) are supported")
+    if not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are supported")
 
     contents = await file.read()
+    _validate_excel_contents(contents, file.filename)
     preview_data = excel_service.preview_import_catalog_excel(db, contents)
     return preview_data
 
@@ -646,10 +665,11 @@ async def import_catalog_excel(
     admin: User = Depends(require_permission("catalog:import"))
 ):
     """Bulk import or update catalog items from an uploaded Excel spreadsheet (.xlsx)."""
-    if not file.filename.endswith(('.xlsx', '.xls')):
-        raise HTTPException(status_code=400, detail="Only Excel files (.xlsx) are supported")
+    if not file.filename.lower().endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="Only Excel files (.xlsx, .xls) are supported")
 
     contents = await file.read()
+    _validate_excel_contents(contents, file.filename)
     inserted, updated, errors = excel_service.parse_and_import_catalog_excel(db, contents, admin.email)
 
     return {
