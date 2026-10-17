@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/useAuth';
 import { BackendPulse } from '../common/BackendPulse';
+import { LanguageSelector } from '../common/LanguageSelector';
+import { getBundleItems } from '../../utils/bundleCart';
 import { 
   Home, 
   Grid, 
@@ -9,7 +12,8 @@ import {
   HelpCircle, 
   User, 
   LogOut, 
-  X
+  X,
+  Layers,
 } from 'lucide-react';
 
 export interface CustomerSidebarProps {
@@ -20,6 +24,22 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { t } = useTranslation();
+
+  const [bundleCount, setBundleCount] = useState<number>(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      setBundleCount(getBundleItems().length);
+    };
+    updateCount();
+    window.addEventListener('smartserve_bundle_updated', updateCount);
+    window.addEventListener('storage', updateCount);
+    return () => {
+      window.removeEventListener('smartserve_bundle_updated', updateCount);
+      window.removeEventListener('storage', updateCount);
+    };
+  }, []);
 
   const handleLogout = async () => {
     if (onClose) onClose();
@@ -29,31 +49,38 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
 
   const navItems = [
     { 
-      label: 'Home', 
+      label: t('nav.home', { defaultValue: 'Home' }), 
       path: '/home', 
       icon: Home,
       isActive: location.pathname === '/home' || location.pathname === '/'
     },
     { 
-      label: 'Services', 
+      label: t('nav.services', { defaultValue: 'Services' }), 
       path: '/catalog', 
       icon: Grid,
       isActive: location.pathname === '/catalog' || location.pathname.startsWith('/service/') || location.pathname.startsWith('/catalog/')
     },
     { 
-      label: 'My Bookings', 
+      label: t('bundle.cart_title', { defaultValue: 'Service Bundle' }), 
+      path: '/bundle', 
+      icon: Layers,
+      badge: bundleCount > 0 ? bundleCount : null,
+      isActive: location.pathname === '/bundle' || location.pathname === '/combined-booking'
+    },
+    { 
+      label: t('nav.bookings', { defaultValue: 'My Bookings' }), 
       path: '/bookings', 
       icon: CalendarCheck,
       isActive: location.pathname.startsWith('/bookings')
     },
     { 
-      label: 'Support', 
+      label: t('nav.support', { defaultValue: 'Support' }), 
       path: '/support', 
       icon: HelpCircle,
       isActive: location.pathname.startsWith('/support')
     },
     { 
-      label: 'Profile', 
+      label: t('nav.profile', { defaultValue: 'Profile' }), 
       path: '/profile', 
       icon: User,
       isActive: location.pathname.startsWith('/profile')
@@ -122,21 +149,34 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
               key={item.label}
               to={item.path}
               onClick={onClose}
-              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[13.5px] font-semibold transition-all ${
+              className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-[13.5px] font-semibold transition-all ${
                 active
                   ? 'bg-[#2F5233] text-white shadow-xs font-bold'
                   : 'text-[#1F2A1E]/75 hover:bg-[#F2EDE1] hover:text-[#1F2A1E]'
               }`}
             >
-              <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-white' : 'text-[#1F2A1E]/60'}`} />
-              <span className="truncate">{item.label}</span>
+              <div className="flex items-center gap-3 min-w-0">
+                <Icon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-white' : 'text-[#1F2A1E]/60'}`} />
+                <span className="truncate">{item.label}</span>
+              </div>
+              {item.badge && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#C9A15A] text-white shadow-2xs">
+                  {item.badge}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
 
-      {/* 3. Bottom Profile & Actions */}
+      {/* 3. Bottom Profile, Language Switcher & Actions */}
       <div className="p-4 border-t border-[#E5DEC9] space-y-3 flex-shrink-0 bg-[#F2EDE1]/50">
+        {/* Multilingual Selector */}
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1F2A1E]/50">Language</span>
+          <LanguageSelector compact />
+        </div>
+
         {/* Backend Pulse Live Indicator */}
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/70 border border-[#E5DEC9]/80 text-xs font-semibold text-[#1F2A1E]/70">
           <span className="text-[11px] font-medium text-[#1F2A1E]/60">Platform Status</span>

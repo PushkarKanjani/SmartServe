@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { getCatalogCategories, getCatalogServices, CategoryItem, ServiceItem } from '../api/catalog';
 import { getCustomerBookings, BookingDetail } from '../api/bookings';
@@ -19,6 +20,7 @@ import {
 import { HomePromoCarousel } from '../components/home/HomePromoCarousel';
 
 export const CustomerHome: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -83,7 +85,7 @@ export const CustomerHome: React.FC = () => {
             type="submit"
             className="px-6 py-2.5 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-sm rounded-xl transition-all shadow-xs flex items-center gap-2 flex-shrink-0 cursor-pointer"
           >
-            <span>Search</span>
+            <span>{t('common.search', { defaultValue: 'Search' })}</span>
             <ArrowRight className="w-4 h-4 text-[#C9A15A]" />
           </button>
         </form>
@@ -95,10 +97,10 @@ export const CustomerHome: React.FC = () => {
           <div className="flex items-center justify-between">
             <h3 className="font-serif text-2xl font-normal text-[#1F2A1E] tracking-tight flex items-center gap-2.5">
               <Calendar className="w-5 h-5 text-[#2F5233]" />
-              <span>Your Active Bookings</span>
+              <span>{t('booking.active_bookings', { defaultValue: 'Your Active Bookings' })}</span>
             </h3>
             <button onClick={() => navigate('/bookings')} className="text-xs font-bold text-[#2F5233] hover:text-[#3D6B42] hover:underline cursor-pointer">
-              View All ({activeBookings.length})
+              {t('common.view_all', { defaultValue: 'View All' })} ({activeBookings.length})
             </button>
           </div>
 
@@ -137,14 +139,16 @@ export const CustomerHome: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1F2A1E] tracking-tight">Explore Categories</h2>
+            <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1F2A1E] tracking-tight">
+              {t('home.popular_categories', { defaultValue: 'Explore Categories' })}
+            </h2>
             <p className="text-xs text-[#1F2A1E]/60 font-medium mt-0.5">Browse verified services managed in the SmartServe master catalog.</p>
           </div>
           <button
             onClick={() => navigate('/catalog')}
             className="text-xs font-bold text-[#2F5233] hover:text-[#3D6B42] flex items-center gap-1 cursor-pointer"
           >
-            <span>See Full Catalog</span>
+            <span>{t('home.view_all', { defaultValue: 'See Full Catalog' })}</span>
             <ChevronRight className="w-4 h-4 text-[#C9A15A]" />
           </button>
         </div>
@@ -195,7 +199,7 @@ export const CustomerHome: React.FC = () => {
             Standard SmartServe Guarantee
           </span>
           <h3 className="font-serif text-2xl sm:text-3xl font-normal tracking-tight text-[#1F2A1E] leading-tight">
-            Transparent Upfront Pricing & 30-Day Service Warranty
+            {t('home.trust_warranty_banner', { defaultValue: 'Transparent Upfront Pricing & 7-Day Service Warranty' })}
           </h3>
           <p className="text-xs sm:text-sm text-[#1F2A1E]/75 font-normal leading-relaxed">
             All services booked through SmartServe are executed by verified specialists with clear inclusions, standard process steps, and genuine customer protection.
@@ -205,7 +209,7 @@ export const CustomerHome: React.FC = () => {
               onClick={() => navigate('/catalog')}
               className="px-6 py-3 rounded-xl bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-xs sm:text-sm shadow-xs transition-all inline-flex items-center gap-2 cursor-pointer"
             >
-              <span>Browse All Services</span>
+              <span>{t('home.explore_services', { defaultValue: 'Browse All Services' })}</span>
               <ArrowRight className="w-4 h-4 text-[#C9A15A]" />
             </button>
           </div>
@@ -216,14 +220,16 @@ export const CustomerHome: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1F2A1E] tracking-tight">Popular Home Services</h2>
+            <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1F2A1E] tracking-tight">
+              {t('home.popular_categories', { defaultValue: 'Popular Home Services' })}
+            </h2>
             <p className="text-xs text-[#1F2A1E]/60 font-medium mt-0.5">Top-rated services booked across the marketplace</p>
           </div>
           <button
             onClick={() => navigate('/catalog')}
             className="text-xs font-bold text-[#2F5233] hover:text-[#3D6B42] cursor-pointer"
           >
-            View All Services
+            {t('home.view_all', { defaultValue: 'View All Services' })}
           </button>
         </div>
 

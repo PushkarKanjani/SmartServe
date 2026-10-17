@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   getCatalogCategories, 
   getCatalogServices, 
@@ -8,6 +9,7 @@ import {
 } from '../api/catalog';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage, formatCategoryDisplayName, DEFAULT_SERVICE_IMAGE } from '../utils/serviceImages';
+import { addBundleItem, removeBundleItem, getBundleItems } from '../utils/bundleCart';
 import { 
   Search, 
   Star, 
@@ -26,6 +28,7 @@ import {
 } from 'lucide-react';
 
 export const CustomerCatalog: React.FC = () => {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -46,6 +49,34 @@ export const CustomerCatalog: React.FC = () => {
   const [sortBy, setSortBy] = useState<string>('default');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [servicesLoading, setServicesLoading] = useState<boolean>(false);
+  const [bundleItemIds, setBundleItemIds] = useState<string[]>(() => getBundleItems().map(b => b.id));
+
+  useEffect(() => {
+    const syncBundle = () => {
+      setBundleItemIds(getBundleItems().map(b => b.id));
+    };
+    window.addEventListener('smartserve_bundle_updated', syncBundle);
+    window.addEventListener('storage', syncBundle);
+    return () => {
+      window.removeEventListener('smartserve_bundle_updated', syncBundle);
+      window.removeEventListener('storage', syncBundle);
+    };
+  }, []);
+
+  const handleToggleBundle = (e: React.MouseEvent, svc: ServiceItem) => {
+    e.stopPropagation();
+    if (bundleItemIds.includes(svc.id)) {
+      removeBundleItem(svc.id);
+    } else {
+      addBundleItem({
+        id: svc.id,
+        name: svc.name,
+        category: svc.category,
+        base_price: svc.base_price,
+        image_url: getServiceImage(svc.category, svc.subcategory, svc.name)
+      });
+    }
+  };
 
   // 1. Initial Categories Load
   const fetchCategories = async () => {
@@ -671,23 +702,39 @@ export const CustomerCatalog: React.FC = () => {
                       )}
 
                       {/* Pricing & Booking Footer */}
-                      <div className="pt-3 border-t border-[#E5DEC9]/60 flex items-center justify-between gap-3">
+                      <div className="pt-3 border-t border-[#E5DEC9]/60 flex items-center justify-between gap-2">
                         <div>
                           <span className="text-[10px] font-bold text-[#1F2A1E]/45 uppercase tracking-wider block">Price</span>
-                          <span className="font-serif text-xl font-normal text-[#1F2A1E]">
+                          <span className="font-serif text-lg font-normal text-[#1F2A1E]">
                             {formatCurrencyINR(svc.base_price)}
                           </span>
                         </div>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/catalog/service/${svc.id}`);
-                          }}
-                          className="px-4 py-2 bg-[#2F5233] hover:bg-[#3D6B42] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                        >
-                          Book Service
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={(e) => handleToggleBundle(e, svc)}
+                            className={`px-2.5 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center gap-1 ${
+                              bundleItemIds.includes(svc.id)
+                                ? 'bg-[#C9A15A]/15 text-[#C9A15A] border-[#C9A15A]'
+                                : 'bg-[#F2EDE1] text-[#2F5233] border-[#E5DEC9] hover:bg-[#E5DEC9]'
+                            }`}
+                            title={bundleItemIds.includes(svc.id) ? 'Remove from Bundle' : 'Add to Multi-Service Bundle'}
+                          >
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>{bundleItemIds.includes(svc.id) ? t('booking.in_bundle', { defaultValue: 'In Bundle' }) : t('booking.add_to_bundle', { defaultValue: '+ Bundle' })}</span>
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/catalog/service/${svc.id}`);
+                            }}
+                            className="px-3.5 py-2 bg-[#2F5233] hover:bg-[#3D6B42] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                          >
+                            {t('booking.book_now', { defaultValue: 'Book' })}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -735,7 +782,7 @@ export const CustomerCatalog: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between sm:justify-end gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-[#E5DEC9]/60 flex-shrink-0">
+                    <div className="flex items-center justify-between sm:justify-end gap-4 pt-3 sm:pt-0 border-t sm:border-t-0 border-[#E5DEC9]/60 flex-shrink-0">
                       <div className="text-left sm:text-right">
                         <span className="font-serif text-lg font-normal text-[#1F2A1E] block">
                           {formatCurrencyINR(svc.base_price)}
@@ -745,15 +792,31 @@ export const CustomerCatalog: React.FC = () => {
                         </span>
                       </div>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/catalog/service/${svc.id}`);
-                        }}
-                        className="px-4 py-2 bg-[#2F5233] hover:bg-[#3D6B42] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-                      >
-                        Book Now
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleBundle(e, svc)}
+                          className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer flex items-center gap-1 ${
+                            bundleItemIds.includes(svc.id)
+                              ? 'bg-[#C9A15A]/15 text-[#C9A15A] border-[#C9A15A]'
+                              : 'bg-[#F2EDE1] text-[#2F5233] border-[#E5DEC9] hover:bg-[#E5DEC9]'
+                          }`}
+                          title={bundleItemIds.includes(svc.id) ? 'Remove from Bundle' : 'Add to Multi-Service Bundle'}
+                        >
+                          <Layers className="w-3.5 h-3.5" />
+                          <span>{bundleItemIds.includes(svc.id) ? t('booking.in_bundle', { defaultValue: 'In Bundle' }) : t('booking.add_to_bundle', { defaultValue: '+ Bundle' })}</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/catalog/service/${svc.id}`);
+                          }}
+                          className="px-4 py-2 bg-[#2F5233] hover:bg-[#3D6B42] text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+                        >
+                          {t('booking.book_now', { defaultValue: 'Book Now' })}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );

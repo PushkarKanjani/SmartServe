@@ -1,10 +1,13 @@
 import React, { ReactNode, useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CustomerSidebar } from './CustomerSidebar';
 import { CustomerFooter } from './CustomerFooter';
 import { BackendPulse } from '../common/BackendPulse';
 import { AISupportAssistant } from '../common/AISupportAssistant';
-import { Menu } from 'lucide-react';
+import { LanguageSelector } from '../common/LanguageSelector';
+import { getBundleItems } from '../../utils/bundleCart';
+import { Menu, Layers } from 'lucide-react';
 
 interface CustomerLayoutProps {
   children: ReactNode;
@@ -13,6 +16,22 @@ interface CustomerLayoutProps {
 export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
+  const { t } = useTranslation();
+
+  const [bundleCount, setBundleCount] = useState<number>(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      setBundleCount(getBundleItems().length);
+    };
+    updateCount();
+    window.addEventListener('smartserve_bundle_updated', updateCount);
+    window.addEventListener('storage', updateCount);
+    return () => {
+      window.removeEventListener('smartserve_bundle_updated', updateCount);
+      window.removeEventListener('storage', updateCount);
+    };
+  }, []);
 
   // Close drawer on route change
   useEffect(() => {
@@ -73,17 +92,20 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
 
       {/* 4. MAIN CONTENT AREA (Occupies Remaining Width) */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-[#FAF7F0] lg:pl-[260px]">
-        {/* Mobile Header (Only visible on screens < lg) */}
-        <header className="lg:hidden h-16 bg-[#FAF7F0]/95 backdrop-blur-md border-b border-[#E5DEC9] px-4 flex items-center justify-between sticky top-0 z-30 flex-shrink-0">
+        {/* Universal Top Header (Visible on ALL devices) */}
+        <header className="h-16 bg-[#FAF7F0]/95 backdrop-blur-md border-b border-[#E5DEC9] px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30 flex-shrink-0">
           <div className="flex items-center gap-3">
+            {/* Mobile menu trigger */}
             <button
               onClick={() => setDrawerOpen(true)}
-              className="p-2 rounded-xl text-[#1F2A1E]/70 hover:bg-[#F2EDE1] transition-colors cursor-pointer"
+              className="lg:hidden p-2 rounded-xl text-[#1F2A1E]/70 hover:bg-[#F2EDE1] transition-colors cursor-pointer"
               aria-label="Open navigation menu"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <Link to="/home" className="flex items-center gap-2">
+
+            {/* Mobile Brand Logo */}
+            <Link to="/home" className="flex items-center gap-2 lg:hidden">
               <div className="w-8 h-8 rounded-lg border border-[#E5DEC9] bg-[#FAF7F0] flex items-center justify-center p-0.5">
                 <svg className="w-full h-full" viewBox="0 0 96 96" fill="none">
                   <path
@@ -108,8 +130,48 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                 Smart<span className="text-[#C9A15A]">Serve</span>
               </span>
             </Link>
+
+            {/* Desktop Headline / Breadcrumb */}
+            <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-[#1F2A1E]/60">
+              <span className="text-[#2F5233] font-bold font-serif">SmartServe</span>
+              <span>/</span>
+              <span className="text-[#1F2A1E] font-medium capitalize">
+                {location.pathname === '/catalog'
+                  ? t('nav.services', { defaultValue: 'Services' })
+                  : location.pathname === '/bundle'
+                  ? t('bundle.cart_title', { defaultValue: 'Service Bundle' })
+                  : location.pathname.replace('/', '') || 'Home'}
+              </span>
+            </div>
           </div>
-          <BackendPulse />
+
+          {/* Right Header Controls: Bundle Cart + Language Switcher + Live Network */}
+          <div className="flex items-center gap-3">
+            {/* Service Bundle Cart Quick Link */}
+            <Link
+              to="/bundle"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-[#F2EDE1] text-[#2F5233] rounded-xl border border-[#E5DEC9] text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+              title="View Multi-Service Bundle Cart"
+            >
+              <div className="relative">
+                <Layers className="w-4 h-4 text-[#2F5233]" />
+                {bundleCount > 0 && (
+                  <span className="absolute -top-2 -right-2.5 min-w-4 h-4 px-1 rounded-full bg-[#C9A15A] text-white text-[9px] font-black flex items-center justify-center animate-pulse">
+                    {bundleCount}
+                  </span>
+                )}
+              </div>
+              <span className="hidden sm:inline">{t('bundle.cart_title', { defaultValue: 'Bundle Cart' })}</span>
+            </Link>
+
+            {/* Language Selector */}
+            <LanguageSelector />
+
+            {/* Live Network Pulse */}
+            <div className="hidden sm:block">
+              <BackendPulse />
+            </div>
+          </div>
         </header>
 
         {/* Existing Customer Page Content */}
