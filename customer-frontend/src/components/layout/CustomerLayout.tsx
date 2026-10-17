@@ -7,7 +7,7 @@ import { AISupportAssistant } from '../common/AISupportAssistant';
 import { LanguageSelector } from '../common/LanguageSelector';
 import { getBundleItems } from '../../utils/bundleCart';
 import { getLocalizedCategory, getLocalizedSubcategory } from '../../utils/localizedNames';
-import { Menu, Layers } from 'lucide-react';
+import { Menu, Layers, ChevronRight } from 'lucide-react';
 
 interface CustomerLayoutProps {
   children: ReactNode;
@@ -132,11 +132,11 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
             </Link>
 
             {/* Desktop Headline / Breadcrumb */}
-            <div className="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-[#1F2A1E]/60 flex-wrap">
+            <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-[#1F2A1E]/60 whitespace-nowrap">
               <Link to="/home" className="text-[#2F5233] font-bold font-serif hover:opacity-80 transition-opacity">
                 SmartServe
               </Link>
-              <span>/</span>
+              <ChevronRight className="w-3.5 h-3.5 text-[#1F2A1E]/30 flex-shrink-0" />
               {location.pathname === '/catalog' ? (
                 <>
                   <Link
@@ -147,7 +147,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                   </Link>
                   {new URLSearchParams(location.search).get('category') && (
                     <>
-                      <span>/</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-[#1F2A1E]/30 flex-shrink-0" />
                       <Link
                         to={`/catalog?category=${encodeURIComponent(new URLSearchParams(location.search).get('category')!)}`}
                         className={`hover:text-[#2F5233] transition-colors ${!new URLSearchParams(location.search).get('subcategory') ? 'text-[#1F2A1E] font-bold' : ''}`}
@@ -158,7 +158,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
                   )}
                   {new URLSearchParams(location.search).get('subcategory') && (
                     <>
-                      <span>/</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-[#1F2A1E]/30 flex-shrink-0" />
                       <span className="text-[#1F2A1E] font-bold">
                         {getLocalizedSubcategory(new URLSearchParams(location.search).get('subcategory')!)}
                       </span>

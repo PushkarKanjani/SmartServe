@@ -10,7 +10,7 @@ export function normalizeKey(raw?: string | null): string {
   if (!raw) return '';
   return raw
     .replace(/^\d+\.\s*/, '')
-    .replace(/[&\/\\_\-+]/g, ' ')
+    .replace(/[^a-zA-Z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
@@ -160,13 +160,31 @@ export const SERVICE_NAME_TRANSLATIONS: Record<string, { hi: string; gu: string 
   'balcony cleaning': { hi: 'बालकनी सफाई', gu: 'બાલ્કની સફાઈ' },
 
   // Beauty
-  'bleach': { hi: 'ब्लीच सर्विस', gu: 'બ્લીચ સર્વિસ' },
-  'facial bleach': { hi: 'फेशियल ब्लीच', gu: 'ફેશિયલ બ્લીચ' },
-  'body bleach': { hi: 'बॉडी ब्लीच', gu: 'બોડી બ્લીચ' },
+  'classic facial': { hi: 'क्लासिक फेशियल', gu: 'ક્લાસિક ફેશિયલ' },
   'fruit facial': { hi: 'फ्रूट फेशियल', gu: 'ફ્રૂટ ફેશિયલ' },
   'gold facial': { hi: 'गोल्ड फेशियल', gu: 'ગોલ્ડ ફેશિયલ' },
   'diamond facial': { hi: 'डायमंड फेशियल', gu: 'ડાયમંડ ફેશિયલ' },
+  'anti aging facial': { hi: 'एंटी-एजिंग फेशियल', gu: 'એન્ટી-એજિંગ ફેશિયલ' },
+  'skin brightening facial': { hi: 'स्किन ब्राइटनिंग फेशियल', gu: 'સ્કિન બ્રાઇટનિંગ ફેશિયલ' },
+  'de tan pack': { hi: 'डी-टैन पैक', gu: 'ડી-ટેન પેક' },
+  'face cleanup': { hi: 'फेस क्लीनअप', gu: 'ફેસ ક્લીનઅપ' },
+  'facial cleanup': { hi: 'फेशियल क्लीनअप', gu: 'ફેશિયલ ક્લીનઅપ' },
   'cleanup': { hi: 'फेस क्लीनअप', gu: 'ફેસ ક્લીનઅપ' },
+  'bleach': { hi: 'ब्लीच सर्विस', gu: 'બ્લીચ સર્વિસ' },
+  'bleach service': { hi: 'ब्लीच सर्विस', gu: 'બ્લીચ સર્વિસ' },
+  'facial bleach': { hi: 'फेशियल ब्लीच', gu: 'ફેશિયલ બ્લીચ' },
+  'body bleach': { hi: 'बॉडी ब्लीच', gu: 'બોડી બ્લીચ' },
+  'haircut': { hi: 'हेयरकट', gu: 'હેરકટ' },
+  'hair spa': { hi: 'हेयर स्पा', gu: 'હેર સ્પા' },
+  'head massage': { hi: 'हेड मसाज', gu: 'હેડ મસાજ' },
+  'body massage': { hi: 'बॉडी मसाज', gu: 'બોડી મસાજ' },
+  'full body massage': { hi: 'फुल बॉडी मसाज', gu: 'ફુલ બોડી મસાજ' },
+  'manicure': { hi: 'मेनिक्योर', gu: 'મેનિક્યોર' },
+  'pedicure': { hi: 'पेदिक्योर', gu: 'પેડિક્યોર' },
+  'waxing': { hi: 'वैक्सिंग', gu: 'વેક્સિંગ' },
+  'threading': { hi: 'थ्रेडिंग', gu: 'થ્રેડિંગ' },
+  'shave': { hi: 'शेव', gu: 'શેવિંગ' },
+  'beard styling': { hi: 'दाढ़ी स्टाइलिंग', gu: 'દાઢી સ્ટાઇલિંગ' },
 
   // AC & Electrical
   'ac service': { hi: 'एसी सर्विस', gu: 'એસી સર્વિસ' },
@@ -261,7 +279,40 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     return lang === 'hi' ? `${base} सेवा विकल्प ${num}` : `${base} સેવા વિકલ્પ ${num}`;
   }
 
-  // 4. Common suffix transliterations
+  // 4. Common keywords & suffix transliterations
+  if (lower.includes('facial')) {
+    const prefix = trimmed.replace(/facial/gi, '').trim();
+    if (!prefix) return lang === 'hi' ? 'फेशियल' : 'ફેશિયલ';
+    if (prefix.toLowerCase() === 'classic') return lang === 'hi' ? 'क्लासिक फेशियल' : 'ક્લાસિક ફેશિયલ';
+    if (prefix.toLowerCase() === 'fruit') return lang === 'hi' ? 'फ्रूट फेशियल' : 'ફ્રૂટ ફેશિયલ';
+    if (prefix.toLowerCase() === 'gold') return lang === 'hi' ? 'गोल्ड फेशियल' : 'ગોલ્ડ ફેશિયલ';
+    if (prefix.toLowerCase() === 'diamond') return lang === 'hi' ? 'डायमंड फेशियल' : 'ડાયમંડ ફેશિયલ';
+    return lang === 'hi' ? `${prefix} फेशियल` : `${prefix} ફેશિયલ`;
+  }
+  if (lower.includes('cleanup')) {
+    const prefix = trimmed.replace(/cleanup/gi, '').trim();
+    return lang === 'hi' ? `${prefix} क्लीनअप`.trim() : `${prefix} ક્લીનઅપ`.trim();
+  }
+  if (lower.includes('massage')) {
+    const prefix = trimmed.replace(/massage/gi, '').trim();
+    return lang === 'hi' ? `${prefix} मसाज`.trim() : `${prefix} મસાજ`.trim();
+  }
+  if (lower.includes('waxing')) {
+    const prefix = trimmed.replace(/waxing/gi, '').trim();
+    return lang === 'hi' ? `${prefix} वैक्सिंग`.trim() : `${prefix} વેક્સિંગ`.trim();
+  }
+  if (lower.includes('manicure')) {
+    const prefix = trimmed.replace(/manicure/gi, '').trim();
+    return lang === 'hi' ? `${prefix} मेनिक्योर`.trim() : `${prefix} મેનિક્યોર`.trim();
+  }
+  if (lower.includes('pedicure')) {
+    const prefix = trimmed.replace(/pedicure/gi, '').trim();
+    return lang === 'hi' ? `${prefix} पेदिक्योर`.trim() : `${prefix} પેડિક્યોર`.trim();
+  }
+  if (lower.includes('haircut')) {
+    const prefix = trimmed.replace(/haircut/gi, '').trim();
+    return lang === 'hi' ? `${prefix} हेयरकट`.trim() : `${prefix} હેરકટ`.trim();
+  }
   if (lower.endsWith('cleaning')) {
     const prefix = trimmed.slice(0, -8).trim();
     return lang === 'hi' ? `${prefix} सफाई` : `${prefix} સફાઈ`;

@@ -8,7 +8,7 @@ import {
   ServiceItem 
 } from '../api/catalog';
 import { formatCurrencyINR } from '../utils/formatters';
-import { getServiceImage, formatCategoryDisplayName, DEFAULT_SERVICE_IMAGE } from '../utils/serviceImages';
+import { getServiceImage, DEFAULT_SERVICE_IMAGE } from '../utils/serviceImages';
 import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName } from '../utils/localizedNames';
 import { addBundleItem, removeBundleItem, getBundleItems } from '../utils/bundleCart';
 import { 
@@ -274,41 +274,6 @@ export const CustomerCatalog: React.FC = () => {
   return (
     <div className="space-y-8 font-sans max-w-7xl mx-auto pb-12">
 
-      {/* BREADCRUMB HIERARCHY BAR */}
-      <nav className="flex items-center gap-2 text-xs font-bold text-[#1F2A1E]/50 flex-wrap">
-        <button 
-          onClick={handleResetToCategories}
-          className={`hover:text-[#2F5233] transition-colors cursor-pointer ${isLevel1 ? 'text-[#2F5233]' : ''}`}
-        >
-          All Categories
-        </button>
-
-        {selectedCategory && (
-          <>
-            <ChevronRight className="w-3.5 h-3.5 text-[#C9A15A] flex-shrink-0" />
-            <button 
-              onClick={() => handleSelectCategory(selectedCategory)}
-              className={`hover:text-[#2F5233] transition-colors cursor-pointer ${isLevel2 ? 'text-[#2F5233]' : ''}`}
-            >
-              {formatCategoryDisplayName(selectedCategory)}
-            </button>
-          </>
-        )}
-
-        {selectedSubcategory && (
-          <>
-            <ChevronRight className="w-3.5 h-3.5 text-[#C9A15A] flex-shrink-0" />
-            <span className="text-[#1F2A1E] font-extrabold">{selectedSubcategory}</span>
-          </>
-        )}
-
-        {viewAllServices && !selectedCategory && (
-          <>
-            <ChevronRight className="w-3.5 h-3.5 text-[#C9A15A] flex-shrink-0" />
-            <span className="text-[#1F2A1E] font-extrabold">All Services Catalog</span>
-          </>
-        )}
-      </nav>
 
       {/* SEARCH & QUICK ACTION BAR */}
       <div className="bg-white p-4 sm:p-5 rounded-3xl border border-[#E5DEC9] shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -485,7 +450,7 @@ export const CustomerCatalog: React.FC = () => {
                           {getLocalizedSubcategory(sub.name)}
                         </h3>
                         <p className="text-xs text-[#FAF7F0]/80 font-medium mt-0.5">
-                          {sub.service_count} {t('nav.catalog', { defaultValue: 'Services' })} Available
+                          {sub.service_count} {t('catalog_page.services_available', { defaultValue: 'Services Available' })}
                         </p>
                       </div>
 
