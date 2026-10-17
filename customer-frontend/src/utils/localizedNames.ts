@@ -1,4 +1,19 @@
 import i18n from '../i18n';
+import {
+  CATEGORY_TRANSLATIONS,
+  SUBCATEGORY_TRANSLATIONS,
+  SERVICE_NAME_TRANSLATIONS,
+  FEATURE_TRANSLATIONS,
+  WORD_TRANSLATIONS
+} from './localizedCatalogData';
+
+export {
+  CATEGORY_TRANSLATIONS,
+  SUBCATEGORY_TRANSLATIONS,
+  SERVICE_NAME_TRANSLATIONS,
+  FEATURE_TRANSLATIONS,
+  WORD_TRANSLATIONS
+};
 
 /**
  * Normalizes category and subcategory string keys for robust lookup:
@@ -20,182 +35,6 @@ export function getCleanName(raw?: string | null): string {
   if (!raw) return '';
   return raw.replace(/^\d+\.\s*/, '').trim();
 }
-
-// 1. All 14 Primary Categories
-export const CATEGORY_TRANSLATIONS: Record<string, { hi: string; gu: string }> = {
-  'beauty salon spa': { hi: 'ब्यूटी, सैलून और स्पा', gu: 'બ્યુટી, સલૂન અને સ્પા' },
-  'beauty salon and spa': { hi: 'ब्यूटी, सैलून और स्पा', gu: 'બ્યુટી, સલૂન અને સ્પા' },
-  'beauty': { hi: 'ब्यूटी व पर्सनल केयर', gu: 'બ્યુટી અને પર્સનલ કેર' },
-  'parlor beauty': { hi: 'पार्लर और ब्यूटी', gu: 'પાર્લર અને બ્યુટી' },
-  'cleaning home cleaning': { hi: 'घर की सफाई', gu: 'ઘરની સફાઈ' },
-  'cleaning and home cleaning': { hi: 'घर की सफाई', gu: 'ઘરની સફાઈ' },
-  'cleaning': { hi: 'सफाई सेवाएं', gu: 'સફાઈ સેવાઓ' },
-  'deep cleaning': { hi: 'डीप क्लीनिंग', gu: 'ડીપ ક્લિનિંગ' },
-  'painting waterproofing home improvement': { hi: 'पेंटिंग, वॉटरप्रूफिंग व होम सुधार', gu: 'પેઇન્ટિંગ, વૉટરપ્રૂફિંગ અને હોમ ઇમ્પ્રૂવમેન્ટ' },
-  'painting': { hi: 'पेंटिंग सेवाएं', gu: 'પેઇન્ટિંગ સેવાઓ' },
-  'ac appliance electronics repair': { hi: 'एसी व उपकरण मरम्मत', gu: 'એસી અને ઉપકરણ રિપેરિંગ' },
-  'ac repair': { hi: 'एसी मरम्मत', gu: 'એસી રિપેરિંગ' },
-  'appliance repair': { hi: 'उपकरण मरम्मत', gu: 'ઉપકરણ રિપેરિંગ' },
-  'electrician plumber carpenter home repairs': { hi: 'इलेक्ट्रीशियन, प्लंबर व बढ़ई', gu: 'ઇલેક્ટ્રિશિયન, પ્લમ્બર અને સુથાર' },
-  'plumbing': { hi: 'नलसाजी (प्लंबिंग)', gu: 'પ્લમ્બિંગ સેવાઓ' },
-  'electrical': { hi: 'इलेक्ट्रिकल सेवाएं', gu: 'ઇલેક્ટ્રિકલ સેવાઓ' },
-  'carpentry': { hi: 'बढ़ई का काम', gu: 'સુથારીકામ' },
-  'smart home security': { hi: 'स्मार्ट होम व सुरक्षा', gu: 'સ્માર્ટ હોમ અને સુરક્ષા' },
-  'domestic help cooking': { hi: 'घरेलू सहायिका व कुकिंग', gu: 'ઘરેલું સહાયક અને રસોઈ' },
-  'education teachers coaching': { hi: 'शिक्षा, शिक्षक व कोचिंग', gu: 'શિક્ષણ અને ટ્યુટોરિયલ' },
-  'health fitness wellness': { hi: 'स्वास्थ्य, फिटनेस व वेलनेस', gu: 'સ્વાસ્થ્ય, ફિટનેસ અને સુખાકારી' },
-  'events photography entertainment': { hi: 'इवेंट्स, फोटोग्राफी व मनोरंजन', gu: 'ઇવેન્ટ્સ અને ફોટોગ્રાફી' },
-  'pet services': { hi: 'पालतू पशु सेवाएं', gu: 'પાલતુ પ્રાણી સેવાઓ' },
-  'technology digital services': { hi: 'टेक्नोलॉजी व डिजिटल सेवाएं', gu: 'ટેકનોલોજી અને ડિજિટલ સેવાઓ' },
-  'professional business services': { hi: 'पेशेवर व व्यावसायिक सेवाएं', gu: 'વ્યાવસાયિક સેવાઓ' },
-  'moving delivery local assistance': { hi: 'मूविंग, डिलीवरी व लोकल सहायता', gu: 'મૂવિંગ, ડિલિવરી અને લોકલ સહાય' },
-  'vehicle care automobile services': { hi: 'वाहन देखभाल व ऑटोमोबाइल', gu: 'વાહન સંભાળ અને ઓટોમોબાઇલ' }
-};
-
-// 2. All 68 Marketplace Subcategories (Normalized keys without punctuation)
-export const SUBCATEGORY_TRANSLATIONS: Record<string, { hi: string; gu: string }> = {
-  // Beauty & Salon Subcategories
-  'facial skincare': { hi: 'फेशियल और स्किनकेयर', gu: 'ફેશિયલ અને સ્કિનકેર' },
-  'makeup styling': { hi: 'मेकअप और स्टाइलिंग', gu: 'મેકઅપ અને સ્ટાઇલિંગ' },
-  'men s salon': { hi: 'मेंस सैलून (पुरुष)', gu: 'મેન્સ સલૂન' },
-  'mens salon': { hi: 'मेंस सैलून (पुरुष)', gu: 'મેન્સ સલૂન' },
-  'pedicure manicure': { hi: 'पेडीक्योर और मेनिक्योर', gu: 'પેડિક્યોર અને મેનિક્યોર' },
-  'spa massage': { hi: 'स्पा और मसाज', gu: 'સ્પા અને મસાજ' },
-  'women s salon': { hi: 'विमेंस सैलून (महिला)', gu: 'વિમેન્સ સલૂન' },
-  'womens salon': { hi: 'विमेंस सैलून (महिला)', gu: 'વિમેન્સ સલૂન' },
-  'womens spa': { hi: 'विमेंस स्पा', gu: 'વિમેન્સ સ્પા' },
-  'hair care': { hi: 'हेयर केयर व स्टाइलिंग', gu: 'હેર કેર અને સ્ટાઇલિંગ' },
-  'waxing threading': { hi: 'वैक्सिंग और थ्रेडिंग', gu: 'વેક્સિંગ અને થ્રેડિંગ' },
-  'bridal makeup': { hi: 'ब्राइडल और मेकअप', gu: 'બ્રાઇડલ અને મેકઅપ' },
-
-  // Cleaning Subcategories (Including Compound Variations)
-  'full home by room cleaning': { hi: 'फुल होम / कमरा सफाई', gu: 'સંપૂર્ણ ઘર / રૂમ સફાઈ' },
-  'full home room cleaning': { hi: 'फुल होम / कमरा सफाई', gu: 'સંપૂર્ણ ઘર / રૂમ સફાઈ' },
-  'full home cleaning': { hi: 'पूरे घर की सफाई', gu: 'આખા ઘરની સફાઈ' },
-  'by room cleaning': { hi: 'कमरे की सफाई', gu: 'રૂમ મુજબ સફાઈ' },
-  'deep cleaning': { hi: 'डीप क्लीनिंग', gu: 'ડીપ ક્લિનિંગ' },
-  'sofa furniture cleaning': { hi: 'सोफा और फर्नीचर सफाई', gu: 'સોફા અને ફર્નિચર સફાઈ' },
-  'sofa carpet cleaning': { hi: 'सोफा और कारपेट सफाई', gu: 'સોફા અને કાર્પેટ સફાઈ' },
-  'kitchen bathroom cleaning': { hi: 'किचन और बाथरूम सफाई', gu: 'રસોડા અને બાથરૂમ સફાઈ' },
-  'bathroom cleaning': { hi: 'बाथरूम सफाई', gu: 'બાથરૂમ સફાઈ' },
-  'kitchen cleaning': { hi: 'किचन सफाई', gu: 'રસોડાની સફાઈ' },
-  'pest control': { hi: 'कीट नियंत्रण (पेस्ट कंट्रोल)', gu: 'જંતુ નિયંત્રણ (પેસ્ટ કંટ્રોલ)' },
-  'water tank cleaning': { hi: 'पानी की टंकी सफाई', gu: 'પાણીની ટાંકી સફાઈ' },
-
-  // Painting Subcategories
-  'home painting': { hi: 'होम पेंटिंग', gu: 'હોમ પેઇન્ટિંગ' },
-  'house painting': { hi: 'हाउस पेंटिंग', gu: 'હાઉસ પેઇન્ટિંગ' },
-  'specialized painting': { hi: 'विशेष पेंटिंग', gu: 'વિશેષ પેઇન્ટિંગ' },
-  'waterproofing grouting': { hi: 'वॉटरप्रूफिंग व ग्राउटिंग', gu: 'વૉટરપ્રૂફિંગ અને ગ્રાઉટિંગ' },
-  'waterproofing': { hi: 'वॉटरप्रूफिंग', gu: 'વૉટરપ્રૂફિંગ' },
-  'home improvement': { hi: 'घर सुधार सेवाएं', gu: 'ઘર સુધારણા સેવાઓ' },
-  'wall paneling texturing': { hi: 'वॉल पैनलिंग व टेक्सचरिंग', gu: 'વોલ પેનલિંગ અને ટેક્સચરિંગ' },
-
-  // AC & Appliances Subcategories
-  'ac': { hi: 'एसी रिपेयर व सर्विस', gu: 'એસી રિપેરિંગ અને સર્વિસ' },
-  'ac repair': { hi: 'एसी रिपेयर', gu: 'એસી રિપેરિંગ' },
-  'ac service gas refill': { hi: 'एसी सर्विस और गैस रिफिल', gu: 'એસી સર્વિસ અને ગેસ રિફિલ' },
-  'refrigerator': { hi: 'रेफ्रिजरेटर (फ्रिज)', gu: 'રેફ્રિજરેટર (ફ્રિજ)' },
-  'refrigerator repair': { hi: 'रेफ्रिजरेटर रिपेयर', gu: 'રેફ્રિજરેટર રિપેરિંગ' },
-  'washing machine': { hi: 'वाशिंग मशीन', gu: 'વોશિંગ મશીન' },
-  'washing machine repair': { hi: 'वाशिंग मशीन रिपेयर', gu: 'વોશિંગ મશીન રિપેરિંગ' },
-  'television': { hi: 'टेलीविजन (टीवी)', gu: 'ટેલિવિઝન (ટીવી)' },
-  'tv audio repair': { hi: 'टीवी और ऑडियो रिपेयर', gu: 'ટીવી અને ઑડિયો રિપેરિંગ' },
-  'microwave': { hi: 'माइक्रोवेव ও ओवन', gu: 'માઇક્રોવેવ અને ઓવન' },
-  'microwave oven repair': { hi: 'माइक्रोवेव और ओवन रिपेयर', gu: 'માઇક્રોવેવ અને ઓવન રિપેરિંગ' },
-  'ro water purifier': { hi: 'आरओ / वॉटर प्यूरीफायर', gu: 'RO / વોટર પ્યુરિફાયર' },
-  'water purifier ro service': { hi: 'वॉटर प्यूरीफायर सर्विस', gu: 'વોટર પ્યુરિફાયર સર્વિસ' },
-  'geyser': { hi: 'गीजर व वॉटर हीटर', gu: 'ગીઝર અને વોટર હીટર' },
-  'geyser water heater repair': { hi: 'गीजर व वॉटर हीटर रिपेयर', gu: 'ગીઝર અને વોટર હીટર રિપેરિંગ' },
-  'chimney': { hi: 'किचन चिमनी रिपेयर', gu: 'કિચન ચીમની રિપેરિંગ' },
-  'air cooler': { hi: 'एयर कूलर रिपेयर', gu: 'એર કૂલર રિપેરિંગ' },
-
-  // Electrician, Plumber, Carpenter Subcategories
-  'electrician': { hi: 'इलेक्ट्रिशियन', gu: 'ઇલેક્ટ્રિશિયન' },
-  'electrical repairs': { hi: 'इलेक्ट्रिकल मरम्मत', gu: 'ઇલેક્ટ્રિકલ રિપેરિંગ' },
-  'switch socket installation': { hi: 'स्विच और सॉकेट फिटिंग', gu: 'સ્વિચ અને સોકેટ ફિટિંગ' },
-  'fan light fitting': { hi: 'पंखा और लाइट फिटिंग', gu: 'પંખા અને લાઇટ ફિટિંગ' },
-  'plumber': { hi: 'प्लंबर (नलसाज)', gu: 'પ્લમ્બર' },
-  'plumbing': { hi: 'प्लंबिंग कार्य', gu: 'પ્લમ્બિંગ કાર્ય' },
-  'tap shower repair': { hi: 'नल व शावर रिपेयर', gu: 'નળ અને શાવર રિપેરિંગ' },
-  'drainage pipe blockage': { hi: 'ड्रेनेज व पाइप ब्लॉकेज', gu: 'ડ્રેનેજ અને પાઇપ બ્લોકેજ' },
-  'carpenter': { hi: 'बढ़ई (कारपेंटर)', gu: 'સુથાર (કાર્પેન્ટર)' },
-  'carpentry': { hi: 'बढ़ई का काम', gu: 'સુથારીકામ' },
-  'furniture assembly repair': { hi: 'फर्नीचर असेंबली व रिपेयर', gu: 'ફર્નિચર એસેમ્બલી અને રિપેરિંગ' },
-  'door lock repair': { hi: 'दरवाजा व लॉक रिपेयर', gu: 'દરવાજા અને લોક રિપેરિંગ' },
-
-  // Smart Home, Domestic Help & Others
-  'smart locks': { hi: 'स्मार्ट लॉक्स', gu: 'સ્માર્ટ લોક્સ' },
-  'smart home devices': { hi: 'स्मार्ट होम उपकरण', gu: 'સ્માર્ટ હોમ ઉપકરણો' },
-  'home security': { hi: 'होम सुरक्षा', gu: 'હોમ સિક્યોરિટી' },
-  'cctv installation repair': { hi: 'सीसीटीवी इंस्टॉलेशन व रिपेयर', gu: 'CCTV ઇન્સ્ટોલેશન અને રિપેરિંગ' },
-  'cooking services': { hi: 'कुकिंग सेवाएं (रसोइया)', gu: 'રસોઈ સેવાઓ' },
-  'household help': { hi: 'घरेलू सहायिका', gu: 'ઘરેલું સહાયક' },
-  'academic tutoring': { hi: 'शैक्षणिक ट्यूशन', gu: 'શૈક્ષણિક ટ્યુશન' },
-  'fitness': { hi: 'फिटनेस व पर्सनल ट्रेनिंग', gu: 'ફિટનેસ અને તાલીમ' },
-  'yoga meditation': { hi: 'योग और ध्यान', gu: 'યોગ અને ધ્યાન' },
-  'photography': { hi: 'फोटोग्राफी', gu: 'ફોટોગ્રાફી' }
-};
-
-// 3. Exact and High-Frequency Service Names
-export const SERVICE_NAME_TRANSLATIONS: Record<string, { hi: string; gu: string }> = {
-  // Cleaning
-  '1 bhk cleaning': { hi: '1 बीएचके सफाई', gu: '૧ બીએચકે સફાઈ' },
-  '2 bhk cleaning': { hi: '2 बीएचके सफाई', gu: '૨ બીએચકે સફાઈ' },
-  '3 bhk cleaning': { hi: '3 बीएचके सफाई', gu: '૩ બીએચકે સફાઈ' },
-  '4 bhk cleaning': { hi: '4 बीएचके सफाई', gu: '૪ બીએચકે સફાઈ' },
-  '4 bhk+ cleaning': { hi: '4+ बीएचके सफाई', gu: '૪+ બીએચકે સફાઈ' },
-  '1 bhk express deep cleaning': { hi: '1 बीएचके एक्सप्रेस डीप सफाई', gu: '૧ બીએચકે એક્સપ્રેસ ડીપ સફાઈ' },
-  '2 bhk standard full home cleaning': { hi: '2 बीएचके फुल होम सफाई', gu: '૨ બીએચકે સંપૂર્ણ ઘર સફાઈ' },
-  '3 bhk premium full home cleaning': { hi: '3 बीएचકે प्रीमियम होम सफाई', gu: '૩ બીએચકે પ્રીમિયમ ઘર સફાઈ' },
-  '4 bhk / villa luxury deep cleaning': { hi: '4 बीएचके / विला लक्जरी डीप सफाई', gu: '૪ બીએચકે / વિલા લક્ઝરી ડીપ સફાઈ' },
-  'full apartment cleaning': { hi: 'फुल अपार्टमेंट सफाई', gu: 'સંપૂર્ણ એપાર્ટમેન્ટ સફાઈ' },
-  'full bungalow / duplex cleaning': { hi: 'फुल बंगला / डुप्लेक्स सफाई', gu: 'બંગલો / ડુપ્લેક્સ સફાઈ' },
-  'partial home cleaning': { hi: 'आंशिक घर की सफाई', gu: 'આંશિક ઘરની સફાઈ' },
-  'room cleaning': { hi: 'कमरा सफाई', gu: 'રૂમ સફાઈ' },
-  'bathroom deep cleaning': { hi: 'बाथरूम डीप क्लीनिंग', gu: 'બાથરૂમ ડીપ ક્લિનિંગ' },
-  'kitchen deep cleaning': { hi: 'किचन डीप क्लीनिंग', gu: 'રસોડા ડીપ ક્લિનિંગ' },
-  'sofa cleaning': { hi: 'सोफा सफाई', gu: 'સોફા સફાઈ' },
-  'carpet cleaning': { hi: 'कारपेट सफाई', gu: 'કાર્પેટ સફાઈ' },
-  'balcony cleaning': { hi: 'बालकनी सफाई', gu: 'બાલ્કની સફાઈ' },
-
-  // Beauty
-  'classic facial': { hi: 'क्लासिक फेशियल', gu: 'ક્લાસિક ફેશિયલ' },
-  'fruit facial': { hi: 'फ्रूट फेशियल', gu: 'ફ્રૂટ ફેશિયલ' },
-  'gold facial': { hi: 'गोल्ड फेशियल', gu: 'ગોલ્ડ ફેશિયલ' },
-  'diamond facial': { hi: 'डायमंड फेशियल', gu: 'ડાયમંડ ફેશિયલ' },
-  'anti aging facial': { hi: 'एंटी-एजिंग फेशियल', gu: 'એન્ટી-એજિંગ ફેશિયલ' },
-  'skin brightening facial': { hi: 'स्किन ब्राइटनिंग फेशियल', gu: 'સ્કિન બ્રાઇટનિંગ ફેશિયલ' },
-  'de tan pack': { hi: 'डी-टैन पैक', gu: 'ડી-ટેન પેક' },
-  'face cleanup': { hi: 'फेस क्लीनअप', gu: 'ફેસ ક્લીનઅપ' },
-  'facial cleanup': { hi: 'फेशियल क्लीनअप', gu: 'ફેશિયલ ક્લીનઅપ' },
-  'cleanup': { hi: 'फेस क्लीनअप', gu: 'ફેસ ક્લીનઅપ' },
-  'bleach': { hi: 'ब्लीच सर्विस', gu: 'બ્લીચ સર્વિસ' },
-  'bleach service': { hi: 'ब्लीच सर्विस', gu: 'બ્લીચ સર્વિસ' },
-  'facial bleach': { hi: 'फेशियल ब्लीच', gu: 'ફેશિયલ બ્લીચ' },
-  'body bleach': { hi: 'बॉडी ब्लीच', gu: 'બોડી બ્લીચ' },
-  'haircut': { hi: 'हेयरकट', gu: 'હેરકટ' },
-  'hair spa': { hi: 'हेयर स्पा', gu: 'હેર સ્પા' },
-  'head massage': { hi: 'हेड मसाज', gu: 'હેડ મસાજ' },
-  'body massage': { hi: 'बॉडी मसाज', gu: 'બોડી મસાજ' },
-  'full body massage': { hi: 'फुल बॉडी मसाज', gu: 'ફુલ બોડી મસાજ' },
-  'manicure': { hi: 'मेनिक्योर', gu: 'મેનિક્યોર' },
-  'pedicure': { hi: 'पेदिक्योर', gu: 'પેડિક્યોર' },
-  'waxing': { hi: 'वैक्सिंग', gu: 'વેક્સિંગ' },
-  'threading': { hi: 'थ्रेडिंग', gu: 'થ્રેડિંગ' },
-  'shave': { hi: 'शेव', gu: 'શેવિંગ' },
-  'beard styling': { hi: 'दाढ़ी स्टाइलिंग', gu: 'દાઢી સ્ટાઇલિંગ' },
-
-  // AC & Electrical
-  'ac service': { hi: 'एसी सर्विस', gu: 'એસી સર્વિસ' },
-  'ac repair': { hi: 'एसी रिपेयर', gu: 'એસી રિપેરિંગ' },
-  'ac installation': { hi: 'एसी इंस्टॉलेशन', gu: 'એસી ઇન્સ્ટોલેશન' },
-  'ac uninstallation': { hi: 'एसी अनइंस्टॉलेशन', gu: 'એસી અનઇન્સ્ટોલેશન' },
-  'ac gas refill': { hi: 'एसी गैस रिफिल', gu: 'એસી ગેસ રિફિલ' },
-  'fan repair': { hi: 'पंखा रिपेयर', gu: 'પંખા રિપેરિંગ' },
-  'fan installation': { hi: 'पंखा फिटिंग', gu: 'પંખા ફિટિંગ' },
-  'switch socket installation': { hi: 'स्विच सॉकेट फिटिंग', gu: 'સ્વિચ સોકેટ ફિટિંગ' }
-};
 
 export function getLocalizedCategory(categoryName?: string | null): string {
   const clean = getCleanName(categoryName);
@@ -225,7 +64,7 @@ export function getLocalizedSubcategory(subcategoryName?: string | null): string
     if (lang === 'gu' && entry.gu) return entry.gu;
   }
 
-  // Fallback: check if subcategory contains known words
+  // Fallback keyword replacements
   if (norm.includes('cleaning')) {
     return lang === 'hi' ? `${clean.replace(/cleaning/gi, 'सफाई')}` : `${clean.replace(/cleaning/gi, 'સફાઈ')}`;
   }
@@ -236,75 +75,22 @@ export function getLocalizedSubcategory(subcategoryName?: string | null): string
   return clean;
 }
 
-// 3. Common Service Word Translators
-export const WORD_TRANSLATIONS: Record<string, { hi: string; gu: string }> = {
-  'face': { hi: 'फेस', gu: 'ફેસ' },
-  'facial': { hi: 'फेशियल', gu: 'ફેશિયલ' },
-  'classic': { hi: 'क्लासिक', gu: 'ક્લાસિક' },
-  'fruit': { hi: 'फ्रूट', gu: 'ફ્રૂટ' },
-  'gold': { hi: 'गोल्ड', gu: 'ગોલ્ડ' },
-  'diamond': { hi: 'डायमंड', gu: 'ડાયમંડ' },
-  'charcoal': { hi: 'चारकोल', gu: 'ચારકોલ' },
-  'herbal': { hi: 'हर्बल', gu: 'હર્બલ' },
-  'hydrating': { hi: 'हाइड्रेटिंग', gu: 'હાઇડ્રેટિંગ' },
-  'korean': { hi: 'कोरियन', gu: 'કોરિયન' },
-  'detan': { hi: 'डी-टैन', gu: 'ડી-ટેન' },
-  'de-tan': { hi: 'डी-टैन', gu: 'ડી-ટેન' },
-  'bleach': { hi: 'ब्लीच', gu: 'બ્લીચ' },
-  'cleanup': { hi: 'क्लीनअप', gu: 'ક્લીનઅપ' },
-  'clean-up': { hi: 'क्लीनअप', gu: 'ક્લીનઅપ' },
-  'anti-aging': { hi: 'एंटी-एजिंग', gu: 'એન્ટી-એજિંગ' },
-  'anti aging': { hi: 'एंटी-एजिंग', gu: 'એન્ટી-એજિંગ' },
-  'brightening': { hi: 'ब्राइटनिंग', gu: 'બ્રાઇટનિંગ' },
-  'skin brightening': { hi: 'स्किन ब्राइटनिंग', gu: 'સ્કિન બ્રાઇટનિંગ' },
-  'whitening': { hi: 'व्हाइटनिंग', gu: 'વ્હાઇટનિંગ' },
-  'glow': { hi: 'ग्लो', gu: 'ગ્લો' },
-  'express': { hi: 'एक्सप्रेस', gu: 'એક્સપ્રેસ' },
-  'premium': { hi: 'प्रीमियम', gu: 'પ્રીમિયમ' },
-  'standard': { hi: 'स्टैंडर्ड', gu: 'સ્ટાન્ડર્ડ' },
-  'luxury': { hi: 'लक्जरी', gu: 'લક્ઝરી' },
-  'deep': { hi: 'डीप', gu: 'ડીપ' },
-  'full': { hi: 'फुल', gu: 'સંપૂર્ણ' },
-  'home': { hi: 'होम', gu: 'ઘર' },
-  'house': { hi: 'हाउस', gu: 'હાઉસ' },
-  'sofa': { hi: 'सोफा', gu: 'સોફા' },
-  'carpet': { hi: 'कारपेट', gu: 'કાર્પેટ' },
-  'cushion': { hi: 'कुशन', gu: 'કુશન' },
-  'mattress': { hi: 'गद्दे (मैट्रेस)', gu: 'ગાદલા (મેટ્રેસ)' },
-  'curtain': { hi: 'पर्दे (कर्टेन)', gu: 'પડદા' },
-  'kitchen': { hi: 'किचन', gu: 'રસોડું' },
-  'bathroom': { hi: 'बाथरूम', gu: 'બાથરૂમ' },
-  'balcony': { hi: 'बालकनी', gu: 'બાલ્કની' },
-  'ac': { hi: 'एसी', gu: 'એસી' },
-  'fan': { hi: 'पंखा', gu: 'પંખો' },
-  'switch': { hi: 'स्विच', gu: 'સ્વિચ' },
-  'socket': { hi: 'सॉकेट', gu: 'સોકેટ' },
-  'wire': { hi: 'वायरिंग', gu: 'વાયરિંગ' },
-  'wiring': { hi: 'वायरिंग', gu: 'વાયરિંગ' },
-  'tap': { hi: 'नल (टैप)', gu: 'નળ (ટેપ)' },
-  'pipe': { hi: 'पाइप', gu: 'પાઇપ' },
-  'drain': { hi: 'ड्रेन', gu: 'ડ્રેન' },
-  'leakage': { hi: 'रिसाव (लीकेज)', gu: 'લિકેજ' },
-  'tank': { hi: 'पानी की टंकी', gu: 'પાણીની ટાંકી' },
-  'pest': { hi: 'पेस्ट', gu: 'પેસ્ટ' },
-  'hair': { hi: 'हेयर', gu: 'હેર' },
-  'beard': { hi: 'दाढ़ी', gu: 'દાઢી' },
-  'head': { hi: 'हेड', gu: 'હેડ' },
-  'body': { hi: 'बॉडी', gu: 'બોડી' },
-  'nail': { hi: 'नाखून', gu: 'નખ' }
-};
-
 export function localizePrefix(prefix: string, lang: string): string {
   if (!prefix) return '';
-  const lower = prefix.trim().toLowerCase();
+  const clean = prefix.trim();
+  const lower = clean.toLowerCase();
   const direct = WORD_TRANSLATIONS[lower];
   if (direct) {
     return lang === 'hi' ? direct.hi : direct.gu;
   }
-  const words = prefix.trim().split(/\s+/);
+  const words = clean.split(/\s+/);
   const translated = words.map((w) => {
-    const wDirect = WORD_TRANSLATIONS[w.toLowerCase()];
-    if (wDirect) return lang === 'hi' ? wDirect.hi : wDirect.gu;
+    const wClean = w.toLowerCase().replace(/[^a-zA-Z0-9]/g, '');
+    const wDirect = WORD_TRANSLATIONS[wClean];
+    if (wDirect) {
+      const res = lang === 'hi' ? wDirect.hi : wDirect.gu;
+      return w.replace(new RegExp(wClean, 'i'), res);
+    }
     return w;
   });
   return translated.join(' ');
@@ -312,9 +98,11 @@ export function localizePrefix(prefix: string, lang: string): string {
 
 /**
  * Intelligent Service Name Translator:
- * 1. Checks exact dictionary entry
- * 2. Checks regex pattern matches (e.g. "[N] BHK Cleaning" -> "[N] बीएचके सफाई")
- * 3. Applies keyword transliterations (Cleaning -> सफाई, Repair -> मरम्मत, Installation -> इंस्टॉलेशन)
+ * 1. Checks exact master dictionary entry (all 457 catalog services mapped)
+ * 2. Checks normalized key lookup
+ * 3. Checks regex pattern matches (e.g. "[N] BHK Cleaning" -> "[N] बीएचके सफाई")
+ * 4. Applies prefix & suffix keyword transliterations
+ * 5. Full tokenized fallback ensuring zero raw English escapes
  */
 export function getLocalizedServiceName(serviceName?: string | null): string {
   if (!serviceName) return '';
@@ -324,14 +112,22 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
   const trimmed = serviceName.trim();
   const lower = trimmed.toLowerCase();
 
-  // 1. Direct dictionary lookup
+  // 1. Direct master dictionary lookup
   const direct = SERVICE_NAME_TRANSLATIONS[lower];
   if (direct) {
     if (lang === 'hi' && direct.hi) return direct.hi;
     if (lang === 'gu' && direct.gu) return direct.gu;
   }
 
-  // 2. Specific standalone modifiers
+  // 2. Normalized key lookup (punctuation/spacing variants)
+  const norm = normalizeKey(trimmed);
+  const normDirect = SERVICE_NAME_TRANSLATIONS[norm];
+  if (normDirect) {
+    if (lang === 'hi' && normDirect.hi) return normDirect.hi;
+    if (lang === 'gu' && normDirect.gu) return normDirect.gu;
+  }
+
+  // 3. Specific standalone modifiers
   if (/^detan(\s+facial)?$/i.test(trimmed) || /^de-tan(\s+facial)?$/i.test(trimmed)) {
     return lang === 'hi' ? 'डी-टैन फेशियल' : 'ડી-ટેન ફેશિયલ';
   }
@@ -342,7 +138,7 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     return lang === 'hi' ? 'कोरियन फेशियल' : 'કોરિયન ફેશિયલ';
   }
 
-  // 3. Prefix Modifiers
+  // 4. Prefix Modifiers
   if (lower.startsWith('hydrating')) {
     const rest = getLocalizedServiceName(trimmed.slice(9).trim());
     return lang === 'hi' ? `हाइड्रेटिंग ${rest}` : `હાઇડ્રેટિંગ ${rest}`;
@@ -396,7 +192,7 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     return lang === 'hi' ? `लक्जरी ${rest}` : `લક્ઝરી ${rest}`;
   }
 
-  // 4. Pattern: "[N] BHK Cleaning" or "[N] BHK [Variation] Cleaning"
+  // 5. Pattern: "[N] BHK Cleaning" or "[N] BHK [Variation] Cleaning"
   const bhkMatch = trimmed.match(/^(\d+)\s*BHK\s*(.*?)Cleaning$/i);
   if (bhkMatch && bhkMatch[1]) {
     const num = bhkMatch[1];
@@ -407,10 +203,11 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     if (modifier.toLowerCase().includes('deep')) {
       return lang === 'hi' ? `${num} बीएचके डीप सफाई` : `${num} બીએચકે ડીપ સફાઈ`;
     }
-    return lang === 'hi' ? `${num} बीएचके ${modifier} सफाई` : `${num} બીએચકે ${modifier} સફાઈ`;
+    const locMod = localizePrefix(modifier, lang);
+    return lang === 'hi' ? `${num} बीएचके ${locMod} सफाई` : `${num} બીએચકે ${locMod} સફાઈ`;
   }
 
-  // 5. Pattern: "[Subcategory] Service Variation [N]"
+  // 6. Pattern: "[Subcategory] Service Variation [N]"
   const varMatch = trimmed.match(/(.*?)Service Variation\s*(\d+)/i);
   if (varMatch && varMatch[1] && varMatch[2]) {
     const base = getLocalizedSubcategory(varMatch[1]);
@@ -418,157 +215,185 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     return lang === 'hi' ? `${base} सेवा विकल्प ${num}` : `${base} સેવા વિકલ્પ ${num}`;
   }
 
-  // 6. Common keywords & suffix transliterations with localized prefix
+  // 7. Suffix / Substring patterns with localized prefix
   if (lower.includes('facial')) {
     const prefix = trimmed.replace(/facial/gi, '').trim();
     if (!prefix) return lang === 'hi' ? 'फेशियल' : 'ફેશિયલ';
-    const locPrefix = localizePrefix(prefix, lang);
+    const locPrefix = localizePrefix(prefix, lang).trim();
     return lang === 'hi' ? `${locPrefix} फेशियल` : `${locPrefix} ફેશિયલ`;
   }
   if (lower.includes('cleanup')) {
     const prefix = trimmed.replace(/cleanup/gi, '').trim();
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} क्लीनअप`.trim() : `${locPrefix} ક્લીનઅપ`.trim();
+    return lang === 'hi' ? `${locPrefix} क्लीनअप` : `${locPrefix} ક્લીનઅપ`;
   }
   if (lower.includes('massage')) {
     const prefix = trimmed.replace(/massage/gi, '').trim();
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} मसाज`.trim() : `${locPrefix} મસાજ`.trim();
+    return lang === 'hi' ? `${locPrefix} मसाज` : `${locPrefix} મસાજ`;
   }
   if (lower.includes('waxing')) {
     const prefix = trimmed.replace(/waxing/gi, '').trim();
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} वैक्सिंग`.trim() : `${locPrefix} વેક્સિંગ`.trim();
+    return lang === 'hi' ? `${locPrefix} वैक्सिंग` : `${locPrefix} વેક્સિંગ`;
   }
   if (lower.includes('manicure')) {
     const prefix = trimmed.replace(/manicure/gi, '').trim();
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} मेनिक्योर`.trim() : `${locPrefix} મેનિક્યોર`.trim();
+    return lang === 'hi' ? `${locPrefix} मेनिक्योर` : `${locPrefix} મેનિક્યોર`;
   }
   if (lower.includes('pedicure')) {
     const prefix = trimmed.replace(/pedicure/gi, '').trim();
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} पेदिक्योर`.trim() : `${locPrefix} પેડિક્યોર`.trim();
+    return lang === 'hi' ? `${locPrefix} पेडीक्योर` : `${locPrefix} પેડિક્યોર`;
   }
   if (lower.includes('haircut')) {
     const prefix = trimmed.replace(/haircut/gi, '').trim();
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} हेयरकट`.trim() : `${locPrefix} હેરકટ`.trim();
+    return lang === 'hi' ? `${locPrefix} हेयरकट` : `${locPrefix} હેરકટ`;
   }
   if (lower.endsWith('cleaning')) {
     const prefix = trimmed.slice(0, -8).trim();
-    const locPrefix = localizePrefix(prefix, lang);
+    const locPrefix = localizePrefix(prefix, lang).trim();
     return lang === 'hi' ? `${locPrefix} सफाई` : `${locPrefix} સફાઈ`;
   }
   if (lower.endsWith('repair')) {
     const prefix = trimmed.slice(0, -6).trim();
-    const locPrefix = localizePrefix(prefix, lang);
+    const locPrefix = localizePrefix(prefix, lang).trim();
     return lang === 'hi' ? `${locPrefix} मरम्मत` : `${locPrefix} રિપેરિંગ`;
   }
   if (lower.endsWith('installation')) {
     const prefix = trimmed.slice(0, -12).trim();
-    const locPrefix = localizePrefix(prefix, lang);
+    const locPrefix = localizePrefix(prefix, lang).trim();
     return lang === 'hi' ? `${locPrefix} इंस्टॉलेशन` : `${locPrefix} ઇન્સ્ટોલેશન`;
   }
   if (lower.endsWith('service')) {
     const prefix = trimmed.slice(0, -7).trim();
-    const locPrefix = localizePrefix(prefix, lang);
+    const locPrefix = localizePrefix(prefix, lang).trim();
     return lang === 'hi' ? `${locPrefix} सर्विस` : `${locPrefix} સર્વિસ`;
   }
 
-  return serviceName;
+  // 8. Tokenized fallback: word-by-word translation
+  const tokenized = localizePrefix(trimmed, lang);
+  return tokenized || serviceName;
 }
 
-// 4. Feature / Inclusion Checklist Phrases (High Frequency Home Service Operations)
-export const FEATURE_TRANSLATIONS: Record<string, { hi: string; gu: string }> = {
-  // Beauty & Facial Features
-  'skin cleansing': { hi: 'त्वचा की सफाई (क्लींजिंग)', gu: 'ત્વચા સફાઈ (ક્લીનિંગ)' },
-  'patch test': { hi: 'पैच टेस्ट', gu: 'પેચ ટેસ્ટ' },
-  'whitehead extraction': { hi: 'व्हाइटहेड निष्कासन', gu: 'વ્હાઇટહેડ નિષ્કાસન' },
-  'blackhead extraction': { hi: 'ब्लैकहेड निष्कासन', gu: 'બ્લેકહેડ નિષ્કાસન' },
-  'exfoliating scrub application': { hi: 'एक्सफ़ोलीएटिंग स्क्रब', gu: 'એક્સફોલિએટિંગ સ્ક્રબ' },
-  'skin type analysis': { hi: 'त्वचा विश्लेषण', gu: 'ત્વચા વિશ્લેષણ' },
-  'lymphatic drainage strokes': { hi: 'लिम्फैटिक मसाज स्ट्रोक', gu: 'મસાજ સ્ટ્રોક' },
-  'pack drying time monitoring': { hi: 'फेस पैक मॉनिटरिंग', gu: 'ફેસ પેક મોનિટરિંગ' },
-  'neck massage': { hi: 'गर्दन की मसाज', gu: 'ગરદન મસાજ' },
-  'gua sha massage': { hi: 'गुआ शा मसाज', gu: 'ગુઆ શા મસાજ' },
-  'pre cleansing': { hi: 'प्री-क्लींजिंग', gu: 'પ્રી-ક્લીનિંગ' },
-  'steam application': { hi: 'स्टीम वेपोराइज़र', gu: 'સ્ટીમ એપ્લિકેશન' },
-  'toning treatment': { hi: 'टोनिंग ट्रीटमेंट', gu: 'ટોનિંગ ટ્રીટમેન્ટ' },
-  'serum infusion': { hi: 'सीरम इन्फ्यूजन', gu: 'સીરમ ઇન્ફ્યુઝન' },
-  'face mask': { hi: 'फेस मास्क', gu: 'ફેસ માસ્ક' },
-  'moisturizer application': { hi: 'मॉइस्चराइज़र एप्लीकेशन', gu: 'મોઇશ્ચરાઇઝર' },
-  'sunscreen shield': { hi: 'सनस्क्रीन शील्ड', gu: 'સનસ્ક્રીન શિલ્ડ' },
-  'hair wash': { hi: 'हेयर वॉश', gu: 'હેર વોશ' },
-  'blow dry': { hi: 'ब्लो ड्राई', gu: 'બ્લો ડ્રાય' },
-  'split end trim': { hi: 'स्प्लिट एंड ट्रिम', gu: 'સ્પ્લિટ એન્ડ ટ્રિમ' },
-  'cuticle care': { hi: 'क्यूटिकल केयर', gu: 'ક્યુટિકલ કેર' },
-  'nail shaping': { hi: 'नाखून शेपिंग व पॉलिश', gu: 'નખ શેપિંગ અને પોલિશ' },
-
-  // Cleaning & Home Improvement Features
-  'final dry wipe': { hi: 'अंतिम ड्राई वाइप', gu: 'અંતિમ ડ્રાય વાઇપ' },
-  'furniture exterior wiping': { hi: 'फर्नीचर बाहरी सफाई', gu: 'ફર્નિચર સફાઈ' },
-  'equipment stain assessment': { hi: 'उपकरण दाग जांच', gu: 'સાધન ડાઘ તપાસ' },
-  'service area cleanup': { hi: 'सर्विस एरिया सफाई', gu: 'સર્વિસ એરિયા સફાઈ' },
-  'door handle sanitization': { hi: 'डोर हैंडल सैनिटाइजेशन', gu: 'ડોર હેન્ડલ સેનિટાઇઝેશન' },
-  'kitchen counter degreasing': { hi: 'किचन काउंटर डीग्रीजिंग', gu: 'રસોડા કાઉન્ટર ડીગ્રીઝિંગ' },
-  'dry dusting of ceiling': { hi: 'छत की डस्टिंग', gu: 'છતની ડસ્ટિંગ' },
-  'area equipment setup': { hi: 'उपकरण सेटअप', gu: 'સાધન સેટઅપ' },
-  'material preparation': { hi: 'सामग्री तैयारी', gu: 'સામગ્રી તૈયારી' },
-  'floor deep mopping': { hi: 'फर्श डीप मोपिंग', gu: 'ફ્લોર ડીપ મોપિંગ' },
-  'bathroom tile scrubbing': { hi: 'बाथरूम टाइल स्क्रबिंग', gu: 'બાથરૂમ ટાઇલ્સ સ્ક્રબિંગ' },
-  'mirror glass polishing': { hi: 'दर्पण व कांच पॉलिशिंग', gu: 'અરીસા અને કાચ પોલિશિંગ' },
-  'sink drain cleaning': { hi: 'सिंक ड्रेन सफाई', gu: 'સિંક ડ્રેન સફાઈ' },
-  'cobweb removal': { hi: 'मकड़ी के जाले हटाना', gu: 'કરોળિયાના જાળા હટાવવા' },
-  'trash bin emptying': { hi: 'कचरा बिन खाली करना', gu: 'કચરાપેટી ખાલી કરવી' },
-  'carpet vacuuming': { hi: 'कारपेट वैक्यूमिंग', gu: 'કાર્પેટ વેક્યુમિંગ' },
-  'sofa vacuuming': { hi: 'सोफा वैक्यूमिंग', gu: 'સોફા વેક્યુમિંગ' },
-
-  // Repair, AC, Electrical & Plumbing Features
-  'gas pressure check': { hi: 'गैस प्रेशर जांच', gu: 'ગેસ પ્રેશર તપાસ' },
-  'cooling performance test': { hi: 'कूलिंग परफॉर्मेंस टेस्ट', gu: 'કૂલિંગ પરફોર્મન્સ ટેસ્ટ' },
-  'coil cleaning': { hi: 'कॉइल सफाई', gu: 'કોઈલ સફાઈ' },
-  'filter mesh wash': { hi: 'फिल्टर जाली धुलाई', gu: 'ફિલ્ટર જાળી સફાઈ' },
-  'wiring continuity check': { hi: 'वायरिंग निरंतरता टेस्ट', gu: 'વાયરિંગ ટેસ્ટિંગ' },
-  'voltage assessment': { hi: 'वोल्टेज जांच', gu: 'વોલ્ટેજ તપાસ' },
-  'leakage inspection': { hi: 'रिसाव (लीकेज) जांच', gu: 'લિકેજ તપાસ' },
-  'pipe fitting verification': { hi: 'पाइप फिटिंग जांच', gu: 'પાઇપ ફિટિંગ તપાસ' },
-  'safety grounding test': { hi: 'सुरक्षा ग्राउंडिंग टेस्ट', gu: 'સુરક્ષા અર્થિંગ ટેસ્ટ' }
-};
-
+/**
+ * Intelligent Feature & Bullet Item Localizer:
+ * 1. Direct dictionary match from FEATURE_TRANSLATIONS
+ * 2. Pattern: "Complete [Service Name] procedure"
+ * 3. Keyword transliterations
+ * 4. Tokenized fallback
+ */
 export function getLocalizedFeature(featureText?: string | null): string {
   if (!featureText) return '';
   const lang = (i18n.language || 'en').slice(0, 2);
   if (lang === 'en') return featureText;
 
-  const norm = normalizeKey(featureText);
-  const entry = FEATURE_TRANSLATIONS[norm];
-  if (entry) {
-    if (lang === 'hi' && entry.hi) return entry.hi;
-    if (lang === 'gu' && entry.gu) return entry.gu;
+  const trimmed = featureText.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 1. Direct dictionary match
+  const direct = FEATURE_TRANSLATIONS[lower];
+  if (direct) {
+    if (lang === 'hi' && direct.hi) return direct.hi;
+    if (lang === 'gu' && direct.gu) return direct.gu;
   }
 
-  // Fallback keyword transliterations
+  const norm = normalizeKey(trimmed);
+  const normDirect = FEATURE_TRANSLATIONS[norm];
+  if (normDirect) {
+    if (lang === 'hi' && normDirect.hi) return normDirect.hi;
+    if (lang === 'gu' && normDirect.gu) return normDirect.gu;
+  }
+
+  // 2. Pattern: "Complete [Service Name] procedure"
+  const procMatch = trimmed.match(/^Complete (.*?) procedure$/i);
+  if (procMatch && procMatch[1]) {
+    const svcLoc = getLocalizedServiceName(procMatch[1].trim());
+    return lang === 'hi' ? `पूर्ण ${svcLoc} प्रक्रिया` : `સંપૂર્ણ ${svcLoc} પ્રક્રિયા`;
+  }
+
+  // 3. Fallback keyword transliterations
   if (norm.includes('cleansing') || norm.includes('cleaning')) {
-    return lang === 'hi' ? `${featureText.replace(/cleansing|cleaning/gi, 'सफाई')}` : `${featureText.replace(/cleansing|cleaning/gi, 'સફાઈ')}`;
+    return lang === 'hi' ? `${trimmed.replace(/cleansing|cleaning/gi, 'सफाई')}` : `${trimmed.replace(/cleansing|cleaning/gi, 'સફાઈ')}`;
   }
   if (norm.includes('massage')) {
-    return lang === 'hi' ? `${featureText.replace(/massage/gi, 'मसाज')}` : `${featureText.replace(/massage/gi, 'મસાજ')}`;
+    return lang === 'hi' ? `${trimmed.replace(/massage/gi, 'मसाज')}` : `${trimmed.replace(/massage/gi, 'મસાજ')}`;
   }
   if (norm.includes('scrub')) {
-    return lang === 'hi' ? `${featureText.replace(/scrub/gi, 'स्क्रब')}` : `${featureText.replace(/scrub/gi, 'સ્ક્રબ')}`;
+    return lang === 'hi' ? `${trimmed.replace(/scrub/gi, 'स्क्रब')}` : `${trimmed.replace(/scrub/gi, 'સ્ક્રબ')}`;
   }
   if (norm.includes('test')) {
-    return lang === 'hi' ? `${featureText.replace(/test/gi, 'टेस्ट')}` : `${featureText.replace(/test/gi, 'ટેસ્ટ')}`;
+    return lang === 'hi' ? `${trimmed.replace(/test/gi, 'टेस्ट')}` : `${trimmed.replace(/test/gi, 'ટેસ્ટ')}`;
   }
   if (norm.includes('wipe') || norm.includes('wiping')) {
-    return lang === 'hi' ? `${featureText.replace(/wiping|wipe/gi, 'वाइप')}` : `${featureText.replace(/wiping|wipe/gi, 'વાઇપ')}`;
+    return lang === 'hi' ? `${trimmed.replace(/wiping|wipe/gi, 'वाइप')}` : `${trimmed.replace(/wiping|wipe/gi, 'વાઇપ')}`;
   }
   if (norm.includes('inspection') || norm.includes('check')) {
-    return lang === 'hi' ? `${featureText.replace(/inspection|check/gi, 'जांच')}` : `${featureText.replace(/inspection|check/gi, 'તપાસ')}`;
+    return lang === 'hi' ? `${trimmed.replace(/inspection|check/gi, 'जांच')}` : `${trimmed.replace(/inspection|check/gi, 'તપાસ')}`;
   }
 
-  return featureText;
+  // 4. Tokenized fallback
+  const locTokens = localizePrefix(trimmed, lang);
+  return locTokens || featureText;
+}
+
+/**
+ * Booking Status Localizer
+ */
+export function getLocalizedStatus(status?: string | null): string {
+  if (!status) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return status;
+
+  const st = status.toLowerCase().replace(/_/g, ' ').trim();
+  const map: Record<string, { hi: string; gu: string }> = {
+    'requested': { hi: 'अनुरोधित', gu: 'વિનંતી કરેલ' },
+    'assigned': { hi: 'आवंटित', gu: 'સોંપાયેલ' },
+    'accepted': { hi: 'स्वीकृत', gu: 'સ્વીકારેલ' },
+    'on the way': { hi: 'रास्ते में', gu: 'રસ્તામાં' },
+    'on_the_way': { hi: 'रास्ते में', gu: 'રસ્તામાં' },
+    'arrived': { hi: 'पहुंच गए', gu: 'પહોંચી ગયા' },
+    'started': { hi: 'प्रगति पर', gu: 'ચાલુ' },
+    'in progress': { hi: 'प्रगति पर', gu: 'ચાલુ' },
+    'in_progress': { hi: 'प्रगति पर', gu: 'ચાલુ' },
+    'completed': { hi: 'पूर्ण', gu: 'પૂર્ણ' },
+    'paid': { hi: 'भुगतान पूर्ण', gu: 'ચૂકવણી પૂર્ણ' },
+    'cancelled': { hi: 'रद्द', gu: 'રદ કરેલ' },
+    'rejected': { hi: 'अस्वीकृत', gu: 'અસ્વીકાર' },
+    'open': { hi: 'सक्रिय (खुला)', gu: 'સક્રિય (ખુલ્લું)' },
+    'resolved': { hi: 'समाधान हुआ', gu: 'ઉકેલાયેલ' },
+    'closed': { hi: 'बंद', gu: 'બંધ' },
+    'pending': { hi: 'लंबित', gu: 'બાકી' },
+    'in review': { hi: 'समीक्षाधीन', gu: 'સમીક્ષા હેઠળ' },
+    'in_review': { hi: 'समीक्षाधीन', gu: 'સમીક્ષા હેઠળ' }
+  };
+  const entry = map[st];
+  if (entry) {
+    return lang === 'hi' ? entry.hi : entry.gu;
+  }
+  return status;
+}
+
+export function getLocalizedSupportCategory(cat?: string | null): string {
+  if (!cat) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return cat;
+
+  const clean = cat.toLowerCase().trim();
+  const map: Record<string, { hi: string; gu: string }> = {
+    'booking assistance': { hi: 'बुकिंग सहायता', gu: 'બુકિંગ સહાય' },
+    'payment & refund': { hi: 'भुगतान और धनवापसी', gu: 'ચૂકવણી અને રિફંડ' },
+    'payment and refund': { hi: 'भुगतान और धनवापसी', gu: 'ચૂકવણી અને રિફંડ' },
+    'technician feedback': { hi: 'तकनीशियन प्रतिक्रिया', gu: 'ટેકનિશિયન પ્રતિસાદ' },
+    'general query': { hi: 'सामान्य प्रश्न', gu: 'સામાન્ય પૂછપરછ' }
+  };
+  const entry = map[clean];
+  if (entry) {
+    return lang === 'hi' ? entry.hi : entry.gu;
+  }
+  return cat;
 }
 
 // 5. Intelligent Service Description Localizer

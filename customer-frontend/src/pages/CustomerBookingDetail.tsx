@@ -13,7 +13,7 @@ import {
 } from '../api/bookings';
 import { getBookingChat, sendBookingChatMessage, SupportTicketDetail, MessageItem } from '../api/support';
 import { formatCurrencyINR } from '../utils/formatters';
-import { getLocalizedServiceName } from '../utils/localizedNames';
+import { getLocalizedServiceName, getLocalizedStatus } from '../utils/localizedNames';
 import { useToast } from '../hooks/useToast';
 import { 
   ArrowLeft, 
@@ -392,7 +392,7 @@ export const CustomerBookingDetail: React.FC = () => {
                 ? 'bg-purple-500/20 text-purple-300 border-purple-400/30'
                 : 'bg-blue-500/20 text-blue-300 border-blue-400/30'
             }`}>
-              {booking.status}
+              {getLocalizedStatus(booking.status)}
             </span>
             {showLiveTracking && (
               <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">

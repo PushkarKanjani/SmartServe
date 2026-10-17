@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ShieldCheck, AlertTriangle, CheckCircle, Clock, X, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
+import { getLocalizedServiceName } from '../../utils/localizedNames';
 
 export interface WarrantyData {
   id: string;
@@ -165,7 +166,7 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
                 <h3 className="font-bold text-sm text-[#1F2A1E]">
                   {t('warranty.claim_modal_title', { defaultValue: 'Raise Warranty Claim' })}
                 </h3>
-                <p className="text-xs text-[#1F2A1E]/60">{serviceName}</p>
+                <p className="text-xs text-[#1F2A1E]/60">{getLocalizedServiceName(serviceName)}</p>
               </div>
             </div>
 

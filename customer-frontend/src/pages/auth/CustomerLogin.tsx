@@ -5,11 +5,13 @@ import { useAuth } from '../../auth/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { CustomerLoginVideoCarousel } from '../../components/auth/CustomerLoginVideoCarousel';
 import { initiateOAuth } from '../../api/auth';
+import { useTranslation } from 'react-i18next';
 
 export const CustomerLogin: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showToast } = useToast();
+  const { t, i18n } = useTranslation();
 
   const [email, setEmail] = useState('customer@example.com');
   const [password, setPassword] = useState('CustomerPass123!');
@@ -120,8 +122,29 @@ export const CustomerLogin: React.FC = () => {
           ══════════════════════════════════════════════════════════════════*/}
       <div className="w-full lg:w-[60%] xl:w-[58%] h-full flex flex-col justify-between p-6 sm:p-10 lg:p-14 xl:p-20 bg-[#FAF7F0] overflow-y-auto">
         
-        {/* Top spacer */}
-        <div className="hidden lg:block h-4" />
+        {/* Top language switcher bar */}
+        <div className="flex justify-end items-center gap-1.5 pb-2">
+          <span className="text-[10px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider mr-1">
+            {i18n.language === 'hi' ? 'भाषा' : i18n.language === 'gu' ? 'ભાષા' : 'Language'}:
+          </span>
+          {(['en', 'hi', 'gu'] as const).map((lng) => {
+            const active = (i18n.language || 'en').startsWith(lng);
+            return (
+              <button
+                key={lng}
+                type="button"
+                onClick={() => i18n.changeLanguage(lng)}
+                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                  active
+                    ? 'bg-[#2F5233] text-white shadow-2xs'
+                    : 'text-[#1F2A1E]/60 hover:text-[#1F2A1E] hover:bg-[#F2EDE1]'
+                }`}
+              >
+                {lng === 'en' ? 'EN' : lng === 'hi' ? 'हिन्दी' : 'ગુજરાતી'}
+              </button>
+            );
+          })}
+        </div>
 
         {/* ── Central Login Content ── */}
         <div className="w-full max-w-[400px] mx-auto my-auto py-4">
@@ -155,19 +178,29 @@ export const CustomerLogin: React.FC = () => {
                   <span className="text-xl font-bold text-[#2F5233] tracking-tight">Smart</span>
                   <span className="text-xl font-bold text-[#C9A15A] tracking-tight ml-0.5">Serve</span>
                 </div>
+                {i18n.language === 'hi' && (
+                  <span className="text-[11px] font-semibold text-[#2F5233]/80 -mt-1 block font-sans">
+                    स्मार्टसर्व
+                  </span>
+                )}
+                {i18n.language === 'gu' && (
+                  <span className="text-[11px] font-semibold text-[#2F5233]/80 -mt-1 block font-sans">
+                    સ્માર્ટસર્વ
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Page Title */}
             <h1 className="text-2xl sm:text-3xl font-bold text-[#1F2A1E] tracking-tight mb-1.5">
-              {is2FaRequired ? 'Two-Factor Verification' : 'Customer Login'}
+              {is2FaRequired ? t('auth.two_factor_title', { defaultValue: 'Two-Factor Verification' }) : t('auth.login_title', { defaultValue: 'Customer Login' })}
             </h1>
             <p className="text-sm text-[#1F2A1E]/60 font-medium">
               {is2FaRequired
                 ? (isRecoveryMode
-                    ? 'Enter your single-use backup recovery code.'
-                    : 'Enter the 6-digit code from your authenticator app.')
-                : 'Sign in to book and manage your home services.'}
+                    ? t('auth.recovery_code_label', { defaultValue: 'Enter your single-use backup recovery code.' })
+                    : t('auth.totp_code_label', { defaultValue: 'Enter the 6-digit code from your authenticator app.' }))
+                : t('auth.login_subtitle', { defaultValue: 'Sign in to book and manage your home services.' })}
             </p>
           </div>
 
@@ -193,7 +226,7 @@ export const CustomerLogin: React.FC = () => {
                 {/* Email Address */}
                 <div>
                   <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">
-                    Email Address
+                    {t('auth.email_label', { defaultValue: 'Email Address' })}
                   </label>
                   <div className="relative">
                     <Mail className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
@@ -213,14 +246,14 @@ export const CustomerLogin: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider">
-                      Password
+                      {t('auth.password_label', { defaultValue: 'Password' })}
                     </label>
                     <button
                       type="button"
                       onClick={handleForgotPassword}
                       className="text-xs font-semibold text-[#2F5233] hover:text-[#3D6B42] hover:underline transition-colors cursor-pointer"
                     >
-                      Forgot Password?
+                      {t('auth.forgot_password', { defaultValue: 'Forgot Password?' })}
                     </button>
                   </div>
                   <div className="relative">
@@ -251,7 +284,7 @@ export const CustomerLogin: React.FC = () => {
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider">
-                      {isRecoveryMode ? 'Recovery Code' : '6-Digit TOTP Code'}
+                      {isRecoveryMode ? t('auth.recovery_code_label', { defaultValue: 'Recovery Code' }) : t('auth.totp_code_label', { defaultValue: '6-Digit TOTP Code' })}
                     </label>
                     <button
                       type="button"
@@ -262,7 +295,7 @@ export const CustomerLogin: React.FC = () => {
                       }}
                       className="text-xs font-semibold text-[#2F5233] hover:text-[#3D6B42] hover:underline transition-colors cursor-pointer"
                     >
-                      {isRecoveryMode ? 'Use Authenticator Code' : 'Use Recovery Code'}
+                      {isRecoveryMode ? t('auth.use_authenticator', { defaultValue: 'Use Authenticator Code' }) : t('auth.use_recovery', { defaultValue: 'Use Recovery Code' })}
                     </button>
                   </div>
                   <div className="relative">
@@ -296,7 +329,7 @@ export const CustomerLogin: React.FC = () => {
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1F2A1E]/60 hover:text-[#1F2A1E] transition-colors cursor-pointer"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    Back to credentials
+                    {t('auth.back_to_creds', { defaultValue: 'Back to credentials' })}
                   </button>
                 </div>
               </>
@@ -312,10 +345,10 @@ export const CustomerLogin: React.FC = () => {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Verifying...</span>
+                    <span>{t('auth.verifying', { defaultValue: 'Verifying...' })}</span>
                   </>
                 ) : (
-                  <span>{is2FaRequired ? 'Verify & Sign In' : 'Login to SmartServe'}</span>
+                  <span>{is2FaRequired ? t('auth.btn_verify', { defaultValue: 'Verify & Sign In' }) : t('auth.btn_login', { defaultValue: 'Login to SmartServe' })}</span>
                 )}
               </button>
             </div>
@@ -331,8 +364,8 @@ export const CustomerLogin: React.FC = () => {
               title="Click to autofill customer demo credentials"
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="font-bold text-[#1F2A1E]/70 uppercase tracking-wider text-[10px]">Customer Demo Login</span>
-                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 group-hover:bg-emerald-100 transition-colors">Click to Auto-fill</span>
+                <span className="font-bold text-[#1F2A1E]/70 uppercase tracking-wider text-[10px]">{t('auth.demo_login_title', { defaultValue: 'Customer Demo Login' })}</span>
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 group-hover:bg-emerald-100 transition-colors">{t('auth.demo_click_autofill', { defaultValue: 'Click to Auto-fill' })}</span>
               </div>
               <p className="text-[11px] text-[#1F2A1E]/60 font-mono">customer@example.com / CustomerPass123!</p>
             </div>
@@ -346,7 +379,7 @@ export const CustomerLogin: React.FC = () => {
                     <div className="w-full border-t border-[#E5DEC9]" />
                   </div>
                   <span className="relative bg-[#FAF7F0] px-3 text-[11px] font-bold uppercase tracking-wider text-[#1F2A1E]/50">
-                    Or continue with
+                    {t('auth.or_continue_with', { defaultValue: 'Or continue with' })}
                   </span>
                 </div>
 
@@ -383,7 +416,7 @@ export const CustomerLogin: React.FC = () => {
                         />
                       </svg>
                     )}
-                    <span>Continue with Google</span>
+                    <span>{t('auth.continue_google', { defaultValue: 'Continue with Google' })}</span>
                   </button>
 
                   {/* Continue with Apple */}
@@ -402,7 +435,7 @@ export const CustomerLogin: React.FC = () => {
                         <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.76 1.05-1.81.93-2.87-1 .04-2.17.67-2.84 1.45-.58.67-1.09 1.74-.95 2.78 1.11.09 2.23-.58 2.86-1.36z" />
                       </svg>
                     )}
-                    <span>Continue with Apple</span>
+                    <span>{t('auth.continue_apple', { defaultValue: 'Continue with Apple' })}</span>
                   </button>
 
                   {/* Continue with GitHub */}
@@ -421,7 +454,7 @@ export const CustomerLogin: React.FC = () => {
                         <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
                       </svg>
                     )}
-                    <span>Continue with GitHub</span>
+                    <span>{t('auth.continue_github', { defaultValue: 'Continue with GitHub' })}</span>
                   </button>
                 </div>
               </div>
@@ -429,9 +462,9 @@ export const CustomerLogin: React.FC = () => {
 
             {/* Sign Up Link */}
             <div className="text-center pt-2 text-xs text-[#1F2A1E]/70 font-medium">
-              Don't have an account?{' '}
+              {t('auth.no_account', { defaultValue: "Don't have an account?" })}{' '}
               <Link to="/register" className="font-bold text-[#2F5233] hover:text-[#3D6B42] hover:underline transition-colors">
-                Create account (5 steps)
+                {t('auth.create_account', { defaultValue: 'Create account (5 steps)' })}
               </Link>
             </div>
           </form>
@@ -441,7 +474,7 @@ export const CustomerLogin: React.FC = () => {
         {/* ── Minimal Footer (Matching Admin) ── */}
         <div className="text-center pt-4 pb-1">
           <p className="text-[11px] font-medium text-[#1F2A1E]/40">
-            SmartServe Marketplace · Verified Home & Urban Services
+            {t('auth.footer_tagline', { defaultValue: 'SmartServe Marketplace · Verified Home & Urban Services' })}
           </p>
         </div>
 

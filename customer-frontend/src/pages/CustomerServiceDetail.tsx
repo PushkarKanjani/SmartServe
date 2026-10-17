@@ -37,7 +37,7 @@ import { useTranslation } from 'react-i18next';
 import { addBundleItem, isInBundle } from '../utils/bundleCart';
 
 export const CustomerServiceDetail: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { serviceId } = useParams<{ serviceId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -410,12 +410,12 @@ export const CustomerServiceDetail: React.FC = () => {
               {service.is_active ? (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#10B981]/90 backdrop-blur-md text-white text-[11px] font-bold shadow-xs">
                   <BadgeCheck className="w-3.5 h-3.5" />
-                  <span>Active Service</span>
+                  <span>{t('service_detail.active_service', { defaultValue: 'Active Service' })}</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/90 backdrop-blur-md text-white text-[11px] font-bold shadow-xs">
                   <Ban className="w-3.5 h-3.5" />
-                  <span>Service Suspended</span>
+                  <span>{t('service_detail.service_suspended', { defaultValue: 'Service Suspended' })}</span>
                 </span>
               )}
             </div>
@@ -442,9 +442,9 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="p-4 rounded-[20px] bg-rose-50 border border-rose-200 text-rose-800 flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
               <div className="text-xs space-y-1">
-                <p className="font-bold">This service is currently unavailable for new bookings</p>
+                <p className="font-bold">{t('service_detail.service_unavailable', { defaultValue: 'This service is currently unavailable for new bookings' })}</p>
                 <p className="text-rose-700/80">
-                  The service administrator has deactivated this service in the catalog. Information is displayed in read-only mode.
+                  {t('service_detail.service_unavailable_desc', { defaultValue: 'The service administrator has deactivated this service in the catalog. Information is displayed in read-only mode.' })}
                 </p>
               </div>
             </div>
@@ -566,7 +566,7 @@ export const CustomerServiceDetail: React.FC = () => {
                   {t('service_detail.process', { defaultValue: 'Standard Execution Process' })}
                 </h3>
                 <span className="text-xs font-semibold text-[#1F2A1E]/60 bg-[#F2EDE1] px-2.5 py-1 rounded-full">
-                  {service.process_steps.length} Steps
+                  {t('service_detail.steps_count', { count: service.process_steps.length, defaultValue: `${service.process_steps.length} Steps` })}
                 </span>
               </div>
               <div className="space-y-3.5">
@@ -581,14 +581,14 @@ export const CustomerServiceDetail: React.FC = () => {
                           <h4 className="text-sm font-bold text-[#1F2A1E]">{getLocalizedFeature(step.title)}</h4>
                           {step.is_key_step && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#C9A15A]/15 text-[#8C6B28] text-[10px] font-bold uppercase tracking-wider border border-[#C9A15A]/30">
-                              Key Step
+                              {t('service_detail.key_step', { defaultValue: 'Key Step' })}
                             </span>
                           )}
                         </div>
                         {step.duration_minutes && (
                           <span className="text-xs font-semibold text-[#1F2A1E]/60 flex items-center gap-1">
                             <Clock className="w-3 h-3 text-[#C9A15A]" />
-                            {step.duration_minutes} mins
+                            {step.duration_minutes} {t('common.mins', { defaultValue: 'Mins' })}
                           </span>
                         )}
                       </div>
@@ -608,10 +608,10 @@ export const CustomerServiceDetail: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Camera className="w-4 h-4 text-[#2F5233]" />
-                  <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Service Gallery & Media</h3>
+                  <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">{t('service_detail.gallery_title', { defaultValue: 'Service Gallery & Media' })}</h3>
                 </div>
                 <span className="text-xs font-semibold text-[#1F2A1E]/60 bg-[#F2EDE1] px-2.5 py-1 rounded-full">
-                  {service.service_media.length} Photos
+                  {t('service_detail.photos_count', { count: service.service_media.length, defaultValue: `${service.service_media.length} Photos` })}
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -629,7 +629,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     )}
                     {item.is_cover && (
                       <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-[#2F5233]/90 backdrop-blur-xs text-[10px] font-bold text-white uppercase tracking-wider shadow-xs">
-                        Cover
+                        {t('service_detail.cover_badge', { defaultValue: 'Cover' })}
                       </span>
                     )}
                   </div>
@@ -751,7 +751,7 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
               <div className="flex items-center gap-2">
                 <HelpCircle className="w-4 h-4 text-[#2F5233]" />
-                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Frequently Asked Questions</h3>
+                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">{t('service_detail.faqs_title', { defaultValue: 'Frequently Asked Questions' })}</h3>
               </div>
               <div className="space-y-3">
                 {service.faqs.map((faq, idx) => (
@@ -769,7 +769,7 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
               <div className="flex items-center gap-2">
                 <Lightbulb className="w-4 h-4 text-[#C9A15A]" />
-                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Professional Tips</h3>
+                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">{t('service_detail.tips_title', { defaultValue: 'Professional Tips' })}</h3>
               </div>
               <div className="space-y-2.5">
                 {service.tips.map((tip, idx) => (
@@ -787,13 +787,13 @@ export const CustomerServiceDetail: React.FC = () => {
           {/* 16. Dos & Don'ts */}
           {((service.dos && service.dos.length > 0) || (service.donts && service.donts.length > 0)) && (
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-5">
-              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Recommended Dos and Don'ts</h3>
+              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">{t('service_detail.dos_donts_title', { defaultValue: "Recommended Dos and Don'ts" })}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {service.dos && service.dos.length > 0 && (
                   <div className="space-y-2.5">
                     <h4 className="text-xs font-bold text-[#2F5233] uppercase tracking-wider flex items-center gap-1.5">
                       <CheckCircle className="w-4 h-4 text-[#10B981]" />
-                      Dos
+                      {t('service_detail.dos', { defaultValue: 'Dos' })}
                     </h4>
                     <div className="space-y-2">
                       {service.dos.map((item, idx) => (
@@ -809,7 +809,7 @@ export const CustomerServiceDetail: React.FC = () => {
                   <div className="space-y-2.5">
                     <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wider flex items-center gap-1.5">
                       <AlertCircle className="w-4 h-4 text-rose-600" />
-                      Don'ts
+                      {t('service_detail.donts', { defaultValue: "Don'ts" })}
                     </h4>
                     <div className="space-y-2">
                       {service.donts.map((item, idx) => (
@@ -830,12 +830,12 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Customizable Service Add-Ons</h3>
-                  <p className="text-xs text-[#1F2A1E]/60">Select enhancements to bundle with your service request</p>
+                  <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">{t('service_detail.addons_title', { defaultValue: 'Customizable Service Add-Ons' })}</h3>
+                  <p className="text-xs text-[#1F2A1E]/60">{t('service_detail.addons_subtitle', { defaultValue: 'Select enhancements to bundle with your service request' })}</p>
                 </div>
                 {selectedAddons.length > 0 && (
                   <span className="text-xs font-bold text-[#2F5233] bg-[#F2EDE1] px-2.5 py-1 rounded-full">
-                    {selectedAddons.length} Selected
+                    {t('service_detail.addons_selected_count', { count: selectedAddons.length, defaultValue: `${selectedAddons.length} Selected` })}
                   </span>
                 )}
               </div>
@@ -974,7 +974,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 className="w-full py-4 bg-slate-100 text-slate-400 font-bold rounded-full text-sm cursor-not-allowed flex items-center justify-center gap-2 border border-slate-200"
               >
                 <Ban className="w-4 h-4" />
-                <span>Service Unavailable</span>
+                <span>{t('service_detail.service_unavailable_btn', { defaultValue: 'Service Unavailable' })}</span>
               </button>
             )}
 
@@ -998,9 +998,9 @@ export const CustomerServiceDetail: React.FC = () => {
               <div>
                 <h3 className="text-xl font-bold font-serif-display text-[#1F2A1E] flex items-center gap-2">
                   {isEmergency && <Zap className="w-5 h-5 text-amber-600 animate-pulse" />}
-                  <span>{isEmergency ? 'Emergency Dispatch Booking' : 'Schedule Service Booking'}</span>
+                  <span>{isEmergency ? t('service_detail.emergency_dispatch_booking', { defaultValue: 'Emergency Dispatch Booking' }) : t('service_detail.schedule_service_booking', { defaultValue: 'Schedule Service Booking' })}</span>
                 </h3>
-                <p className="text-xs text-[#1F2A1E]/60 font-medium">{service.name}</p>
+                <p className="text-xs text-[#1F2A1E]/60 font-medium">{getLocalizedServiceName(service.name)}</p>
               </div>
               <button
                 onClick={() => setShowBookingModal(false)}
@@ -1016,17 +1016,17 @@ export const CustomerServiceDetail: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider flex items-center gap-1.5">
                     <CalendarIcon className="w-3.5 h-3.5 text-[#2F5233]" />
-                    <span>1. Select Service Date</span>
+                    <span>{t('booking.select_service_date', { defaultValue: '1. Select Service Date' })}</span>
                   </label>
                   {availableDates.length > 0 ? (
                     <span className="text-[11px] text-[#2F5233] font-semibold flex items-center gap-1">
                       <CheckCircle className="w-3 h-3 text-[#2F5233]" />
-                      {availableDates.length} upcoming date{availableDates.length > 1 ? 's' : ''} with open slots
+                      {t('booking.upcoming_dates_open', { count: availableDates.length, defaultValue: `${availableDates.length} upcoming date${availableDates.length > 1 ? 's' : ''} with open slots` })}
                     </span>
                   ) : (
                     <span className="text-[11px] text-amber-700 font-semibold flex items-center gap-1">
                       <AlertCircle className="w-3 h-3" />
-                      Checking open slots...
+                      {t('booking.checking_open_slots', { defaultValue: 'Checking open slots...' })}
                     </span>
                   )}
                 </div>
@@ -1045,13 +1045,14 @@ export const CustomerServiceDetail: React.FC = () => {
                 {availableDates.length > 0 && (
                   <div className="space-y-1 pt-1">
                     <span className="text-[10px] text-[#1F2A1E]/50 font-semibold uppercase tracking-wider block">
-                      Quick Select Open Dates:
+                      {t('booking.quick_select_open_dates', { defaultValue: 'Quick Select Open Dates:' })}
                     </span>
                     <div className="flex items-center gap-2 overflow-x-auto pb-1.5">
                       {availableDates.slice(0, 7).map((d) => {
                         const isSelected = bookingDate === d;
                         const dateObj = new Date(d + 'T00:00:00');
                         const isToday = d === todayStr;
+                        const localeCode = i18n.language === 'hi' ? 'hi-IN' : i18n.language === 'gu' ? 'gu-IN' : 'en-US';
                         return (
                           <button
                             key={d}
@@ -1064,10 +1065,10 @@ export const CustomerServiceDetail: React.FC = () => {
                             }`}
                           >
                             <span className="text-[10px] uppercase font-bold opacity-80">
-                              {isToday ? 'Today' : dateObj.toLocaleDateString('en-US', { weekday: 'short' })}
+                              {isToday ? t('common.today', { defaultValue: 'Today' }) : dateObj.toLocaleDateString(localeCode, { weekday: 'short' })}
                             </span>
                             <span className="text-xs font-extrabold">
-                              {dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              {dateObj.toLocaleDateString(localeCode, { month: 'short', day: 'numeric' })}
                             </span>
                           </button>
                         );
@@ -1082,12 +1083,12 @@ export const CustomerServiceDetail: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-[#2F5233]" />
-                    <span>2. Select Time Slot</span>
+                    <span>{t('booking.select_time_slot', { defaultValue: '2. Select Time Slot' })}</span>
                   </label>
                   {availableTimeOptions.length > 0 && (
                     <span className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
                       <CheckCircle className="w-3 h-3 text-emerald-600" />
-                      {availableTimeOptions.length} slot{availableTimeOptions.length > 1 ? 's' : ''} available
+                      {t('booking.slots_available', { count: availableTimeOptions.length, defaultValue: `${availableTimeOptions.length} slot${availableTimeOptions.length > 1 ? 's' : ''} available` })}
                     </span>
                   )}
                 </div>
@@ -1109,10 +1110,10 @@ export const CustomerServiceDetail: React.FC = () => {
                   <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
                     <p className="font-bold flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
-                      <span>No Provider Slots on {bookingDate || 'Selected Date'}</span>
+                      <span>{t('booking.no_slots_on_date', { date: bookingDate || t('common.selected_date', { defaultValue: 'Selected Date' }), defaultValue: `No Provider Slots on ${bookingDate || 'Selected Date'}` })}</span>
                     </p>
                     <p className="text-amber-800/80">
-                      No verified provider availability found for this specific date. Please pick a date highlighted above with open slots or choose another date.
+                      {t('booking.no_slots_desc', { defaultValue: 'No verified provider availability found for this specific date. Please pick a date highlighted above with open slots or choose another date.' })}
                     </p>
                   </div>
                 )}
@@ -1124,18 +1125,18 @@ export const CustomerServiceDetail: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase tracking-wider">
                       <Zap className="w-4 h-4 text-amber-600 animate-pulse" />
-                      <span>Emergency Priority Auto-Dispatch</span>
+                      <span>{t('booking.emergency_priority_auto_dispatch', { defaultValue: 'Emergency Priority Auto-Dispatch' })}</span>
                     </div>
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-200 text-amber-900 uppercase">
-                      Fastest Available
+                      {t('booking.fastest_available', { defaultValue: 'Fastest Available' })}
                     </span>
                   </div>
                   <p className="text-xs text-amber-800 leading-relaxed">
-                    Customer provider selection is bypassed for emergency hazard & safety services. SmartServe automatically pairs and dispatches the nearest verified, background-checked professional to your location based on real-time availability.
+                    {t('booking.emergency_auto_dispatch_desc', { defaultValue: 'Customer provider selection is bypassed for emergency hazard & safety services. SmartServe automatically pairs and dispatches the nearest verified, background-checked professional to your location based on real-time availability.' })}
                   </p>
                   {earliestEmergencySlot && (
                     <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between text-xs">
-                      <span className="text-amber-900 font-medium">Earliest Dispatch Window:</span>
+                      <span className="text-amber-900 font-medium">{t('booking.earliest_dispatch_window', { defaultValue: 'Earliest Dispatch Window:' })}</span>
                       <span className="font-bold text-amber-950 bg-white px-2.5 py-1 rounded-lg border border-amber-300 shadow-xs">
                         📅 {earliestEmergencySlot.date} at ⏰ {earliestEmergencySlot.time}
                       </span>
@@ -1147,15 +1148,15 @@ export const CustomerServiceDetail: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider flex items-center gap-1.5">
                       <UserCheck className="w-3.5 h-3.5 text-[#2F5233]" />
-                      <span>Choose Your Professional (Specialist Choice)</span>
+                      <span>{t('booking.choose_professional', { defaultValue: 'Choose Your Professional (Specialist Choice)' })}</span>
                     </label>
-                    <span className="text-[11px] text-[#1F2A1E]/60 font-medium">Optional</span>
+                    <span className="text-[11px] text-[#1F2A1E]/60 font-medium">{t('common.optional', { defaultValue: 'Optional' })}</span>
                   </div>
                   
                   {providersLoading ? (
                     <div className="flex items-center justify-center p-4 bg-white rounded-xl border border-[#E5DEC9]">
                       <Loader2 className="w-4 h-4 animate-spin text-[#2F5233]" />
-                      <span className="ml-2 text-xs text-[#1F2A1E]/60">Checking verified provider availability...</span>
+                      <span className="ml-2 text-xs text-[#1F2A1E]/60">{t('booking.checking_provider_availability', { defaultValue: 'Checking verified provider availability...' })}</span>
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -1170,8 +1171,8 @@ export const CustomerServiceDetail: React.FC = () => {
                         <div className="flex items-center gap-2.5">
                           <Sparkles className="w-4 h-4 text-[#C9A15A]" />
                           <div>
-                            <p className="text-xs font-bold text-[#1F2A1E]">SmartServe Auto-Match (Recommended)</p>
-                            <p className="text-[11px] text-[#1F2A1E]/60">Dispatch highest-rated available verified expert</p>
+                            <p className="text-xs font-bold text-[#1F2A1E]">{t('booking.smartserve_auto_match_rec', { defaultValue: 'SmartServe Auto-Match (Recommended)' })}</p>
+                            <p className="text-[11px] text-[#1F2A1E]/60">{t('booking.auto_match_sub', { defaultValue: 'Dispatch highest-rated available verified expert' })}</p>
                           </div>
                         </div>
                         <input 
@@ -1197,24 +1198,24 @@ export const CustomerServiceDetail: React.FC = () => {
                             <div className="flex items-center gap-2">
                               <p className="text-xs font-bold text-[#1F2A1E]">{prov.full_name}</p>
                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                ⭐ {prov.reliability_score}% Reliability
+                                ⭐ {prov.reliability_score}% {t('provider.reliability_short', { defaultValue: 'Reliability' })}
                               </span>
                               <span className="text-[10px] text-[#1F2A1E]/50 font-medium">
-                                {prov.experience_years}y exp
+                                {prov.experience_years} {t('provider.years_exp', { defaultValue: 'yrs exp' })}
                               </span>
                               {prov.is_available ? (
                                 <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                                  Slots Open
+                                  {t('booking.slots_open', { defaultValue: 'Slots Open' })}
                                 </span>
                               ) : (
                                 <span className="text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">
-                                  Fully Booked
+                                  {t('booking.fully_booked', { defaultValue: 'Fully Booked' })}
                                 </span>
                               )}
                             </div>
                             {prov.skills && (
                               <p className="text-[11px] text-[#1F2A1E]/70 line-clamp-1">
-                                Skills: {prov.skills}
+                                {t('provider.skills_label', { defaultValue: 'Skills' })}: {prov.skills}
                               </p>
                             )}
                           </div>
@@ -1238,13 +1239,13 @@ export const CustomerServiceDetail: React.FC = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-bold text-[#1F2A1E]">SmartServe Auto-Match</h4>
+                        <h4 className="text-xs font-bold text-[#1F2A1E]">{t('booking.smartserve_auto_match', { defaultValue: 'SmartServe Auto-Match' })}</h4>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#10B981]/15 text-[#2F5233] uppercase">
-                          Standard Policy
+                          {t('booking.standard_policy', { defaultValue: 'Standard Policy' })}
                         </span>
                       </div>
                       <p className="text-[11px] text-[#1F2A1E]/70 mt-0.5">
-                        Our intelligent matching system automatically dispatches the highest-rated verified technician specialized in {service.name}.
+                        {t('booking.auto_match_desc', { serviceName: getLocalizedServiceName(service.name), defaultValue: `Our intelligent matching system automatically dispatches the highest-rated verified technician specialized in ${getLocalizedServiceName(service.name)}.` })}
                       </p>
                     </div>
                   </div>
@@ -1252,12 +1253,12 @@ export const CustomerServiceDetail: React.FC = () => {
               )}
 
               <div>
-                <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">Street Address</label>
+                <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">{t('booking.street_address', { defaultValue: 'Street Address' })}</label>
                 <input
                   type="text"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Flat / House No., Building Name, Street"
+                  placeholder={t('booking.address_placeholder', { defaultValue: 'Flat / House No., Building Name, Street' })}
                   className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl px-4 text-sm font-medium text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
                   required
                 />
@@ -1265,7 +1266,7 @@ export const CustomerServiceDetail: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">City</label>
+                  <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">{t('booking.city', { defaultValue: 'City' })}</label>
                   <input
                     type="text"
                     value={city}
@@ -1275,7 +1276,7 @@ export const CustomerServiceDetail: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">Pincode</label>
+                  <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">{t('booking.pincode', { defaultValue: 'Pincode' })}</label>
                   <input
                     type="text"
                     value={pincode}
@@ -1287,18 +1288,18 @@ export const CustomerServiceDetail: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">Special Instructions (Optional)</label>
+                <label className="block text-xs font-bold text-[#1F2A1E] uppercase tracking-wider mb-1.5">{t('booking.special_instructions', { defaultValue: 'Special Instructions (Optional)' })}</label>
                 <input
                   type="text"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="e.g. Ring bell twice, specific parking instructions"
+                  placeholder={t('booking.notes_placeholder', { defaultValue: 'e.g. Ring bell twice, specific parking instructions' })}
                   className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl px-4 text-sm font-medium text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
                 />
               </div>
 
               <div className="pt-2 border-t border-[#E5DEC9] flex items-center justify-between text-sm">
-                <span className="font-semibold text-[#1F2A1E]/70">Total Amount</span>
+                <span className="font-semibold text-[#1F2A1E]/70">{t('booking.total', { defaultValue: 'Total Amount' })}</span>
                 <span className="text-xl font-bold font-serif-display text-[#1F2A1E]">{formatCurrencyINR(calculateTotalPrice())}</span>
               </div>
 
@@ -1308,7 +1309,7 @@ export const CustomerServiceDetail: React.FC = () => {
                   onClick={() => setShowBookingModal(false)}
                   className="w-1/2 py-3.5 bg-white hover:bg-[#F2EDE1] font-bold text-[#1F2A1E] rounded-full text-xs uppercase tracking-wider border border-[#E5DEC9] transition-all"
                 >
-                  Cancel
+                  {t('common.cancel', { defaultValue: 'Cancel' })}
                 </button>
                 <button
                   type="submit"
@@ -1322,15 +1323,15 @@ export const CustomerServiceDetail: React.FC = () => {
                   {bookingLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Booking...</span>
+                      <span>{t('booking.booking_in_progress', { defaultValue: 'Booking...' })}</span>
                     </>
                   ) : isEmergency ? (
                     <>
                       <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
-                      <span>Confirm Emergency Dispatch</span>
+                      <span>{t('booking.confirm_emergency', { defaultValue: 'Confirm Emergency Dispatch' })}</span>
                     </>
                   ) : (
-                    <span>Confirm Booking</span>
+                    <span>{t('booking.confirm_booking', { defaultValue: 'Confirm Booking' })}</span>
                   )}
                 </button>
               </div>

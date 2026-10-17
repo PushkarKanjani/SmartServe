@@ -1,4 +1,6 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
+import { getLocalizedServiceName, getLocalizedStatus } from '../utils/localizedNames';
 import { 
   ShieldCheck, 
   Star, 
@@ -36,6 +38,8 @@ export const CustomerProviderCard: React.FC<CustomerProviderCardProps> = ({
   distanceKm,
   etaMinutes,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md overflow-hidden">
       {/* Top Banner Ribbon */}
@@ -63,7 +67,7 @@ export const CustomerProviderCard: React.FC<CustomerProviderCardProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-400/20 text-emerald-200 border border-emerald-400/30">
-                Verified Expert Partner
+                {t('provider.verified_partner', { defaultValue: 'Verified Expert Partner' })}
               </span>
               <span className="flex items-center gap-1 text-amber-300 text-xs font-bold bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
                 <Star className="w-3.5 h-3.5 fill-amber-300" />
@@ -76,17 +80,17 @@ export const CustomerProviderCard: React.FC<CustomerProviderCardProps> = ({
             </h2>
 
             <p className="text-xs text-emerald-100/80 font-medium">
-              {provider.skills || provider.category || category} Specialist • {provider.experience_years || 5}+ years exp.
+              {provider.skills || provider.category || category} • {provider.experience_years || 5}+ {t('provider.years_exp', { defaultValue: 'yrs exp' })}
             </p>
           </div>
         </div>
 
         {/* Live Distance / Status Badge */}
         <div className="flex flex-col sm:items-end justify-center">
-          <span className="text-[10px] text-emerald-200 uppercase tracking-wider font-semibold">Current State</span>
+          <span className="text-[10px] text-emerald-200 uppercase tracking-wider font-semibold">{t('provider.current_state', { defaultValue: 'Current State' })}</span>
           <span className="text-sm font-extrabold text-white flex items-center gap-1.5 mt-0.5">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-            <span>{status}</span>
+            <span>{getLocalizedStatus(status)}</span>
           </span>
           {providerLocation ? (
             <span className="text-[10px] text-emerald-200 font-mono mt-1 flex items-center gap-1">
@@ -106,12 +110,12 @@ export const CustomerProviderCard: React.FC<CustomerProviderCardProps> = ({
       {/* Detail Specifications */}
       <div className="p-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 bg-slate-50/60 border-t border-slate-100 text-xs">
         <div>
-          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Service</span>
-          <span className="font-bold text-slate-800 text-sm block mt-0.5 truncate">{serviceName}</span>
+          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">{t('provider.service_label', { defaultValue: 'Service' })}</span>
+          <span className="font-bold text-slate-800 text-sm block mt-0.5 truncate">{getLocalizedServiceName(serviceName)}</span>
         </div>
 
         <div>
-          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Date</span>
+          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">{t('provider.date_label', { defaultValue: 'Date' })}</span>
           <span className="font-bold text-slate-800 text-sm block mt-0.5 flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5 text-blue-600" />
             <span>{scheduledDate}</span>
@@ -119,7 +123,7 @@ export const CustomerProviderCard: React.FC<CustomerProviderCardProps> = ({
         </div>
 
         <div>
-          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Slot Time</span>
+          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">{t('provider.slot_time_label', { defaultValue: 'Slot Time' })}</span>
           <span className="font-bold text-slate-800 text-sm block mt-0.5 flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-blue-600" />
             <span>{scheduledTime}</span>
@@ -127,7 +131,7 @@ export const CustomerProviderCard: React.FC<CustomerProviderCardProps> = ({
         </div>
 
         <div>
-          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Reliability</span>
+          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">{t('provider.reliability_label', { defaultValue: 'Reliability' })}</span>
           <span className="font-bold text-emerald-700 text-sm block mt-0.5 flex items-center gap-1">
             <Award className="w-3.5 h-3.5 text-emerald-600" />
             <span>{(provider.reliability_score || 99).toFixed(0)}% Score</span>
@@ -135,15 +139,15 @@ export const CustomerProviderCard: React.FC<CustomerProviderCardProps> = ({
         </div>
 
         <div>
-          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Experience</span>
+          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">{t('provider.experience_label', { defaultValue: 'Experience' })}</span>
           <span className="font-bold text-slate-800 text-sm block mt-0.5 flex items-center gap-1">
             <Briefcase className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{provider.experience_years || 5}+ Years</span>
+            <span>{provider.experience_years || 5}+ {t('provider.years_exp', { defaultValue: 'Years' })}</span>
           </span>
         </div>
 
         <div>
-          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">Skills</span>
+          <span className="text-slate-400 block font-semibold uppercase tracking-wider text-[10px]">{t('provider.skills_label', { defaultValue: 'Skills' })}</span>
           <span className="font-bold text-slate-800 text-sm block mt-0.5 truncate" title={provider.skills || 'Certified Professional'}>
             {provider.skills || 'Certified Professional'}
           </span>
@@ -154,11 +158,11 @@ export const CustomerProviderCard: React.FC<CustomerProviderCardProps> = ({
       <div className="px-6 py-3 bg-white border-t border-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-emerald-600" />
-          <span className="font-medium text-slate-700">SmartServe Background Checked & Insured Professional</span>
+          <span className="font-medium text-slate-700">{t('provider.background_checked_note', { defaultValue: 'SmartServe Background Checked & Insured Professional' })}</span>
         </div>
         <div className="flex items-center gap-2 text-[11px] text-slate-500">
           <MapPin className="w-3.5 h-3.5 text-slate-400" />
-          <span>Service Area: <strong>{provider.service_area || 'Bengaluru, India'}</strong></span>
+          <span>{t('provider.service_area_label', { defaultValue: 'Service Area' })}: <strong>{provider.service_area || 'Bengaluru, India'}</strong></span>
         </div>
       </div>
     </div>
@@ -170,15 +174,17 @@ interface BookingTimelineProps {
 }
 
 export const BookingTimeline: React.FC<BookingTimelineProps> = ({ status }) => {
+  const { t } = useTranslation();
+
   const steps = [
-    { key: 'Requested', label: 'Requested' },
-    { key: 'Assigned', label: 'Assigned' },
-    { key: 'Accepted', label: 'Accepted' },
-    { key: 'On The Way', label: 'On The Way' },
-    { key: 'Arrived', label: 'Arrived' },
-    { key: 'OTP Verification', label: 'OTP Verification' },
-    { key: 'Started', label: 'Started' },
-    { key: 'Completed', label: 'Completed' },
+    { key: 'Requested', label: t('timeline.step_requested', { defaultValue: 'Requested' }) },
+    { key: 'Assigned', label: t('timeline.step_assigned', { defaultValue: 'Assigned' }) },
+    { key: 'Accepted', label: t('timeline.step_accepted', { defaultValue: 'Accepted' }) },
+    { key: 'On The Way', label: t('timeline.step_on_the_way', { defaultValue: 'On The Way' }) },
+    { key: 'Arrived', label: t('timeline.step_arrived', { defaultValue: 'Arrived' }) },
+    { key: 'OTP Verification', label: t('timeline.step_otp_verification', { defaultValue: 'OTP Verification' }) },
+    { key: 'Started', label: t('timeline.step_started', { defaultValue: 'Started' }) },
+    { key: 'Completed', label: t('timeline.step_completed', { defaultValue: 'Completed' }) },
   ];
 
   const getStepIndex = (st: string) => {
@@ -199,11 +205,11 @@ export const BookingTimeline: React.FC<BookingTimelineProps> = ({ status }) => {
     <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 sm:p-7 space-y-4">
       <div className="flex items-center justify-between border-b border-slate-100 pb-3">
         <div>
-          <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">Booking Progress Pipeline</h3>
-          <p className="text-xs text-slate-500 mt-0.5">End-to-end live job execution lifecycle</p>
+          <h3 className="text-sm font-extrabold text-slate-900 tracking-tight">{t('timeline.title', { defaultValue: 'Booking Progress Pipeline' })}</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{t('timeline.subtitle', { defaultValue: 'End-to-end live job execution lifecycle' })}</p>
         </div>
         <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-          Step {Math.min(currentIndex + 1, steps.length)} of {steps.length}
+          {t('timeline.step_count', { current: Math.min(currentIndex + 1, steps.length), total: steps.length, defaultValue: `Step ${Math.min(currentIndex + 1, steps.length)} of ${steps.length}` })}
         </span>
       </div>
 

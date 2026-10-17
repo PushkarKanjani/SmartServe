@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { getCustomerTickets, createSupportTicket, SupportTicketDetail } from '../api/support';
 import { formatDateINR } from '../utils/formatters';
+import { getLocalizedStatus, getLocalizedSupportCategory } from '../utils/localizedNames';
 import { useToast } from '../hooks/useToast';
 import { HelpCircle, Plus, Clock, ChevronRight, Loader2, AlertCircle, RefreshCw, Send } from 'lucide-react';
 import { subscribeToRealtime } from '../utils/realtime';
@@ -159,9 +160,9 @@ export const CustomerSupport: React.FC = () => {
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
-                      {ticketItem.status}
+                      {getLocalizedStatus(ticketItem.status)}
                     </span>
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{ticketItem.category}</span>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{getLocalizedSupportCategory(ticketItem.category)}</span>
                   </div>
 
                   <h3 className="font-extrabold text-slate-900 text-base truncate group-hover:text-[#2563EB] transition-colors">

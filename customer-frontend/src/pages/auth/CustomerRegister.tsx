@@ -21,11 +21,14 @@ import { useAuth } from '../../auth/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { getCategoryImageUrl, CATEGORY_IMAGE_MAP } from '../../utils/serviceImages';
 import { validateEmail, validatePhone } from '../../utils/validators';
+import { useTranslation } from 'react-i18next';
+import { getLocalizedCategory } from '../../utils/localizedNames';
 
 export const CustomerRegister: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { showToast } = useToast();
+  const { t, i18n } = useTranslation();
 
   const [step, setStep] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(false);
@@ -185,14 +188,48 @@ export const CustomerRegister: React.FC = () => {
                   <span className="text-xl font-bold text-[#2F5233] tracking-tight">Smart</span>
                   <span className="text-xl font-bold text-[#C9A15A] tracking-tight ml-0.5">Serve</span>
                 </div>
+                {i18n.language === 'hi' && (
+                  <span className="text-[11px] font-semibold text-[#2F5233]/80 -mt-1 block font-sans">
+                    स्मार्टसर्व
+                  </span>
+                )}
+                {i18n.language === 'gu' && (
+                  <span className="text-[11px] font-semibold text-[#2F5233]/80 -mt-1 block font-sans">
+                    સ્માર્ટસર્વ
+                  </span>
+                )}
                 <span className="text-[11px] font-semibold text-[#1F2A1E]/60 uppercase tracking-wider block font-sans">
-                  Customer Onboarding
+                  {t('auth.register_onboarding', { defaultValue: 'Customer Onboarding' })}
                 </span>
               </div>
             </div>
-            <span className="px-3.5 py-1 rounded-full bg-[#2F5233] text-white text-xs font-bold uppercase tracking-wider shadow-xs">
-              Step {step} of 5
-            </span>
+
+            <div className="flex items-center gap-3">
+              {/* Language Switcher */}
+              <div className="hidden sm:flex items-center gap-1 bg-[#F2EDE1] p-1 rounded-xl border border-[#E5DEC9]">
+                {(['en', 'hi', 'gu'] as const).map((lng) => {
+                  const active = (i18n.language || 'en').startsWith(lng);
+                  return (
+                    <button
+                      key={lng}
+                      type="button"
+                      onClick={() => i18n.changeLanguage(lng)}
+                      className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        active
+                          ? 'bg-[#2F5233] text-white shadow-2xs'
+                          : 'text-[#1F2A1E]/60 hover:text-[#1F2A1E]'
+                      }`}
+                    >
+                      {lng === 'en' ? 'EN' : lng === 'hi' ? 'हिन्दी' : 'ગુજરાતી'}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <span className="px-3.5 py-1 rounded-full bg-[#2F5233] text-white text-xs font-bold uppercase tracking-wider shadow-xs">
+                {t('auth.step_indicator', { step, defaultValue: `Step ${step} of 5` })}
+              </span>
+            </div>
           </div>
 
           {/* 5-Step Progress Bar */}
@@ -208,11 +245,11 @@ export const CustomerRegister: React.FC = () => {
               ))}
             </div>
             <div className="flex justify-between text-[11px] font-semibold text-[#1F2A1E]/40">
-              <span className={step >= 1 ? 'text-[#2F5233] font-bold' : ''}>Credentials</span>
-              <span className={step >= 2 ? 'text-[#2F5233] font-bold' : ''}>Personal Info</span>
-              <span className={step >= 3 ? 'text-[#2F5233] font-bold' : ''}>3 Preferences</span>
-              <span className={step >= 4 ? 'text-[#2F5233] font-bold' : ''}>Summary</span>
-              <span className={step >= 5 ? 'text-[#2F5233] font-bold' : ''}>Complete</span>
+              <span className={step >= 1 ? 'text-[#2F5233] font-bold' : ''}>{t('auth.step_credentials', { defaultValue: 'Credentials' })}</span>
+              <span className={step >= 2 ? 'text-[#2F5233] font-bold' : ''}>{t('auth.step_personal_info', { defaultValue: 'Personal Info' })}</span>
+              <span className={step >= 3 ? 'text-[#2F5233] font-bold' : ''}>{t('auth.step_preferences', { defaultValue: '3 Preferences' })}</span>
+              <span className={step >= 4 ? 'text-[#2F5233] font-bold' : ''}>{t('auth.step_summary', { defaultValue: 'Summary' })}</span>
+              <span className={step >= 5 ? 'text-[#2F5233] font-bold' : ''}>{t('auth.step_complete', { defaultValue: 'Complete' })}</span>
             </div>
           </div>
         </div>
@@ -231,13 +268,13 @@ export const CustomerRegister: React.FC = () => {
           {step === 1 && (
             <div className="space-y-6 animate-in fade-in">
               <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-[#1F2A1E] tracking-tight">Step 1: Account Credentials</h3>
-                <p className="text-sm text-[#1F2A1E]/60 font-medium">Enter your email and password for your SmartServe account.</p>
+                <h3 className="text-2xl font-bold text-[#1F2A1E] tracking-tight">{t('auth.step1_title', { defaultValue: 'Step 1: Account Credentials' })}</h3>
+                <p className="text-sm text-[#1F2A1E]/60 font-medium">{t('auth.step1_subtitle', { defaultValue: 'Set up your secure login email and password.' })}</p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">Email Address</label>
+                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">{t('auth.email_label', { defaultValue: 'Email Address' })}</label>
                   <div className="relative">
                     <Mail className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
                     <input
@@ -251,7 +288,7 @@ export const CustomerRegister: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">Password</label>
+                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">{t('auth.password_label', { defaultValue: 'Password' })}</label>
                   <div className="relative">
                     <Lock className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
                     <input
@@ -265,7 +302,7 @@ export const CustomerRegister: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">Confirm Password</label>
+                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">{t('auth.confirm_password', { defaultValue: 'Confirm Password' })}</label>
                   <div className="relative">
                     <Lock className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
                     <input
@@ -281,13 +318,13 @@ export const CustomerRegister: React.FC = () => {
 
               <div className="pt-4 flex justify-between items-center border-t border-[#E5DEC9]">
                 <Link to="/login" className="text-sm font-semibold text-[#2F5233] hover:underline">
-                  Already have an account? Sign in
+                  {t('auth.already_account', { defaultValue: 'Already have an account? Sign in' })}
                 </Link>
                 <button
                   onClick={handleNextStep1}
                   className="px-6 py-3 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  <span>Continue to Step 2</span>
+                  <span>{t('auth.btn_next', { defaultValue: 'Continue' })}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -298,13 +335,13 @@ export const CustomerRegister: React.FC = () => {
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in">
               <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-[#1F2A1E] tracking-tight">Step 2: Personal Details & Location</h3>
-                <p className="text-sm text-[#1F2A1E]/60 font-medium">Provide your contact details so verified professionals can serve you.</p>
+                <h3 className="text-2xl font-bold text-[#1F2A1E] tracking-tight">{t('auth.step2_title', { defaultValue: 'Step 2: Personal Details & Location' })}</h3>
+                <p className="text-sm text-[#1F2A1E]/60 font-medium">{t('auth.step2_subtitle', { defaultValue: 'Provide your contact details so verified professionals can serve you.' })}</p>
               </div>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">Full Name</label>
+                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">{t('auth.full_name', { defaultValue: 'Full Name' })}</label>
                   <div className="relative">
                     <User className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
                     <input
@@ -318,7 +355,7 @@ export const CustomerRegister: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">Mobile Number</label>
+                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">{t('auth.mobile_number', { defaultValue: 'Mobile Number' })}</label>
                   <div className="relative">
                     <Phone className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
                     <input
@@ -333,7 +370,7 @@ export const CustomerRegister: React.FC = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">City</label>
+                    <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">{t('auth.city', { defaultValue: 'City' })}</label>
                     <div className="relative">
                       <MapPin className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
                       <input
@@ -345,7 +382,7 @@ export const CustomerRegister: React.FC = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">Pincode</label>
+                    <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">{t('auth.pincode', { defaultValue: 'PIN Code' })}</label>
                     <input
                       type="text"
                       value={pincode}
@@ -362,13 +399,13 @@ export const CustomerRegister: React.FC = () => {
                   className="px-5 py-2.5 bg-[#F2EDE1] hover:bg-[#E5DEC9] text-[#1F2A1E] font-semibold text-sm rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
+                  <span>{t('auth.btn_back', { defaultValue: 'Back' })}</span>
                 </button>
                 <button
                   onClick={handleNextStep2}
                   className="px-6 py-3 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-sm rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
                 >
-                  <span>Select 3 Preferences</span>
+                  <span>{t('auth.select_3_pref_btn', { defaultValue: 'Select 3 Preferences' })}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -381,21 +418,21 @@ export const CustomerRegister: React.FC = () => {
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-bold text-[#1F2A1E] tracking-tight">
-                    Step 3: Choose Top 3 Category Preferences
+                    {t('auth.step3_title', { defaultValue: 'Step 3: Choose Top 3 Category Preferences' })}
                   </h3>
                   <span className="text-xs font-bold px-3 py-1 bg-[#2F5233]/10 text-[#2F5233] border border-[#2F5233]/20 rounded-full">
-                    {selectedCategoryIds.length} / 3 Selected
+                    {t('auth.selected_count', { count: selectedCategoryIds.length, defaultValue: `${selectedCategoryIds.length} / 3 Selected` })}
                   </span>
                 </div>
                 <p className="text-sm text-[#1F2A1E]/60 font-medium">
-                  Select <strong className="text-[#1F2A1E]">exactly 3 categories</strong> you are most interested in. (Customizes your home feed with no obligation).
+                  {t('auth.step3_subtitle', { defaultValue: 'Select exactly 3 categories you are most interested in. (Customizes your home feed with no obligation).' })}
                 </p>
               </div>
 
               {loadingCategories ? (
                 <div className="flex flex-col items-center justify-center py-12 space-y-3">
                   <Loader2 className="w-8 h-8 animate-spin text-[#2F5233]" />
-                  <p className="text-sm font-semibold text-[#1F2A1E]/70">Loading catalog categories from database...</p>
+                  <p className="text-sm font-semibold text-[#1F2A1E]/70">{t('common.loading', { defaultValue: 'Loading catalog categories from database...' })}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[380px] overflow-y-auto pr-1">
@@ -426,7 +463,7 @@ export const CustomerRegister: React.FC = () => {
 
                         <div className="relative z-10 p-3 flex justify-between items-start">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-white/90 bg-black/40 px-2 py-0.5 rounded-full backdrop-blur-xs">
-                            {cat.service_count ? `${cat.service_count} Services` : 'Verified'}
+                            {cat.service_count ? t('auth.services_count', { count: cat.service_count, defaultValue: `${cat.service_count} Services` }) : t('auth.verified_badge', { defaultValue: 'Verified' })}
                           </span>
 
                           <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-transform ${isSelected ? 'bg-[#2F5233] text-white scale-110 shadow-xs' : 'bg-white/30 text-white'}`}>
@@ -436,7 +473,7 @@ export const CustomerRegister: React.FC = () => {
 
                         <div className="relative z-10 p-3">
                           <h4 className="font-bold text-white text-xs sm:text-sm leading-snug drop-shadow-sm">
-                            {cat.name}
+                            {getLocalizedCategory(cat.name)}
                           </h4>
                         </div>
                       </div>
@@ -451,14 +488,14 @@ export const CustomerRegister: React.FC = () => {
                   className="px-5 py-2.5 bg-[#F2EDE1] hover:bg-[#E5DEC9] text-[#1F2A1E] font-semibold text-sm rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
+                  <span>{t('auth.btn_back', { defaultValue: 'Back' })}</span>
                 </button>
                 <button
                   onClick={handleNextStep3}
                   disabled={selectedCategoryIds.length !== 3}
                   className="px-6 py-3 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-sm rounded-xl shadow-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
                 >
-                  <span>Continue to Summary</span>
+                  <span>{t('auth.continue_summary_btn', { defaultValue: 'Continue to Summary' })}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -469,39 +506,39 @@ export const CustomerRegister: React.FC = () => {
           {step === 4 && (
             <div className="space-y-6 animate-in fade-in">
               <div className="space-y-1">
-                <h3 className="text-2xl font-bold text-[#1F2A1E] tracking-tight">Step 4: Review & Complete Registration</h3>
-                <p className="text-sm text-[#1F2A1E]/60 font-medium">Verify your details before creating your customer account in the database.</p>
+                <h3 className="text-2xl font-bold text-[#1F2A1E] tracking-tight">{t('auth.step4_title', { defaultValue: 'Step 4: Review & Complete Registration' })}</h3>
+                <p className="text-sm text-[#1F2A1E]/60 font-medium">{t('auth.step4_subtitle', { defaultValue: 'Verify your details before creating your customer account in the database.' })}</p>
               </div>
 
               <div className="bg-[#FAF7F0] p-5 rounded-2xl border border-[#E5DEC9] space-y-4 text-sm">
                 <div className="grid grid-cols-2 gap-4 pb-3 border-b border-[#E5DEC9]">
                   <div>
-                    <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">Full Name</span>
+                    <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">{t('auth.full_name', { defaultValue: 'Full Name' })}</span>
                     <span className="font-bold text-[#1F2A1E]">{fullName}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">Email Address</span>
+                    <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">{t('auth.email_label', { defaultValue: 'Email Address' })}</span>
                     <span className="font-bold text-[#1F2A1E]">{email}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">Mobile Phone</span>
+                    <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">{t('auth.mobile_number', { defaultValue: 'Mobile Phone' })}</span>
                     <span className="font-bold text-[#1F2A1E]">{phone}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">Location</span>
+                    <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">{t('auth.city', { defaultValue: 'Location' })}</span>
                     <span className="font-bold text-[#1F2A1E]">{city} - {pincode}</span>
                   </div>
                 </div>
 
                 <div>
-                  <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block mb-2">Selected Top 3 Category Preferences</span>
+                  <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block mb-2">{t('auth.step_preferences', { defaultValue: 'Selected Top 3 Category Preferences' })}</span>
                   <div className="flex flex-wrap gap-2">
                     {selectedCategoryIds.map((id) => {
                       const match = categories.find((c) => c.id === id);
                       return (
                         <span key={id} className="px-3 py-1 bg-white text-[#2F5233] font-bold text-xs rounded-lg border border-[#E5DEC9] flex items-center gap-1.5 shadow-2xs">
                           <CheckCircle2 className="w-3.5 h-3.5 text-[#2F5233]" />
-                          <span>{match ? match.name : id}</span>
+                          <span>{match ? getLocalizedCategory(match.name) : id}</span>
                         </span>
                       );
                     })}
@@ -511,7 +548,7 @@ export const CustomerRegister: React.FC = () => {
 
               <div className="p-4 bg-[#F2EDE1]/70 border border-[#C9A15A]/40 rounded-xl text-[#1F2A1E] text-xs font-semibold flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-[#2F5233] flex-shrink-0" />
-                <span>Notice: Creating your account saves your 3 preferences. Zero service bookings have been created.</span>
+                <span>{t('auth.register_notice', { defaultValue: 'Notice: Creating your account saves your 3 preferences. Zero service bookings have been created.' })}</span>
               </div>
 
               <div className="pt-4 flex justify-between items-center border-t border-[#E5DEC9]">
@@ -520,7 +557,7 @@ export const CustomerRegister: React.FC = () => {
                   className="px-5 py-2.5 bg-[#F2EDE1] hover:bg-[#E5DEC9] text-[#1F2A1E] font-semibold text-sm rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span>Back</span>
+                  <span>{t('auth.btn_back', { defaultValue: 'Back' })}</span>
                 </button>
                 <button
                   onClick={handleCompleteRegister}
@@ -530,12 +567,12 @@ export const CustomerRegister: React.FC = () => {
                   {loading ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Creating Account...</span>
+                      <span>{t('auth.creating_account', { defaultValue: 'Creating Account...' })}</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4 text-[#C9A15A]" />
-                      <span>Create Account & Finish</span>
+                      <span>{t('auth.btn_create_account', { defaultValue: 'Create Account & Finish' })}</span>
                     </>
                   )}
                 </button>
@@ -550,9 +587,9 @@ export const CustomerRegister: React.FC = () => {
                 <CheckCircle2 className="w-10 h-10 text-[#2F5233]" />
               </div>
               <div className="space-y-2 max-w-md mx-auto">
-                <h3 className="text-3xl font-bold text-[#1F2A1E] tracking-tight">Step 5 of 5: Welcome to SmartServe!</h3>
+                <h3 className="text-3xl font-bold text-[#1F2A1E] tracking-tight">{t('auth.step5_title', { defaultValue: 'Step 5 of 5: Welcome to SmartServe!' })}</h3>
                 <p className="text-sm text-[#1F2A1E]/70 font-medium leading-relaxed">
-                  Your customer account has been created in the database and your preferences have been configured.
+                  {t('auth.step5_subtitle', { defaultValue: 'Your customer account has been created in the database and your preferences have been configured.' })}
                 </p>
               </div>
 
@@ -561,7 +598,7 @@ export const CustomerRegister: React.FC = () => {
                   onClick={() => navigate('/home', { replace: true })}
                   className="px-8 py-4 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-base rounded-2xl shadow-xs transition-all inline-flex items-center gap-2 cursor-pointer"
                 >
-                  <span>Explore Marketplace Home</span>
+                  <span>{t('auth.explore_marketplace', { defaultValue: 'Explore Marketplace Home' })}</span>
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>

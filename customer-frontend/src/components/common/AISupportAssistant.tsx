@@ -70,8 +70,15 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
   // Initial welcome message
   useEffect(() => {
     if (messages.length === 0) {
-      const customerWelcome = `Hello ${user?.full_name ? user.full_name.split(' ')[0] : 'there'}! I can help you with your booking. Let me check the latest booking details or service policies for you.`;
-      const providerWelcome = `Hello ${user?.full_name ? user.full_name.split(' ')[0] : 'Partner'}! I'm here to assist with your assigned jobs, schedule guidance, availability slots, and service workflows.`;
+      const name = user?.full_name ? user.full_name.split(' ')[0] : '';
+      const customerWelcome = t('support.customer_welcome', {
+        name,
+        defaultValue: `Hello ${name || 'there'}! I can help you with your booking. Let me check the latest booking details or service policies for you.`
+      });
+      const providerWelcome = t('support.provider_welcome', {
+        name,
+        defaultValue: `Hello ${name || 'Partner'}! I'm here to assist with your assigned jobs, schedule guidance, availability slots, and service workflows.`
+      });
 
       setMessages([
         {
@@ -80,7 +87,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
         },
       ]);
     }
-  }, [role, user]);
+  }, [role, user, t]);
 
   const handleSendMessage = async (customText?: string) => {
     const textToSend = (customText || inputMessage).trim();
@@ -132,7 +139,9 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
           ...prev,
           {
             role: 'assistant',
-            content: "Looks like this needs help from our support team. I've sent your issue to SmartServe Admin Support.",
+            content: t('support.escalation_message', {
+              defaultValue: "Looks like this needs help from our support team. I've sent your issue to SmartServe Admin Support."
+            }),
           },
         ]);
       } else {
@@ -147,7 +156,9 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
         ...prev,
         {
           role: 'assistant',
-          content: 'AI Support is temporarily unavailable. Would you like to contact Admin Support?',
+          content: t('support.ai_unavailable_desc', {
+            defaultValue: 'AI Support is temporarily unavailable. Would you like to contact Admin Support?'
+          }),
         },
       ]);
     } finally {
@@ -156,8 +167,15 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
   };
 
   const handleReset = () => {
-    const customerWelcome = `Hello ${user?.full_name ? user.full_name.split(' ')[0] : 'there'}! I can help you with your booking. Let me check the latest booking details or service policies for you.`;
-    const providerWelcome = `Hello ${user?.full_name ? user.full_name.split(' ')[0] : 'Partner'}! I'm here to assist with your assigned jobs, schedule guidance, availability slots, and service workflows.`;
+    const name = user?.full_name ? user.full_name.split(' ')[0] : '';
+    const customerWelcome = t('support.customer_welcome', {
+      name,
+      defaultValue: `Hello ${name || 'there'}! I can help you with your booking. Let me check the latest booking details or service policies for you.`
+    });
+    const providerWelcome = t('support.provider_welcome', {
+      name,
+      defaultValue: `Hello ${name || 'Partner'}! I'm here to assist with your assigned jobs, schedule guidance, availability slots, and service workflows.`
+    });
 
     setMessages([
       {
@@ -172,15 +190,15 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
 
   // Quick suggestion chips
   const customerQuickPrompts = [
-    'Where is my provider?',
-    'What is the cancellation policy?',
-    'I want to speak to a human',
+    t('support.prompt_where_provider', { defaultValue: 'Where is my provider?' }),
+    t('support.prompt_cancel_policy', { defaultValue: 'What is the cancellation policy?' }),
+    t('support.prompt_speak_human', { defaultValue: 'I want to speak to a human' }),
   ];
 
   const providerQuickPrompts = [
-    'What booking do I have next?',
-    'How do I change my slots?',
-    'I need human support',
+    t('support.prompt_next_booking', { defaultValue: 'What booking do I have next?' }),
+    t('support.prompt_change_slots', { defaultValue: 'How do I change my slots?' }),
+    t('support.prompt_need_support', { defaultValue: 'I need human support' }),
   ];
 
   const activeQuickPrompts = role === 'customer' ? customerQuickPrompts : providerQuickPrompts;
@@ -292,10 +310,13 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
             <div className="bg-[#F2EDE1] px-3.5 py-1.5 border-b border-[#E5DEC9] flex items-center justify-between text-[11px] font-semibold text-[#1F2A1E]">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#2F5233]" />
-                Active Context: Booking #{activeBookingId.substring(0, 8).toUpperCase()}
+                {t('support.active_context_booking', {
+                  id: activeBookingId.substring(0, 8).toUpperCase(),
+                  defaultValue: `Active Context: Booking #${activeBookingId.substring(0, 8).toUpperCase()}`
+                })}
               </span>
               <span className="text-[#2F5233] text-[10px] uppercase font-bold tracking-wider">
-                Attached
+                {t('support.attached', { defaultValue: 'Attached' })}
               </span>
             </div>
           )}
@@ -341,7 +362,9 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
                     <span className="w-2 h-2 rounded-full bg-[#2F5233] smartserve-typing-dot-2" />
                     <span className="w-2 h-2 rounded-full bg-[#2F5233] smartserve-typing-dot-3" />
                   </div>
-                  <p className="text-[11px] text-[#1F2A1E]/70 font-medium">Thinking...</p>
+                  <p className="text-[11px] text-[#1F2A1E]/70 font-medium">
+                    {t('support.thinking', { defaultValue: 'Thinking...' })}
+                  </p>
                 </div>
               </div>
             )}
@@ -351,16 +374,16 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
               <div className="bg-[#FAF7F0] border border-[#C9A15A] rounded-2xl p-3.5 space-y-2 shadow-xs text-xs text-[#1F2A1E]">
                 <div className="flex items-center gap-2 text-[#2F5233] font-bold">
                   <ShieldCheck className="w-4 h-4 text-[#C9A15A]" />
-                  <span>Your issue has been sent to SmartServe Admin Support.</span>
+                  <span>{t('support.escalated_notice', { defaultValue: 'Your issue has been sent to SmartServe Admin Support.' })}</span>
                 </div>
                 <div className="bg-white px-3 py-2 rounded-xl border border-[#E5DEC9] flex items-center justify-between text-xs">
-                  <span className="text-slate-600 font-medium">Reference:</span>
+                  <span className="text-slate-600 font-medium">{t('support.reference', { defaultValue: 'Reference:' })}</span>
                   <span className="font-mono font-bold text-[#2F5233]">
                     Ticket #{escalatedTicket.reference.replace(/^TKT-/, '')}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-normal">
-                  Our operations team has received the conversation context and will follow up directly on your ticket.
+                  {t('support.escalated_subtext', { defaultValue: 'Our operations team has received the conversation context and will follow up directly on your ticket.' })}
                 </p>
                 <button
                   onClick={() => {
@@ -369,7 +392,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
                   }}
                   className="w-full mt-1 py-2 px-3 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
-                  <span>Open Ticket in Support Center</span>
+                  <span>{t('support.open_ticket_center', { defaultValue: 'Open Ticket in Support Center' })}</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -380,10 +403,10 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3.5 space-y-2 text-xs text-amber-900">
                 <div className="flex items-center gap-2 font-bold text-amber-900">
                   <AlertCircle className="w-4 h-4 text-amber-600" />
-                  <span>AI Support Temporarily Unavailable</span>
+                  <span>{t('support.ai_unavailable_title', { defaultValue: 'AI Support Temporarily Unavailable' })}</span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-amber-800">
-                  AI Support is temporarily unavailable. Would you like to contact Admin Support?
+                  {t('support.ai_unavailable_desc', { defaultValue: 'AI Support is temporarily unavailable. Would you like to contact Admin Support?' })}
                 </p>
                 <button
                   onClick={() => {
@@ -392,7 +415,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
                   }}
                   className="w-full py-1.5 px-3 bg-amber-700 hover:bg-amber-800 text-white font-semibold rounded-xl text-xs transition-colors cursor-pointer"
                 >
-                  Contact Admin Support
+                  {t('support.contact_admin_btn', { defaultValue: 'Contact Admin Support' })}
                 </button>
               </div>
             )}
@@ -452,7 +475,11 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
               <span>{t("support.ai_assistant_subtitle", { defaultValue: "AI Support • Human support available" })}</span>
               {messageCount > 0 && (
                 <span className="text-slate-400">
-                  Message {messageCount} of {maxMessages}
+                  {t('support.message_count_limit', {
+                    count: messageCount,
+                    max: maxMessages,
+                    defaultValue: `Message ${messageCount} of ${maxMessages}`
+                  })}
                 </span>
               )}
             </div>

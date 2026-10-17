@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getLocalizedServiceName } from '../utils/localizedNames';
+import { getLocalizedServiceName, getLocalizedStatus } from '../utils/localizedNames';
 import { useNavigate } from 'react-router-dom';
 import { getCustomerBookings, BookingDetail } from '../api/bookings';
 import { formatCurrencyINR } from '../utils/formatters';
@@ -132,7 +132,7 @@ export const CustomerBookings: React.FC = () => {
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{t("nav.bookings", { defaultValue: "My Service Bookings" })}</h1>
           <p className="text-sm text-slate-500 font-medium mt-1">
-            Track real-time status and technician assignments for your bookings.
+            {t("booking.bookings_subtitle", { defaultValue: "Track real-time status and technician assignments for your bookings." })}
           </p>
         </div>
 
@@ -197,7 +197,7 @@ export const CustomerBookings: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 space-y-3">
           <Loader2 className="w-10 h-10 animate-spin text-[#2563EB]" />
-          <p className="text-sm font-semibold text-slate-600">Fetching your bookings from database...</p>
+          <p className="text-sm font-semibold text-slate-600">{t("booking.fetching_bookings", { defaultValue: "Fetching your bookings from database..." })}</p>
         </div>
       ) : filteredBookings.length > 0 ? (
         <div className="space-y-4">
@@ -229,7 +229,7 @@ export const CustomerBookings: React.FC = () => {
                           ? 'bg-rose-50 text-rose-700 border-rose-200'
                           : 'bg-blue-50 text-[#2563EB] border-blue-200'
                       }`}>
-                        {b.status}
+                        {getLocalizedStatus(b.status)}
                       </span>
                     </div>
 
@@ -242,19 +242,19 @@ export const CustomerBookings: React.FC = () => {
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>{b.scheduled_date} at {b.scheduled_time}</span>
                       </span>
-                      <span>• Provider: <strong className="text-slate-700">{b.provider_name || 'Assigned Soon'}</strong></span>
+                      <span>• {t("booking.provider_label", { defaultValue: "Provider" })}: <strong className="text-slate-700">{b.provider_name || t("booking.assigned_soon", { defaultValue: "Assigned Soon" })}</strong></span>
                     </div>
 
                     {b.otp_code && ['accepted', 'on the way', 'arrived'].includes(stLower) && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-bold w-fit mt-1">
                         <KeyRound className="w-3.5 h-3.5" />
-                        <span>Start OTP: {b.otp_code}</span>
+                        <span>{t("booking.start_otp_label", { defaultValue: "Start OTP" })}: {b.otp_code}</span>
                       </div>
                     )}
 
                     {(b.cancellation_reason || (b as any).rejection_reason) && (
                       <div className="text-xs text-rose-700 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 mt-1 inline-block">
-                        <strong>Reason:</strong> {b.cancellation_reason || (b as any).rejection_reason}
+                        <strong>{t("booking.reason_label", { defaultValue: "Reason" })}:</strong> {b.cancellation_reason || (b as any).rejection_reason}
                       </div>
                     )}
                   </div>

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const CustomerNavbar: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -84,8 +84,24 @@ export const CustomerNavbar: React.FC = () => {
             </div>
             <div>
               <div className="flex items-baseline font-serif">
-                <span className="font-bold text-[#2F5233] text-lg tracking-tight leading-none">Smart</span>
-                <span className="font-bold text-[#C9A15A] text-lg tracking-tight leading-none ml-0.5">Serve</span>
+                {i18n.language.startsWith('hi') ? (
+                  <>
+                    <span className="font-bold text-[#2F5233] text-lg tracking-tight leading-none">स्मार्ट</span>
+                    <span className="font-bold text-[#C9A15A] text-lg tracking-tight leading-none ml-0.5">सर्व</span>
+                    <span className="text-[10px] text-[#1F2A1E]/40 font-mono font-medium ml-1.5 hidden sm:inline">SmartServe</span>
+                  </>
+                ) : i18n.language.startsWith('gu') ? (
+                  <>
+                    <span className="font-bold text-[#2F5233] text-lg tracking-tight leading-none">સ્માર્ટ</span>
+                    <span className="font-bold text-[#C9A15A] text-lg tracking-tight leading-none ml-0.5">સર્વ</span>
+                    <span className="text-[10px] text-[#1F2A1E]/40 font-mono font-medium ml-1.5 hidden sm:inline">SmartServe</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-bold text-[#2F5233] text-lg tracking-tight leading-none">Smart</span>
+                    <span className="font-bold text-[#C9A15A] text-lg tracking-tight leading-none ml-0.5">Serve</span>
+                  </>
+                )}
               </div>
               <span className="text-[10px] font-bold text-[#1F2A1E]/60 tracking-wider uppercase mt-1 block font-sans">
                 {t('nav.marketplace', { defaultValue: 'Marketplace' })}

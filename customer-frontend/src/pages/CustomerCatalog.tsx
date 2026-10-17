@@ -249,7 +249,7 @@ export const CustomerCatalog: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3 font-sans">
         <Loader2 className="w-10 h-10 animate-spin text-[#2F5233]" />
-        <p className="text-sm font-semibold text-[#1F2A1E]/70">Loading SmartServe master catalog...</p>
+        <p className="text-sm font-semibold text-[#1F2A1E]/70">{t('catalog_page.loading_catalog', { defaultValue: 'Loading SmartServe master catalog...' })}</p>
       </div>
     );
   }
@@ -258,14 +258,14 @@ export const CustomerCatalog: React.FC = () => {
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-white border border-[#E5DEC9] rounded-3xl text-center space-y-4 shadow-sm font-sans">
         <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
-        <h3 className="font-serif text-2xl font-normal text-[#1F2A1E]">Catalog Loading Error</h3>
+        <h3 className="font-serif text-2xl font-normal text-[#1F2A1E]">{t('catalog_page.catalog_error', { defaultValue: 'Catalog Loading Error' })}</h3>
         <p className="text-sm text-[#1F2A1E]/70 max-w-md mx-auto">{error}</p>
         <button
           onClick={fetchCategories}
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#2F5233] hover:bg-[#3D6B42] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
         >
           <RefreshCw className="w-4 h-4" />
-          <span>Retry Connection</span>
+          <span>{t('common.retry', { defaultValue: 'Retry Connection' })}</span>
         </button>
       </div>
     );
@@ -578,18 +578,18 @@ export const CustomerCatalog: React.FC = () => {
           {servicesLoading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-3 font-sans bg-white rounded-3xl border border-[#E5DEC9]">
               <Loader2 className="w-8 h-8 animate-spin text-[#2F5233]" />
-              <p className="text-xs font-semibold text-[#1F2A1E]/70">Fetching verified services from database...</p>
+              <p className="text-xs font-semibold text-[#1F2A1E]/70">{t('catalog_page.fetching_services', { defaultValue: 'Fetching verified services from database...' })}</p>
             </div>
           ) : displayedServices.length === 0 ? (
             <div className="py-16 text-center bg-white rounded-3xl border border-[#E5DEC9] shadow-2xs space-y-3">
               <FolderTree className="w-10 h-10 text-[#1F2A1E]/40 mx-auto" />
-              <h3 className="font-serif text-xl font-normal text-[#1F2A1E]">No Services Found</h3>
-              <p className="text-xs text-[#1F2A1E]/60 font-medium">No services match your active filters or search terms.</p>
+              <h3 className="font-serif text-xl font-normal text-[#1F2A1E]">{t('catalog_page.no_services_found', { defaultValue: 'No Services Found' })}</h3>
+              <p className="text-xs text-[#1F2A1E]/60 font-medium">{t('catalog_page.no_services_desc', { defaultValue: 'No services match your active filters or search terms.' })}</p>
               <button
                 onClick={handleResetToCategories}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#2F5233] hover:bg-[#3D6B42] text-white rounded-xl text-xs font-bold mt-2 cursor-pointer"
               >
-                <span>Clear Filters & View Categories</span>
+                <span>{t('catalog_page.clear_filters', { defaultValue: 'Clear Filters & View Categories' })}</span>
               </button>
             </div>
           ) : viewMode === 'grid' ? (

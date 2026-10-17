@@ -6,7 +6,7 @@ import { getCatalogCategories, getCatalogServices, CategoryItem, ServiceItem } f
 import { getCustomerBookings, BookingDetail } from '../api/bookings';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getCategoryImageUrl, getServiceImage } from '../utils/serviceImages';
-import { getLocalizedCategory, getLocalizedServiceName, getLocalizedDescription } from '../utils/localizedNames';
+import { getLocalizedCategory, getLocalizedServiceName, getLocalizedDescription, getLocalizedStatus } from '../utils/localizedNames';
 import { 
   Search, 
   ArrowRight, 
@@ -115,7 +115,7 @@ export const CustomerHome: React.FC = () => {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-0.5 rounded-full bg-[#2F5233]/10 text-[#2F5233] text-[10px] font-bold uppercase border border-[#2F5233]/20">
-                      {b.status}
+                      {getLocalizedStatus(b.status)}
                     </span>
                     <span className="text-xs font-mono font-bold text-[#1F2A1E]/50">{b.booking_reference}</span>
                   </div>

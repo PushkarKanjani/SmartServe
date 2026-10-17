@@ -1,8 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Phone, Mail, MapPin } from 'lucide-react';
 
 export const CustomerFooter: React.FC = () => {
+  const { t, i18n } = useTranslation();
+
   return (
     <footer className="bg-[#1F2A1E] text-[#FAF7F0] pt-14 pb-8 font-sans border-t border-[#2F5233]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
@@ -33,59 +36,89 @@ export const CustomerFooter: React.FC = () => {
                   />
                 </svg>
               </div>
-              <div className="flex items-baseline font-serif">
-                <span className="font-bold text-white text-xl tracking-tight leading-none">Smart</span>
-                <span className="font-bold text-[#C9A15A] text-xl tracking-tight leading-none ml-0.5">Serve</span>
+              <div className="flex flex-col">
+                <div className="flex items-baseline font-serif">
+                  {i18n.language.startsWith('hi') ? (
+                    <>
+                      <span className="font-bold text-white text-xl tracking-tight leading-none">स्मार्ट</span>
+                      <span className="font-bold text-[#C9A15A] text-xl tracking-tight leading-none ml-0.5">सर्व</span>
+                      <span className="text-xs text-[#FAF7F0]/40 font-mono font-medium ml-2">SmartServe</span>
+                    </>
+                  ) : i18n.language.startsWith('gu') ? (
+                    <>
+                      <span className="font-bold text-white text-xl tracking-tight leading-none">સ્માર્ટ</span>
+                      <span className="font-bold text-[#C9A15A] text-xl tracking-tight leading-none ml-0.5">સર્વ</span>
+                      <span className="text-xs text-[#FAF7F0]/40 font-mono font-medium ml-2">SmartServe</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-bold text-white text-xl tracking-tight leading-none">Smart</span>
+                      <span className="font-bold text-[#C9A15A] text-xl tracking-tight leading-none ml-0.5">Serve</span>
+                    </>
+                  )}
+                </div>
+                <span className="text-[10px] text-[#C9A15A] font-bold tracking-wider mt-0.5">
+                  {t('footer.brand_subtitle', { defaultValue: 'स्मार्ट होम सेवाएं' })}
+                </span>
               </div>
             </div>
             <p className="text-[#FAF7F0]/70 text-sm font-normal leading-relaxed max-w-sm">
-              India's premier verified home and urban services marketplace. Professional salon, deep cleaning, AC repair, plumbing, electrical, and lifestyle services delivered to your doorstep.
+              {t('footer.portal_desc', {
+                defaultValue:
+                  "India's premier verified home and urban services marketplace. Professional salon, deep cleaning, AC repair, plumbing, electrical, and lifestyle services delivered to your doorstep.",
+              })}
             </p>
             <div className="pt-2 flex items-center gap-3 text-xs text-emerald-400 font-semibold">
               <ShieldCheck className="w-4 h-4" />
-              <span>100% Verified Service Professionals & Standard Upfront Pricing</span>
+              <span>{t('footer.verified_badge', { defaultValue: '100% Verified Service Professionals & Standard Upfront Pricing' })}</span>
             </div>
           </div>
 
           {/* Quick Links */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-[#C9A15A] uppercase tracking-wider">Quick Navigation</h4>
+            <h4 className="text-xs font-bold text-[#C9A15A] uppercase tracking-wider">
+              {t('footer.quick_nav', { defaultValue: 'Quick Navigation' })}
+            </h4>
             <ul className="space-y-2 text-sm text-[#FAF7F0]/75">
-              <li><Link to="/home" className="hover:text-white transition-colors">Home Marketplace</Link></li>
-              <li><Link to="/catalog" className="hover:text-white transition-colors">Full Catalog</Link></li>
-              <li><Link to="/bookings" className="hover:text-white transition-colors">My Bookings</Link></li>
-              <li><Link to="/support" className="hover:text-white transition-colors">Support Center</Link></li>
-              <li><Link to="/profile" className="hover:text-white transition-colors">Account Profile</Link></li>
+              <li><Link to="/home" className="hover:text-white transition-colors">{t('footer.nav_home', { defaultValue: 'Home Marketplace' })}</Link></li>
+              <li><Link to="/catalog" className="hover:text-white transition-colors">{t('footer.nav_catalog', { defaultValue: 'Full Catalog' })}</Link></li>
+              <li><Link to="/bookings" className="hover:text-white transition-colors">{t('footer.nav_bookings', { defaultValue: 'My Bookings' })}</Link></li>
+              <li><Link to="/support" className="hover:text-white transition-colors">{t('footer.nav_support', { defaultValue: 'Support Center' })}</Link></li>
+              <li><Link to="/profile" className="hover:text-white transition-colors">{t('footer.nav_profile', { defaultValue: 'Account Profile' })}</Link></li>
             </ul>
           </div>
 
           {/* Popular Categories */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-[#C9A15A] uppercase tracking-wider">Top Categories</h4>
+            <h4 className="text-xs font-bold text-[#C9A15A] uppercase tracking-wider">
+              {t('footer.top_categories', { defaultValue: 'Top Categories' })}
+            </h4>
             <ul className="space-y-2 text-sm text-[#FAF7F0]/75">
-              <li><Link to="/catalog?category=Cleaning" className="hover:text-white transition-colors">Deep Cleaning</Link></li>
-              <li><Link to="/catalog?category=AC" className="hover:text-white transition-colors">AC & Appliance Repair</Link></li>
-              <li><Link to="/catalog?category=Electrician" className="hover:text-white transition-colors">Electrician & Repairs</Link></li>
-              <li><Link to="/catalog?category=Plumbing" className="hover:text-white transition-colors">Plumbing Solutions</Link></li>
-              <li><Link to="/catalog?category=Beauty" className="hover:text-white transition-colors">Salon & Spa at Home</Link></li>
+              <li><Link to="/catalog?category=Cleaning" className="hover:text-white transition-colors">{t('footer.cat_cleaning', { defaultValue: 'Deep Cleaning' })}</Link></li>
+              <li><Link to="/catalog?category=AC" className="hover:text-white transition-colors">{t('footer.cat_ac', { defaultValue: 'AC & Appliance Repair' })}</Link></li>
+              <li><Link to="/catalog?category=Electrician" className="hover:text-white transition-colors">{t('footer.cat_electrician', { defaultValue: 'Electrician & Repairs' })}</Link></li>
+              <li><Link to="/catalog?category=Plumbing" className="hover:text-white transition-colors">{t('footer.cat_plumbing', { defaultValue: 'Plumbing Solutions' })}</Link></li>
+              <li><Link to="/catalog?category=Beauty" className="hover:text-white transition-colors">{t('footer.cat_salon', { defaultValue: 'Salon & Spa at Home' })}</Link></li>
             </ul>
           </div>
 
           {/* Contact & Support */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold text-[#C9A15A] uppercase tracking-wider">Need Help?</h4>
+            <h4 className="text-xs font-bold text-[#C9A15A] uppercase tracking-wider">
+              {t('footer.need_help', { defaultValue: 'Need Help?' })}
+            </h4>
             <ul className="space-y-2.5 text-xs text-[#FAF7F0]/75">
               <li className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#C9A15A] flex-shrink-0" />
-                <span>+91 1800 200 4000 (Toll Free)</span>
+                <span>+91 1800 200 4000 ({t('footer.toll_free', { defaultValue: 'Toll Free' })})</span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#C9A15A] flex-shrink-0" />
-                <span>support@smartserve.in</span>
+                <span>{t('footer.support_email', { defaultValue: 'support@smartserve.in' })}</span>
               </li>
               <li className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#C9A15A] flex-shrink-0" />
-                <span>SmartServe Tower, Noida Sector 62</span>
+                <span>{t('footer.office_address', { defaultValue: 'SmartServe Tower, Noida Sector 62' })}</span>
               </li>
             </ul>
           </div>
@@ -94,11 +127,11 @@ export const CustomerFooter: React.FC = () => {
 
         {/* Bottom copyright */}
         <div className="pt-8 border-t border-[#FAF7F0]/10 flex flex-col sm:flex-row items-center justify-between text-xs text-[#FAF7F0]/50 gap-4">
-          <p>© {new Date().getFullYear()} SmartServe Marketplace Operations. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} SmartServe. {t('footer.rights_reserved', { defaultValue: 'All rights reserved.' })}</p>
           <div className="flex items-center gap-6">
-            <span className="hover:text-[#FAF7F0] cursor-pointer">Privacy Policy</span>
-            <span className="hover:text-[#FAF7F0] cursor-pointer">Terms of Service</span>
-            <span className="hover:text-[#FAF7F0] cursor-pointer">Refund Policy</span>
+            <span className="hover:text-[#FAF7F0] cursor-pointer">{t('footer.privacy_policy', { defaultValue: 'Privacy Policy' })}</span>
+            <span className="hover:text-[#FAF7F0] cursor-pointer">{t('footer.terms_of_service', { defaultValue: 'Terms of Service' })}</span>
+            <span className="hover:text-[#FAF7F0] cursor-pointer">{t('footer.refund_policy', { defaultValue: 'Refund Policy' })}</span>
           </div>
         </div>
 
