@@ -6,6 +6,7 @@ import { getCatalogCategories, getCatalogServices, CategoryItem, ServiceItem } f
 import { getCustomerBookings, BookingDetail } from '../api/bookings';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getCategoryImageUrl, getServiceImage } from '../utils/serviceImages';
+import { getLocalizedCategory } from '../utils/localizedNames';
 import { 
   Search, 
   ArrowRight, 
@@ -178,10 +179,10 @@ export const CustomerHome: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#1F2A1E]/90 via-[#1F2A1E]/40 to-transparent" />
                   <div className="relative z-10 space-y-0.5">
                     <h3 className="font-bold text-white text-sm leading-snug drop-shadow-xs">
-                      {cat.display_name || cat.name}
+                      {getLocalizedCategory(cat.display_name || cat.name)}
                     </h3>
                     <span className="text-[10px] text-[#C9A15A] font-semibold block">
-                      {cat.service_count ? `${cat.service_count} Services` : 'Verified Professionals'}
+                      {cat.service_count ? `${cat.service_count} ${t('nav.catalog', { defaultValue: 'Services' })}` : t('common.verified', { defaultValue: 'Verified Professionals' })}
                     </span>
                   </div>
                 </div>

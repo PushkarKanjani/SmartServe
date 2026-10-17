@@ -5,7 +5,8 @@ import { createBooking } from '../api/bookings';
 import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
-import { getServiceImage, formatCategoryDisplayName } from '../utils/serviceImages';
+import { getServiceImage } from '../utils/serviceImages';
+import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName } from '../utils/localizedNames';
 import { 
   Clock, 
   Star, 
@@ -372,22 +373,22 @@ export const CustomerServiceDetail: React.FC = () => {
       {/* 1. Breadcrumb Hierarchy Navigation */}
       <nav className="flex items-center gap-2 text-xs font-semibold text-[#1F2A1E]/60 flex-wrap">
         <Link to="/catalog" className="hover:text-[#2F5233] transition-colors">
-          Catalog
+          {t('nav.catalog', { defaultValue: 'Services' })}
         </Link>
         <ChevronRight className="w-3.5 h-3.5 text-[#1F2A1E]/30 flex-shrink-0" />
         <Link to={`/catalog?category=${encodeURIComponent(service.category)}`} className="hover:text-[#2F5233] transition-colors">
-          {formatCategoryDisplayName(service.category)}
+          {getLocalizedCategory(service.category)}
         </Link>
         {service.subcategory && (
           <>
             <ChevronRight className="w-3.5 h-3.5 text-[#1F2A1E]/30 flex-shrink-0" />
             <Link to={`/catalog?category=${encodeURIComponent(service.category)}&subcategory=${encodeURIComponent(service.subcategory)}`} className="hover:text-[#2F5233] transition-colors">
-              {service.subcategory}
+              {getLocalizedSubcategory(service.subcategory)}
             </Link>
           </>
         )}
         <ChevronRight className="w-3.5 h-3.5 text-[#1F2A1E]/30 flex-shrink-0" />
-        <span className="text-[#1F2A1E] font-bold truncate max-w-xs">{service.name}</span>
+        <span className="text-[#1F2A1E] font-bold truncate max-w-xs">{getLocalizedServiceName(service.name)}</span>
       </nav>
 
       {/* Main Grid: 2/3 Content, 1/3 Floating Sidebar */}
@@ -422,16 +423,16 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="absolute bottom-6 left-6 right-6 text-white space-y-2.5">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="px-3 py-1 rounded-full bg-[#2F5233]/90 border border-[#7A9E6E]/40 backdrop-blur-md text-[#FAF7F0] text-[11px] font-bold uppercase tracking-wider">
-                  {formatCategoryDisplayName(service.category)}
+                  {getLocalizedCategory(service.category)}
                 </span>
                 {service.subcategory && (
                   <span className="px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-white text-[11px] font-semibold">
-                    {service.subcategory}
+                    {getLocalizedSubcategory(service.subcategory)}
                   </span>
                 )}
               </div>
               <h1 className="text-2xl sm:text-4xl font-bold font-serif-display text-[#FAF7F0] tracking-tight leading-tight">
-                {service.name}
+                {getLocalizedServiceName(service.name)}
               </h1>
             </div>
           </div>
@@ -452,7 +453,9 @@ export const CustomerServiceDetail: React.FC = () => {
           {/* 3. Description Section */}
           {service.description && (
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-3">
-              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Service Overview</h3>
+              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                {t('service_detail.overview', { defaultValue: 'Service Overview' })}
+              </h3>
               <p className="text-sm text-[#1F2A1E]/80 leading-relaxed font-sans">
                 {service.description}
               </p>
@@ -474,7 +477,9 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[#C9A15A]" />
-                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Service Highlights</h3>
+                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                  {t('service_detail.highlights', { defaultValue: 'Service Highlights' })}
+                </h3>
               </div>
               <div className="flex flex-wrap gap-2.5">
                 {service.highlights.map((hl, idx) => (
@@ -495,7 +500,9 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-[#2F5233]" />
-                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Distinct Features</h3>
+                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                  {t('service_detail.features', { defaultValue: 'Distinct Features' })}
+                </h3>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {service.service_features.map((feat, idx) => (
@@ -516,7 +523,9 @@ export const CustomerServiceDetail: React.FC = () => {
           {/* 5. What's Included */}
           {allInclusions.length > 0 && (
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
-              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">What's Included</h3>
+              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                {t('service_detail.included', { defaultValue: "What's Included" })}
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-sm text-[#1F2A1E]">
                 {allInclusions.map((feat, idx) => (
                   <div key={idx} className="flex items-start gap-2.5 font-medium bg-[#FAF7F0]/60 p-3 rounded-xl border border-[#E5DEC9]/50">
@@ -533,7 +542,9 @@ export const CustomerServiceDetail: React.FC = () => {
           {/* 6. What's Excluded */}
           {service.excluded && service.excluded.length > 0 && (
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
-              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">What's Excluded</h3>
+              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                {t('service_detail.excluded', { defaultValue: "What's Excluded" })}
+              </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-sm text-[#1F2A1E]/80">
                 {service.excluded.map((item, idx) => (
                   <div key={idx} className="flex items-start gap-2.5 font-medium bg-[#FDFCF7] p-3 rounded-xl border border-rose-100">
@@ -551,7 +562,9 @@ export const CustomerServiceDetail: React.FC = () => {
           {service.process_steps && service.process_steps.length > 0 && (
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-5">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Standard Execution Process</h3>
+                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                  {t('service_detail.process', { defaultValue: 'Standard Execution Process' })}
+                </h3>
                 <span className="text-xs font-semibold text-[#1F2A1E]/60 bg-[#F2EDE1] px-2.5 py-1 rounded-full">
                   {service.process_steps.length} Steps
                 </span>
@@ -630,7 +643,9 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
               <div className="flex items-center gap-2">
                 <Wrench className="w-4 h-4 text-[#7A9E6E]" />
-                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Products, Tools & Materials Used</h3>
+                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                  {t('service_detail.tools_materials', { defaultValue: 'Products, Tools & Materials Used' })}
+                </h3>
               </div>
               <div className="flex flex-wrap gap-2">
                 {service.tools_materials.map((tm, idx) => (
@@ -648,7 +663,9 @@ export const CustomerServiceDetail: React.FC = () => {
           {/* 9. Customer Preparation & Setup */}
           {service.customer_setup && service.customer_setup.length > 0 && (
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
-              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Customer Setup & Preparation</h3>
+              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                {t('service_detail.setup', { defaultValue: 'Customer Setup & Preparation' })}
+              </h3>
               <div className="space-y-2.5">
                 {service.customer_setup.map((req, idx) => (
                   <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1F2A1E]/80 bg-[#FAF7F0] p-3 rounded-xl border border-[#E5DEC9]/60">
@@ -663,7 +680,9 @@ export const CustomerServiceDetail: React.FC = () => {
           {/* 10. Aftercare & Precautions */}
           {service.aftercare && service.aftercare.length > 0 && (
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
-              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Aftercare & Precautions</h3>
+              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                {t('service_detail.aftercare', { defaultValue: 'Aftercare & Precautions' })}
+              </h3>
               <div className="space-y-2.5">
                 {service.aftercare.map((tip, idx) => (
                   <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C9A15A]/30">
@@ -678,7 +697,9 @@ export const CustomerServiceDetail: React.FC = () => {
           {/* 11. Expected Results */}
           {service.expected_results && service.expected_results.length > 0 && (
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
-              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Expected Results</h3>
+              <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                {t('service_detail.expected_results', { defaultValue: 'Expected Results' })}
+              </h3>
               <div className="space-y-2.5">
                 {service.expected_results.map((res, idx) => (
                   <div key={idx} className="flex items-center gap-3 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3 rounded-xl border border-[#E5DEC9]/60">
@@ -695,7 +716,9 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="bg-white p-7 sm:p-8 rounded-[24px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.04)] space-y-4">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#1F2A1E]/60" />
-                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">Important Notes</h3>
+                <h3 className="text-lg font-bold font-serif-display text-[#1F2A1E]">
+                  {t('service_detail.notes', { defaultValue: 'Important Notes' })}
+                </h3>
               </div>
               <div className="space-y-2.5">
                 {service.important_notes.map((note, idx) => (
@@ -713,7 +736,9 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="bg-[#2F5233] text-[#FAF7F0] p-7 sm:p-8 rounded-[24px] border border-[#2F5233] shadow-[0_4px_24px_rgba(47,82,51,0.15)] space-y-3">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-6 h-6 text-[#C9A15A]" />
-                <h3 className="text-xl font-bold font-serif-display text-[#FAF7F0]">Service Warranty & Guarantee</h3>
+                <h3 className="text-xl font-bold font-serif-display text-[#FAF7F0]">
+                  {t('service_detail.warranty', { defaultValue: 'Service Warranty & Guarantee' })}
+                </h3>
               </div>
               <p className="text-sm text-[#FAF7F0]/85 font-medium leading-relaxed">
                 {service.warranty}
@@ -851,14 +876,16 @@ export const CustomerServiceDetail: React.FC = () => {
           <div className="bg-white p-7 rounded-[28px] border border-[#E5DEC9] shadow-[0_4px_24px_rgba(31,42,30,0.06)] space-y-6">
             
             <div className="space-y-1.5 border-b border-[#E5DEC9]/80 pb-5">
-              <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">Total Service Price</span>
+              <span className="text-[11px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider block">
+                {t('service_detail.total_price', { defaultValue: 'Total Service Price' })}
+              </span>
               <div className="flex items-baseline gap-2">
                 <span className="text-3xl sm:text-4xl font-bold font-serif-display text-[#1F2A1E]">
                   {formatCurrencyINR(calculateTotalPrice())}
                 </span>
                 {selectedAddons.length > 0 && (
                   <span className="text-xs font-semibold text-[#2F5233] bg-[#F2EDE1] px-2 py-0.5 rounded-full">
-                    +{selectedAddons.length} Add-on(s)
+                    +{selectedAddons.length} {t('service_detail.addons', { defaultValue: 'Add-on(s)' })}
                   </span>
                 )}
               </div>
@@ -866,22 +893,22 @@ export const CustomerServiceDetail: React.FC = () => {
 
             <div className="space-y-3.5 text-xs text-[#1F2A1E]/80">
               <div className="flex items-center justify-between">
-                <span className="font-medium">Estimated Duration</span>
+                <span className="font-medium">{t('service_detail.estimated_duration', { defaultValue: 'Estimated Duration' })}</span>
                 <span className="font-bold text-[#1F2A1E] flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-[#C9A15A]" />
-                  <span>{service.duration_minutes || 45} Minutes</span>
+                  <span>{service.duration_minutes || 45} {t('service_detail.minutes', { defaultValue: 'Minutes' })}</span>
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="font-medium">Customer Rating</span>
+                <span className="font-medium">{t('service_detail.customer_rating', { defaultValue: 'Customer Rating' })}</span>
                 <span className="font-bold text-[#1F2A1E] flex items-center gap-1">
                   <Star className="w-3.5 h-3.5 fill-[#C9A15A] text-[#C9A15A]" />
-                  {service.rating || '4.8'} ({service.review_count || 120} reviews)
+                  {service.rating || '4.8'} ({service.review_count || 120} {t('service_detail.reviews', { defaultValue: 'reviews' })})
                 </span>
               </div>
               {service.max_demand_increase !== undefined && service.max_demand_increase > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Surge Protection Cap</span>
+                  <span className="font-medium">{t('service_detail.surge_protection_cap', { defaultValue: 'Surge Protection Cap' })}</span>
                   <span className="font-bold text-[#C9A15A] bg-[#FAF7F0] px-2 py-0.5 rounded-md border border-[#C9A15A]/30">
                     Max +{Math.round(service.max_demand_increase * 100)}%
                   </span>
@@ -889,15 +916,15 @@ export const CustomerServiceDetail: React.FC = () => {
               )}
               {service.max_discount !== undefined && service.max_discount > 0 && (
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Max Promotional Discount</span>
+                  <span className="font-medium">{t('service_detail.max_discount', { defaultValue: 'Max Promotional Discount' })}</span>
                   <span className="font-bold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-md border border-[#10B981]/20">
                     Up to {Math.round(service.max_discount * 100)}%
                   </span>
                 </div>
               )}
               <div className="flex items-center justify-between">
-                <span className="font-medium">Cancellation Policy</span>
-                <span className="font-bold text-[#10B981]">Free cancellation up to 2h prior</span>
+                <span className="font-medium">{t('service_detail.cancellation_policy', { defaultValue: 'Cancellation Policy' })}</span>
+                <span className="font-bold text-[#10B981]">{t('service_detail.free_cancellation', { defaultValue: 'Free cancellation up to 2h prior' })}</span>
               </div>
             </div>
 
@@ -914,7 +941,7 @@ export const CustomerServiceDetail: React.FC = () => {
                   {isEmergency ? (
                     <>
                       <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
-                      <span>Request Emergency Dispatch</span>
+                      <span>{t('service_detail.emergency_dispatch', { defaultValue: 'Request Emergency Dispatch' })}</span>
                     </>
                   ) : (
                     <>
@@ -954,7 +981,7 @@ export const CustomerServiceDetail: React.FC = () => {
             <div className="text-center pt-2">
               <span className="text-[11px] font-semibold text-[#1F2A1E]/50 flex items-center justify-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-                <span>Verified Direct Booking via SmartServe Platform</span>
+                <span>{t('service_detail.verified_booking', { defaultValue: 'Verified Direct Booking via SmartServe Platform' })}</span>
               </span>
             </div>
           </div>

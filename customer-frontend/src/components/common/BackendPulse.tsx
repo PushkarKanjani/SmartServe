@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { checkBackendHealth, HealthCheckResult } from '../../api/health';
 import { Activity, RefreshCw } from 'lucide-react';
 
 export const BackendPulse: React.FC = () => {
+  const { t } = useTranslation();
   const [health, setHealth] = useState<HealthCheckResult | null>(null);
   const [checking, setChecking] = useState<boolean>(true);
 
@@ -48,7 +50,11 @@ export const BackendPulse: React.FC = () => {
       </span>
 
       <span className="font-mono text-[11px] text-slate-600 hidden sm:inline">
-        {checking ? 'Connecting to Network...' : health?.isOnline ? 'Network Active' : 'Reconnecting to Network...'}
+        {checking
+          ? t('network.reconnecting', { defaultValue: 'Connecting to Network...' })
+          : health?.isOnline
+          ? t('network.network_active', { defaultValue: 'Network Active' })
+          : t('network.reconnecting', { defaultValue: 'Reconnecting to Network...' })}
       </span>
 
       <Activity className="w-3.5 h-3.5 text-slate-400" />

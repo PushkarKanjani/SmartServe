@@ -55,13 +55,13 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
       isActive: location.pathname === '/home' || location.pathname === '/'
     },
     { 
-      label: t('nav.services', { defaultValue: 'Services' }), 
+      label: t('nav.catalog', { defaultValue: 'Services' }), 
       path: '/catalog', 
       icon: Grid,
       isActive: location.pathname === '/catalog' || location.pathname.startsWith('/service/') || location.pathname.startsWith('/catalog/')
     },
     { 
-      label: t('bundle.cart_title', { defaultValue: 'Service Bundle' }), 
+      label: t('nav.bundle', { defaultValue: 'Service Bundle' }), 
       path: '/bundle', 
       icon: Layers,
       badge: bundleCount > 0 ? bundleCount : null,
@@ -173,13 +173,17 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
       <div className="p-4 border-t border-[#E5DEC9] space-y-3 flex-shrink-0 bg-[#F2EDE1]/50">
         {/* Multilingual Selector */}
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1F2A1E]/50">Language</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#1F2A1E]/50">
+            {t('common.language', { defaultValue: 'Language' })}
+          </span>
           <LanguageSelector compact />
         </div>
 
         {/* Backend Pulse Live Indicator */}
         <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/70 border border-[#E5DEC9]/80 text-xs font-semibold text-[#1F2A1E]/70">
-          <span className="text-[11px] font-medium text-[#1F2A1E]/60">Platform Status</span>
+          <span className="text-[11px] font-medium text-[#1F2A1E]/60">
+            {t('network.platform_status', { defaultValue: 'Platform Status' })}
+          </span>
           <BackendPulse />
         </div>
 

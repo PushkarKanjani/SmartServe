@@ -135,12 +135,20 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
             <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-[#1F2A1E]/60">
               <span className="text-[#2F5233] font-bold font-serif">SmartServe</span>
               <span>/</span>
-              <span className="text-[#1F2A1E] font-medium capitalize">
+              <span className="text-[#1F2A1E] font-medium">
                 {location.pathname === '/catalog'
-                  ? t('nav.services', { defaultValue: 'Services' })
+                  ? t('nav.catalog', { defaultValue: 'Services' })
+                  : location.pathname.startsWith('/catalog/service')
+                  ? t('nav.catalog', { defaultValue: 'Services' })
                   : location.pathname === '/bundle'
-                  ? t('bundle.cart_title', { defaultValue: 'Service Bundle' })
-                  : location.pathname.replace('/', '') || 'Home'}
+                  ? t('nav.bundle', { defaultValue: 'Service Bundle' })
+                  : location.pathname.startsWith('/bookings')
+                  ? t('nav.bookings', { defaultValue: 'My Bookings' })
+                  : location.pathname === '/profile'
+                  ? t('nav.profile', { defaultValue: 'Profile' })
+                  : location.pathname === '/support'
+                  ? t('nav.support', { defaultValue: 'Support' })
+                  : t('nav.home', { defaultValue: 'Home' })}
               </span>
             </div>
           </div>
