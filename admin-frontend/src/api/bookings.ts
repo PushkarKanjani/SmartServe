@@ -6,6 +6,20 @@ export interface TimelineItem {
   timestamp: string;
 }
 
+export interface AdminWarrantyInfo {
+  id: string;
+  service_name: string;
+  issued_at?: string | null;
+  expires_at?: string | null;
+  is_active: boolean;
+  is_valid: boolean;
+  claim_status: string;
+  claim_description?: string | null;
+  claim_submitted_at?: string | null;
+  claim_resolved_at?: string | null;
+  claim_notes?: string | null;
+}
+
 export interface BookingItem {
   id: string;
   customer_id: string;
@@ -25,6 +39,10 @@ export interface BookingItem {
   allowed_next_statuses: string[];
   emergency_flag?: string | null;
   cancellation_reason?: string | null;
+  customer_notes?: string | null;
+  before_photos?: string[];
+  after_photos?: string[];
+  warranty?: AdminWarrantyInfo | null;
   created_at: string;
 }
 
@@ -136,5 +154,17 @@ export interface AdminBookingLocationResponse {
 
 export const getAdminBookingLocation = async (bookingId: string): Promise<AdminBookingLocationResponse> => {
   const response = await apiClient.get<AdminBookingLocationResponse>(`/admin/bookings/${bookingId}/location`);
+  return response.data;
+};
+
+export const resolveAdminWarrantyClaim = async (
+  bookingId: string,
+  action: 'Resolved' | 'Rejected',
+  adminNotes?: string
+): Promise<AdminWarrantyInfo> => {
+  const response = await apiClient.patch<AdminWarrantyInfo>(`/admin/bookings/${bookingId}/warranty/resolve`, {
+    action,
+    admin_notes: adminNotes,
+  });
   return response.data;
 };

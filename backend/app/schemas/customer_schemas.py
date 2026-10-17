@@ -230,6 +230,10 @@ class BookingDetail(BaseModel):
     payment_method: str
     cancellation_reason: Optional[str] = None
     notes: Optional[str] = None
+    customer_notes: Optional[str] = None
+    before_photos: Optional[List[str]] = None
+    after_photos: Optional[List[str]] = None
+    warranty: Optional[Dict[str, Any]] = None
     provider_id: Optional[str] = None
     provider_name: Optional[str] = None
     provider: Optional[Dict[str, Any]] = None
@@ -246,6 +250,88 @@ class BookingDetail(BaseModel):
         if isinstance(v, dict):
             return [v]
         return []
+
+
+# Warranty Schemas
+class WarrantyClaimPayload(BaseModel):
+    description: str = Field(..., min_length=5, max_length=2000)
+
+
+class WarrantyCardResponse(BaseModel):
+    id: str
+    booking_id: str
+    customer_id: str
+    provider_id: Optional[str] = None
+    service_name: str
+    issued_at: datetime
+    expires_at: datetime
+    is_active: bool
+    claim_status: str
+    claim_description: Optional[str] = None
+    claim_submitted_at: Optional[datetime] = None
+    claim_resolved_at: Optional[datetime] = None
+    claim_notes: Optional[str] = None
+    days_remaining: int = 0
+
+
+# Combined Booking Schemas
+class CombinedBookingEstimateItem(BaseModel):
+    service_id: str
+    name: str
+    category: str
+    unit_price: float
+
+
+class CombinedBookingEstimatePayload(BaseModel):
+    service_ids: List[str] = Field(..., min_length=2)
+
+
+class CombinedBookingEstimateResponse(BaseModel):
+    items: List[CombinedBookingEstimateItem]
+    subtotal: float
+    discount_rate: float
+    discount_applied: float
+    final_price: float
+
+
+class CombinedBookingCreatePayload(BaseModel):
+    service_ids: List[str] = Field(..., min_length=2)
+    scheduled_date: str
+    scheduled_time: str
+    address_line1: str = Field(..., min_length=5)
+    city: str = "Noida"
+    pincode: str = "201301"
+    customer_notes: Optional[str] = None
+    payment_method: str = "COD"
+    provider_ids: Optional[Dict[str, str]] = None
+
+
+class CombinedBookingItemDetail(BaseModel):
+    id: str
+    service_id: str
+    service_name: str
+    category: str
+    provider_id: Optional[str] = None
+    unit_price: float
+    status: str
+    scheduled_time: Optional[datetime] = None
+
+
+class CombinedBookingDetail(BaseModel):
+    id: str
+    booking_reference: str
+    customer_id: str
+    status: str
+    total_price: float
+    discount_applied: float
+    final_price: float
+    scheduled_time: datetime
+    address: str
+    customer_notes: Optional[str] = None
+    payment_status: str
+    items: List[CombinedBookingItemDetail] = []
+    created_at: datetime
+
 
 
 # Support Schemas

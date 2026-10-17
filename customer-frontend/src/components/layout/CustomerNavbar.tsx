@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/useAuth';
 import { BackendPulse } from '../common/BackendPulse';
+import { LanguageSelector } from '../common/LanguageSelector';
+import { getBundleItems } from '../../utils/bundleCart';
 import { 
   Home, 
   Grid, 
@@ -11,15 +14,27 @@ import {
   Search, 
   Menu, 
   X,
-  Sparkles
+  Sparkles,
+  Layers
 } from 'lucide-react';
 
 export const CustomerNavbar: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [bundleCount, setBundleCount] = useState<number>(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      setBundleCount(getBundleItems().length);
+    };
+    updateCount();
+    window.addEventListener('smartserve_bundle_updated', updateCount);
+    return () => window.removeEventListener('smartserve_bundle_updated', updateCount);
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,10 +45,10 @@ export const CustomerNavbar: React.FC = () => {
   };
 
   const navLinks = [
-    { label: 'Home', path: '/home', icon: Home },
-    { label: 'Services', path: '/catalog', icon: Grid },
-    { label: 'My Bookings', path: '/bookings', icon: Calendar },
-    { label: 'Support', path: '/support', icon: HelpCircle },
+    { label: t('nav.home', { defaultValue: 'Home' }), path: '/home', icon: Home },
+    { label: t('nav.catalog', { defaultValue: 'Services' }), path: '/catalog', icon: Grid },
+    { label: t('nav.bookings', { defaultValue: 'My Bookings' }), path: '/bookings', icon: Calendar },
+    { label: t('nav.support', { defaultValue: 'Support' }), path: '/support', icon: HelpCircle },
   ];
 
   const handleLogout = async () => {
@@ -91,8 +106,8 @@ export const CustomerNavbar: React.FC = () => {
             />
           </form>
 
-          {/* 3. Navigation Links & Backend Pulse */}
-          <div className="hidden lg:flex items-center gap-6">
+          {/* 3. Navigation Links, Language Selector & Backend Pulse */}
+          <div className="hidden lg:flex items-center gap-4">
             <nav className="flex items-center gap-1">
               {navLinks.map((link) => {
                 const Icon = link.icon;
@@ -112,7 +127,29 @@ export const CustomerNavbar: React.FC = () => {
                   </Link>
                 );
               })}
+
+              {/* Service Bundle Cart Link */}
+              <Link
+                to="/bundle"
+                className={`relative flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border border-[#E5DEC9] ${
+                  location.pathname === '/bundle'
+                    ? 'bg-[#C9A15A] text-white border-[#C9A15A] shadow-xs'
+                    : 'bg-[#FAF7F0] text-[#1F2A1E]/80 hover:bg-[#F2EDE1]'
+                }`}
+                title={t('nav.bundle', { defaultValue: 'Service Bundle' })}
+              >
+                <Layers className={`w-4 h-4 ${location.pathname === '/bundle' ? 'text-white' : 'text-[#2F5233]'}`} />
+                <span>{t('nav.bundle', { defaultValue: 'Bundle' })}</span>
+                {bundleCount > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-extrabold rounded-full bg-[#2F5233] text-white">
+                    {bundleCount}
+                  </span>
+                )}
+              </Link>
             </nav>
+
+            {/* Multilingual Selector */}
+            <LanguageSelector />
 
             <BackendPulse />
 
@@ -146,14 +183,14 @@ export const CustomerNavbar: React.FC = () => {
                   to="/login"
                   className="px-4 py-2 text-xs font-bold text-[#1F2A1E] hover:text-[#2F5233] transition-colors"
                 >
-                  Sign In
+                  {t('nav.login', { defaultValue: 'Sign In' })}
                 </Link>
                 <Link
                   to="/register"
                   className="px-4 py-2 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#C9A15A]" />
-                  <span>Get Started</span>
+                  <span>{t('nav.register', { defaultValue: 'Get Started' })}</span>
                 </Link>
               </div>
             )}
@@ -161,6 +198,17 @@ export const CustomerNavbar: React.FC = () => {
 
           {/* Mobile Menu Toggle Button */}
           <div className="flex lg:hidden items-center gap-2">
+            <Link
+              to="/bundle"
+              className="p-2 text-[#2F5233] hover:bg-[#F2EDE1] rounded-xl relative"
+            >
+              <Layers className="w-5 h-5" />
+              {bundleCount > 0 && (
+                <span className="absolute top-1 right-1 w-4 h-4 text-[9px] font-bold rounded-full bg-[#C9A15A] text-white flex items-center justify-center">
+                  {bundleCount}
+                </span>
+              )}
+            </Link>
             <BackendPulse />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -176,6 +224,10 @@ export const CustomerNavbar: React.FC = () => {
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
         <div className="lg:hidden border-t border-[#E5DEC9] bg-[#FAF7F0] p-4 space-y-4 shadow-lg animate-in slide-in-from-top-2">
+          <div className="flex items-center justify-between">
+            <LanguageSelector />
+          </div>
+
           <form onSubmit={handleSearch} className="relative">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/40" />
             <input
@@ -205,6 +257,24 @@ export const CustomerNavbar: React.FC = () => {
                 </Link>
               );
             })}
+
+            <Link
+              to="/bundle"
+              onClick={() => setMobileMenuOpen(false)}
+              className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-bold transition-colors ${
+                location.pathname === '/bundle' ? 'bg-[#C9A15A] text-white' : 'text-[#1F2A1E] hover:bg-[#F2EDE1]'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Layers className="w-5 h-5 text-[#2F5233]" />
+                <span>{t('nav.bundle', { defaultValue: 'Service Bundle' })}</span>
+              </div>
+              {bundleCount > 0 && (
+                <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-[#2F5233] text-white">
+                  {bundleCount}
+                </span>
+              )}
+            </Link>
           </nav>
 
           <div className="pt-3 border-t border-[#E5DEC9]">
@@ -231,7 +301,7 @@ export const CustomerNavbar: React.FC = () => {
                   className="w-full py-3 bg-rose-50 text-rose-600 font-bold rounded-xl text-sm flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  <span>Sign Out</span>
+                  <span>{t('nav.logout', { defaultValue: 'Sign Out' })}</span>
                 </button>
               </div>
             ) : (
@@ -241,14 +311,14 @@ export const CustomerNavbar: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className="py-3 text-center bg-[#F2EDE1] font-bold text-[#1F2A1E] rounded-xl text-sm hover:bg-[#E5DEC9]"
                 >
-                  Sign In
+                  {t('nav.login', { defaultValue: 'Sign In' })}
                 </Link>
                 <Link
                   to="/register"
                   onClick={() => setMobileMenuOpen(false)}
                   className="py-3 text-center bg-[#2F5233] font-bold text-white rounded-xl text-sm hover:bg-[#3D6B42]"
                 >
-                  Sign Up
+                  {t('nav.register', { defaultValue: 'Sign Up' })}
                 </Link>
               </div>
             )}

@@ -17,7 +17,11 @@ import {
   RefreshCw,
   AlertTriangle,
   Zap,
-  MessageCircle
+  MessageCircle,
+  ShieldCheck,
+  Camera,
+  FileText,
+  Eye,
 } from 'lucide-react';
 import { getBookingConversation } from '../../../api/support';
 import type { SupportTicketItem } from '../../../api/support';
@@ -26,6 +30,7 @@ import {
   updateBookingStatus, 
   reassignBookingProvider,
   getAdminBookingLocation,
+  resolveAdminWarrantyClaim,
   type BookingItem,
   type AdminBookingLocationResponse,
   type AdminProviderLocation
@@ -69,6 +74,12 @@ export const BookingDetailView: React.FC = () => {
   const [auditError, setAuditError] = useState<string | null>(null);
 
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null);
+
+  // Warranty Audit & Photo Lightbox State
+  const [warrantyActionLoading, setWarrantyActionLoading] = useState<boolean>(false);
+  const [warrantyResolvingAction, setWarrantyResolvingAction] = useState<'Resolved' | 'Rejected' | null>(null);
+  const [warrantyResolveNotes, setWarrantyResolveNotes] = useState<string>('');
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
 
   const canManageBookings = hasPermission(adminSession, 'bookings:manage');
 
@@ -220,6 +231,27 @@ export const BookingDetailView: React.FC = () => {
       showToast(err.response?.data?.detail || 'State transition failed.', 'error');
     } finally {
       setTransitionLoading(false);
+    }
+  };
+
+  const handleResolveWarranty = async (action: 'Resolved' | 'Rejected') => {
+    if (!bookingData) return;
+    setWarrantyActionLoading(true);
+    try {
+      const updatedWarranty = await resolveAdminWarrantyClaim(
+        bookingData.id,
+        action,
+        warrantyResolveNotes.trim() || undefined
+      );
+      setBookingData((prev) => (prev ? { ...prev, warranty: updatedWarranty } : prev));
+      showToast(`Warranty claim successfully marked as ${action}!`, 'success');
+      setWarrantyResolvingAction(null);
+      setWarrantyResolveNotes('');
+      fetchBookingProfile();
+    } catch (err: any) {
+      showToast(err.response?.data?.detail || 'Failed to update warranty claim status.', 'error');
+    } finally {
+      setWarrantyActionLoading(false);
     }
   };
 
@@ -550,6 +582,167 @@ export const BookingDetailView: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* Customer Special Instructions / Phone Notes */}
+          {bookingData.customer_notes && (
+            <div className="bg-white p-6 rounded-3xl border border-[#E5DEC9] shadow-sm space-y-3">
+              <h3 className="text-base font-bold font-serif text-[#1F2A1E] border-b border-[#E5DEC9]/60 pb-3 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-amber-600" />
+                <span>Customer Instructions & Notes</span>
+              </h3>
+              <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl text-xs text-amber-900 leading-relaxed whitespace-pre-wrap">
+                {bookingData.customer_notes}
+              </div>
+            </div>
+          )}
+
+          {/* Service Verification Proof Photos */}
+          <div className="bg-white p-6 rounded-3xl border border-[#E5DEC9] shadow-sm space-y-4">
+            <h3 className="text-base font-bold font-serif text-[#1F2A1E] border-b border-[#E5DEC9]/60 pb-3 flex items-center gap-2">
+              <Camera className="w-5 h-5 text-[#2F5233]" />
+              <span>Job Proof Photos</span>
+            </h3>
+
+            <div className="space-y-4 text-xs">
+              {/* Before Photos */}
+              <div className="space-y-2">
+                <span className="font-bold text-slate-700 flex items-center gap-1.5 uppercase text-[10px] tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Before Service ({bookingData.before_photos?.length || 0})
+                </span>
+                {bookingData.before_photos && bookingData.before_photos.length > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {bookingData.before_photos.map((url, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setPreviewPhotoUrl(url)}
+                        className="relative w-16 h-16 rounded-2xl overflow-hidden border border-amber-200 group cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                      >
+                        <img src={url} alt={`Before ${idx + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                          <Eye className="w-4 h-4" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-400 italic">No before photos recorded</p>
+                )}
+              </div>
+
+              {/* After Photos */}
+              <div className="space-y-2 border-t border-[#E5DEC9]/60 pt-3">
+                <span className="font-bold text-emerald-800 flex items-center gap-1.5 uppercase text-[10px] tracking-wider">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  After Service ({bookingData.after_photos?.length || 0})
+                </span>
+                {bookingData.after_photos && bookingData.after_photos.length > 0 ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {bookingData.after_photos.map((url, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setPreviewPhotoUrl(url)}
+                        className="relative w-16 h-16 rounded-2xl overflow-hidden border border-emerald-200 group cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                      >
+                        <img src={url} alt={`After ${idx + 1}`} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                          <Eye className="w-4 h-4" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-400 italic">No after photos recorded</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 7-Day Digital Warranty & Claim Resolution */}
+          {bookingData.warranty && (
+            <div className="bg-white p-6 rounded-3xl border border-[#E5DEC9] shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-[#E5DEC9]/60 pb-3">
+                <h3 className="text-base font-bold font-serif text-[#1F2A1E] flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-[#2F5233]" />
+                  <span>7-Day Digital Warranty</span>
+                </h3>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                  bookingData.warranty.is_valid ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {bookingData.warranty.is_valid ? 'Active' : 'Expired'}
+                </span>
+              </div>
+
+              <div className="space-y-3 text-xs">
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Issued Date:</span>
+                  <span className="font-semibold text-slate-800">
+                    {bookingData.warranty.issued_at ? new Date(bookingData.warranty.issued_at).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Valid Until:</span>
+                  <span className="font-semibold text-slate-800">
+                    {bookingData.warranty.expires_at ? new Date(bookingData.warranty.expires_at).toLocaleDateString() : 'N/A'}
+                  </span>
+                </div>
+
+                {/* Claim Status Details */}
+                <div className="pt-2 border-t border-[#E5DEC9]/60 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-700">Claim Status:</span>
+                    <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                      bookingData.warranty.claim_status === 'Pending' ? 'bg-amber-100 text-amber-800 animate-pulse' :
+                      bookingData.warranty.claim_status === 'Resolved' ? 'bg-emerald-100 text-emerald-800' :
+                      bookingData.warranty.claim_status === 'Rejected' ? 'bg-rose-100 text-rose-800' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>
+                      {bookingData.warranty.claim_status}
+                    </span>
+                  </div>
+
+                  {bookingData.warranty.claim_description && (
+                    <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 text-[11px] text-amber-900 space-y-1">
+                      <span className="font-bold block">Customer Claim Reason:</span>
+                      <p>{bookingData.warranty.claim_description}</p>
+                    </div>
+                  )}
+
+                  {bookingData.warranty.claim_status === 'Pending' && canManageBookings && (
+                    <div className="pt-2 space-y-2">
+                      <textarea
+                        value={warrantyResolveNotes}
+                        onChange={(e) => setWarrantyResolveNotes(e.target.value)}
+                        placeholder="Resolution / rejection remarks..."
+                        rows={2}
+                        className="w-full text-xs p-2.5 rounded-xl border border-[#E5DEC9] bg-[#FAF7F0] focus:outline-none focus:ring-1 focus:ring-[#2F5233]"
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={warrantyActionLoading}
+                          onClick={() => handleResolveWarranty('Resolved')}
+                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
+                        >
+                          {warrantyActionLoading ? 'Saving...' : '✓ Resolve Claim'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={warrantyActionLoading}
+                          onClick={() => handleResolveWarranty('Rejected')}
+                          className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs transition-colors shadow-2xs disabled:opacity-50 cursor-pointer"
+                        >
+                          {warrantyActionLoading ? 'Saving...' : '✗ Reject Claim'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Right Column: Lifecycle Timeline & State Machine Status Control */}
@@ -842,6 +1035,30 @@ export const BookingDetailView: React.FC = () => {
                 Close Audit View
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Lightbox Modal for Photo Preview */}
+      {previewPhotoUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs"
+          onClick={() => setPreviewPhotoUrl(null)}
+        >
+          <div
+            className="relative max-w-2xl max-h-[90vh] bg-white rounded-3xl p-3 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewPhotoUrl(null)}
+              className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition-colors z-10 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={previewPhotoUrl}
+              alt="Service Verification Proof"
+              className="max-w-full max-h-[80vh] object-contain rounded-2xl"
+            />
           </div>
         </div>
       )}

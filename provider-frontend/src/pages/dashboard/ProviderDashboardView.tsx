@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   Clock,
   ShieldCheck,
@@ -26,6 +27,10 @@ import {
   Compass,
   Navigation,
   KeyRound,
+  Camera,
+  Upload,
+  FileText,
+  Eye,
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { subscribeToRealtime } from '../../utils/realtime';
@@ -83,6 +88,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export const ProviderDashboardView: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [trust, setTrust] = useState<ProfileTrust | null>(null);
@@ -93,6 +99,10 @@ export const ProviderDashboardView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
   const [rejectingBooking, setRejectingBooking] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('Schedule conflict with another job');
+
+  // Photo Upload & Preview State
+  const [photoUploadingBookingId, setPhotoUploadingBookingId] = useState<string | null>(null);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = useState<string | null>(null);
 
   // Service Start OTP state
   const [startingBooking, setStartingBooking] = useState<any | null>(null);
@@ -110,6 +120,32 @@ export const ProviderDashboardView: React.FC = () => {
   } | null>(null);
   const [lastGpsSync, setLastGpsSync] = useState<string | null>(null);
   const [isBroadcastingGps, setIsBroadcastingGps] = useState<boolean>(false);
+
+  const handlePhotoUpload = async (bookingId: string, type: 'before' | 'after', file: File) => {
+    setPhotoUploadingBookingId(bookingId);
+    setActionError(null);
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result as string;
+          await apiClient.post(`/providers/me/bookings/${bookingId}/photos/${type}`, {
+            photo_url: base64Data,
+          });
+          await fetchAll();
+        } catch (err: any) {
+          console.error(`Failed to upload ${type} photo`, err);
+          setActionError(err.response?.data?.detail || `Failed to upload ${type} photo.`);
+        } finally {
+          setPhotoUploadingBookingId(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error(err);
+      setPhotoUploadingBookingId(null);
+    }
+  };
 
   const fetchAll = async () => {
     try {
@@ -877,6 +913,122 @@ export const ProviderDashboardView: React.FC = () => {
                         </div>
                       </div>
 
+                      {/* Customer Notes / Access Instructions */}
+                      {booking.customer_notes && (
+                        <div className="mb-4 p-3 bg-amber-50/80 border border-amber-200/90 rounded-2xl text-xs space-y-1">
+                          <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                            <FileText className="w-3.5 h-3.5 text-amber-700" />
+                            <span>{t('dashboard.customer_notes_title', { defaultValue: 'Customer Notes / Access Instructions' })}</span>
+                          </div>
+                          <p className="text-amber-800 whitespace-pre-wrap leading-relaxed">{booking.customer_notes}</p>
+                        </div>
+                      )}
+
+                      {/* Job Verification Photos Section */}
+                      <div className="mb-4 p-3.5 bg-white border border-[#E5DEC9] rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-1.5 font-bold text-xs text-[#1F2A1E]">
+                            <Camera className="w-3.5 h-3.5 text-[#2F5233]" />
+                            <span>{t('dashboard.photos_title', { defaultValue: 'Job Verification Photos (Before & After)' })}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <label className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#F2EDE1] hover:bg-[#E5DEC9] text-[#2F5233] text-[11px] font-bold rounded-lg cursor-pointer transition-colors border border-[#E5DEC9]">
+                              <Upload className="w-3 h-3" />
+                              <span>+ {t('dashboard.upload_before', { defaultValue: 'Before Photo' })}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                disabled={photoUploadingBookingId === booking.id}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handlePhotoUpload(booking.id, 'before', file);
+                                }}
+                              />
+                            </label>
+                            <label className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#2F5233] hover:bg-[#3D6B42] text-white text-[11px] font-bold rounded-lg cursor-pointer transition-colors shadow-2xs">
+                              <Upload className="w-3 h-3" />
+                              <span>+ {t('dashboard.upload_after', { defaultValue: 'After Photo' })}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                capture="environment"
+                                className="hidden"
+                                disabled={photoUploadingBookingId === booking.id}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handlePhotoUpload(booking.id, 'after', file);
+                                }}
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        {photoUploadingBookingId === booking.id && (
+                          <div className="flex items-center gap-2 text-xs text-[#2F5233] font-semibold">
+                            <span className="w-3 h-3 border-2 border-[#2F5233] border-t-transparent rounded-full animate-spin" />
+                            <span>Uploading verification proof photo...</span>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          {/* Before Photos Gallery */}
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                              {t('dashboard.before_photos', { defaultValue: 'Before Service' })} ({booking.before_photos?.length || 0})
+                            </span>
+                            {booking.before_photos && booking.before_photos.length > 0 ? (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {booking.before_photos.map((url: string, idx: number) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setPreviewPhotoUrl(url)}
+                                    className="relative w-12 h-12 rounded-xl overflow-hidden border border-amber-200 group cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                                  >
+                                    <img src={url} alt={`Before ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-slate-400 italic">No before photos added</p>
+                            )}
+                          </div>
+
+                          {/* After Photos Gallery */}
+                          <div className="space-y-1.5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              {t('dashboard.after_photos', { defaultValue: 'After Service' })} ({booking.after_photos?.length || 0})
+                            </span>
+                            {booking.after_photos && booking.after_photos.length > 0 ? (
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {booking.after_photos.map((url: string, idx: number) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setPreviewPhotoUrl(url)}
+                                    className="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-200 group cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                                  >
+                                    <img src={url} alt={`After ${idx + 1}`} className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                      <Eye className="w-3.5 h-3.5" />
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-[10px] text-slate-400 italic">No after photos added</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
                       {/* Action Buttons */}
                       <div className="flex gap-2 flex-wrap pt-2 border-t border-[#E5DEC9]/60">
                         {(() => {
@@ -1267,6 +1419,30 @@ export const ProviderDashboardView: React.FC = () => {
                 )}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Lightbox Modal for Photo Preview */}
+      {previewPhotoUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 backdrop-blur-xs"
+          onClick={() => setPreviewPhotoUrl(null)}
+        >
+          <div
+            className="relative max-w-2xl max-h-[90vh] bg-white rounded-3xl p-3 shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewPhotoUrl(null)}
+              className="absolute top-4 right-4 p-2 bg-black/60 hover:bg-black text-white rounded-full transition-colors z-10 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <img
+              src={previewPhotoUrl}
+              alt="Service Verification Proof"
+              className="max-w-full max-h-[80vh] object-contain rounded-2xl"
+            />
           </div>
         </div>
       )}

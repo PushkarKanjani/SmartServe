@@ -43,6 +43,9 @@ class Booking(Base):
     otp_code = Column(String(10), nullable=True)
     timeline = Column(JSON, nullable=True)
     emergency_flag = Column(String(50), nullable=True)
+    customer_notes = Column(Text, nullable=True)
+    before_photos = Column(JSON, nullable=True)
+    after_photos = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
 
@@ -51,6 +54,7 @@ class Booking(Base):
     service = relationship("Service", primaryjoin="Booking.service_id == Service.id", foreign_keys=[service_id])
     tickets = relationship("SupportTicket", back_populates="booking")
     feedback = relationship("BookingFeedback", back_populates="booking", uselist=False, cascade="all, delete-orphan")
+    warranty = relationship("BookingWarranty", back_populates="booking", uselist=False, cascade="all, delete-orphan")
 
     @property
     def booking_reference(self) -> str:
@@ -128,11 +132,11 @@ class Booking(Base):
 
     @property
     def notes(self) -> str:
-        return ""
+        return self.customer_notes or ""
 
     @notes.setter
     def notes(self, value):
-        pass
+        self.customer_notes = value
 
     @property
     def cancellation_reason(self) -> str:
@@ -216,3 +220,64 @@ class BookingFeedback(Base):
 
     booking = relationship("Booking", back_populates="feedback")
     customer = relationship("Customer")
+
+
+class BookingWarranty(Base):
+    __tablename__ = "booking_warranties"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    booking_id = Column(GUID(), ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False, unique=True)
+    customer_id = Column(GUID(), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
+    provider_id = Column(GUID(), nullable=True)
+    service_name = Column(String(255), nullable=False)
+    issued_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    claim_status = Column(String(50), default="None", nullable=False)  # None, Pending, Resolved, Rejected
+    claim_description = Column(Text, nullable=True)
+    claim_submitted_at = Column(DateTime(timezone=True), nullable=True)
+    claim_resolved_at = Column(DateTime(timezone=True), nullable=True)
+    claim_notes = Column(Text, nullable=True)
+
+    booking = relationship("Booking", back_populates="warranty")
+    customer = relationship("Customer")
+
+
+class CombinedBooking(Base):
+    __tablename__ = "combined_bookings"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    customer_id = Column(GUID(), ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
+    status = Column(String(50), default="Requested", nullable=False)
+    total_price = Column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    discount_applied = Column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    final_price = Column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    scheduled_time = Column(DateTime(timezone=True), nullable=False)
+    address = Column(String(500), nullable=False, default="Address on File")
+    customer_notes = Column(Text, nullable=True)
+    payment_status = Column(String(50), default="Pending", nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    customer = relationship("Customer")
+    items = relationship("CombinedBookingItem", back_populates="combined_booking", cascade="all, delete-orphan")
+
+    @property
+    def booking_reference(self) -> str:
+        return f"CB-{str(self.id)[:8].upper()}"
+
+
+class CombinedBookingItem(Base):
+    __tablename__ = "combined_booking_items"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    combined_booking_id = Column(GUID(), ForeignKey("combined_bookings.id", ondelete="CASCADE"), nullable=False)
+    service_id = Column(GUID(), ForeignKey("services.id", ondelete="CASCADE"), nullable=False)
+    provider_id = Column(GUID(), nullable=True)
+    unit_price = Column(Numeric(10, 2), default=Decimal("0.00"), nullable=False)
+    status = Column(String(50), default="Requested", nullable=False)
+    scheduled_time = Column(DateTime(timezone=True), nullable=True)
+
+    combined_booking = relationship("CombinedBooking", back_populates="items")
+    service = relationship("Service")
+

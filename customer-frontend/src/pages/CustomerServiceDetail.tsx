@@ -29,10 +29,14 @@ import {
   Camera,
   Tag,
   Zap,
-  UserCheck
+  UserCheck,
+  Layers,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { addBundleItem, isInBundle } from '../utils/bundleCart';
 
 export const CustomerServiceDetail: React.FC = () => {
+  const { t } = useTranslation();
   const { serviceId } = useParams<{ serviceId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -41,6 +45,7 @@ export const CustomerServiceDetail: React.FC = () => {
   const [service, setService] = useState<ServiceItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [inBundle, setInBundle] = useState<boolean>(false);
 
   // Eligible Providers State
   const [eligibleProviders, setEligibleProviders] = useState<EligibleProvider[]>([]);
@@ -82,6 +87,29 @@ export const CustomerServiceDetail: React.FC = () => {
     };
     fetchDetail();
   }, [serviceId]);
+
+  useEffect(() => {
+    if (serviceId) {
+      setInBundle(isInBundle(serviceId));
+    }
+  }, [serviceId]);
+
+  const handleToggleBundle = () => {
+    if (!service) return;
+    if (inBundle) {
+      navigate('/bundle');
+      return;
+    }
+    addBundleItem({
+      id: service.id,
+      name: service.name,
+      category: service.category,
+      base_price: service.base_price,
+      image_url: service.image_url,
+    });
+    setInBundle(true);
+    showToast(t('booking.in_bundle', { defaultValue: 'Added to service bundle! Click again to view combined booking.' }), 'success');
+  };
 
   const isEmergency = Boolean(service?.is_emergency || service?.is_emergency_eligible);
 
@@ -874,26 +902,45 @@ export const CustomerServiceDetail: React.FC = () => {
             </div>
 
             {service.is_active ? (
-              <button
-                onClick={() => setShowBookingModal(true)}
-                className={`w-full py-4 font-bold rounded-full text-sm shadow-[0_4px_16px_rgba(47,82,51,0.2)] hover:shadow-md transition-all flex items-center justify-center gap-2 ${
-                  isEmergency
-                    ? 'bg-rose-700 hover:bg-rose-800 text-white'
-                    : 'bg-[#2F5233] hover:bg-[#3D6B42] text-[#FAF7F0]'
-                }`}
-              >
-                {isEmergency ? (
-                  <>
-                    <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
-                    <span>Request Emergency Dispatch</span>
-                  </>
-                ) : (
-                  <>
-                    <CalendarIcon className="w-4 h-4 text-[#C9A15A]" />
-                    <span>Book This Service</span>
-                  </>
-                )}
-              </button>
+              <div className="space-y-2.5">
+                <button
+                  onClick={() => setShowBookingModal(true)}
+                  className={`w-full py-4 font-bold rounded-full text-sm shadow-[0_4px_16px_rgba(47,82,51,0.2)] hover:shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    isEmergency
+                      ? 'bg-rose-700 hover:bg-rose-800 text-white'
+                      : 'bg-[#2F5233] hover:bg-[#3D6B42] text-[#FAF7F0]'
+                  }`}
+                >
+                  {isEmergency ? (
+                    <>
+                      <Zap className="w-4 h-4 text-amber-300 animate-pulse" />
+                      <span>Request Emergency Dispatch</span>
+                    </>
+                  ) : (
+                    <>
+                      <CalendarIcon className="w-4 h-4 text-[#C9A15A]" />
+                      <span>{t('booking.book_now', { defaultValue: 'Book This Service' })}</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleBundle}
+                  className={`w-full py-3.5 font-bold rounded-full text-xs border transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    inBundle
+                      ? 'bg-[#C9A15A]/20 border-[#C9A15A] text-[#1F2A1E]'
+                      : 'bg-[#FAF7F0] hover:bg-[#F2EDE1] text-[#2F5233] border-[#2F5233]/40'
+                  }`}
+                >
+                  <Layers className="w-4 h-4 text-[#C9A15A]" />
+                  <span>
+                    {inBundle
+                      ? t('booking.in_bundle', { defaultValue: 'Added to Bundle ✓ (View Bundle)' })
+                      : t('booking.add_to_bundle', { defaultValue: '+ Add to Service Bundle' })}
+                  </span>
+                </button>
+              </div>
             ) : (
               <button
                 disabled

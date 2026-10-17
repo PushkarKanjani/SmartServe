@@ -37,4 +37,8 @@ class BookingDetailResponse(BaseModel):
     allowed_next_statuses: List[str] = []
     emergency_flag: Optional[str] = None
     cancellation_reason: Optional[str] = None
+    customer_notes: Optional[str] = None
+    before_photos: Optional[List[str]] = []
+    after_photos: Optional[List[str]] = []
+    warranty: Optional[Dict[str, Any]] = None
     created_at: str

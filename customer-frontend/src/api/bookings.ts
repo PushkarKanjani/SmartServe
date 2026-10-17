@@ -15,6 +15,18 @@ export interface CreateBookingPayload {
   provider_id?: string;
 }
 
+export interface WarrantyInfo {
+  id: string;
+  booking_id: string;
+  service_name: string;
+  issued_at: string;
+  expires_at: string;
+  is_active: boolean;
+  claim_status: string;
+  claim_description?: string;
+  days_remaining?: number;
+}
+
 export interface BookingDetail {
   id: string;
   booking_reference: string;
@@ -33,6 +45,11 @@ export interface BookingDetail {
   total_price: number;
   total_amount?: number;
   otp_code?: string;
+  notes?: string;
+  customer_notes?: string;
+  before_photos?: string[];
+  after_photos?: string[];
+  warranty?: WarrantyInfo | null;
   provider_id?: string;
   provider_name?: string;
   provider?: ProviderProfileInfo | null;
@@ -41,10 +58,94 @@ export interface BookingDetail {
   created_at: string;
 }
 
+export interface CombinedEstimateItem {
+  service_id: string;
+  name: string;
+  category: string;
+  unit_price: number;
+}
+
+export interface CombinedEstimateResponse {
+  items: CombinedEstimateItem[];
+  subtotal: number;
+  discount_rate: number;
+  discount_applied: number;
+  final_price: number;
+}
+
+export interface CombinedBookingCreatePayload {
+  service_ids: string[];
+  scheduled_date: string;
+  scheduled_time: string;
+  address_line1: string;
+  city?: string;
+  pincode?: string;
+  customer_notes?: string | null;
+  payment_method?: string;
+  provider_ids?: Record<string, string>;
+}
+
+export interface CombinedBookingItemDetail {
+  id: string;
+  service_id: string;
+  service_name: string;
+  category: string;
+  provider_id?: string | null;
+  unit_price: number;
+  status: string;
+  scheduled_time?: string;
+}
+
+export interface CombinedBookingDetail {
+  id: string;
+  booking_reference: string;
+  customer_id: string;
+  status: string;
+  total_price: number;
+  discount_applied: number;
+  final_price: number;
+  scheduled_time: string;
+  address: string;
+  customer_notes?: string | null;
+  payment_status: string;
+  items: CombinedBookingItemDetail[];
+  created_at: string;
+}
+
 export const createBooking = async (payload: CreateBookingPayload): Promise<BookingDetail> => {
   const res = await apiClient.post<BookingDetail>('/customer/bookings', payload);
   return res.data;
 };
+
+export const getCombinedEstimate = async (serviceIds: string[]): Promise<CombinedEstimateResponse> => {
+  const res = await apiClient.post<CombinedEstimateResponse>('/customer/combined-bookings/estimate', {
+    service_ids: serviceIds,
+  });
+  return res.data;
+};
+
+export const createCombinedBooking = async (payload: CombinedBookingCreatePayload): Promise<CombinedBookingDetail> => {
+  const res = await apiClient.post<CombinedBookingDetail>('/customer/combined-bookings', payload);
+  return res.data;
+};
+
+export const getCombinedBookings = async (): Promise<CombinedBookingDetail[]> => {
+  const res = await apiClient.get<CombinedBookingDetail[]>('/customer/combined-bookings');
+  return res.data;
+};
+
+export const getCombinedBookingDetail = async (id: string): Promise<CombinedBookingDetail> => {
+  const res = await apiClient.get<CombinedBookingDetail>(`/customer/combined-bookings/${id}`);
+  return res.data;
+};
+
+export const cancelCombinedBooking = async (id: string, reason?: string): Promise<CombinedBookingDetail> => {
+  const res = await apiClient.post<CombinedBookingDetail>(`/customer/combined-bookings/${id}/cancel`, {
+    reason: reason || 'Cancelled by Customer',
+  });
+  return res.data;
+};
+
 
 export const getCustomerBookings = async (): Promise<BookingDetail[]> => {
   const res = await apiClient.get<BookingDetail[]>('/customer/bookings');

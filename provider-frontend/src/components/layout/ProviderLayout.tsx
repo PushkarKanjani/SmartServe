@@ -14,9 +14,11 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useTranslation } from 'react-i18next';
 import { apiClient } from '../../api/client';
 import { BackendPulse } from '../common/BackendPulse';
 import { AISupportAssistant } from '../common/AISupportAssistant';
+import { LanguageSelector } from '../common/LanguageSelector';
 
 export const ProviderLayout: React.FC = () => {
   const { user, logout } = useAuth();
@@ -63,12 +65,14 @@ export const ProviderLayout: React.FC = () => {
     navigate('/login');
   }, [logout, navigate]);
 
+  const { t } = useTranslation();
+
   const navItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'My Services', path: '/services', icon: Briefcase },
-    { label: 'Availability', path: '/availability', icon: Calendar },
-    { label: 'Profile & Trust', path: '/profile', icon: UserIcon },
-    { label: 'Support Tickets', path: '/support', icon: LifeBuoy },
+    { label: t('nav.dashboard', { defaultValue: 'Dashboard' }), path: '/dashboard', icon: LayoutDashboard },
+    { label: t('nav.services', { defaultValue: 'My Services' }), path: '/services', icon: Briefcase },
+    { label: t('nav.availability', { defaultValue: 'Availability' }), path: '/availability', icon: Calendar },
+    { label: t('nav.profile', { defaultValue: 'Profile & Trust' }), path: '/profile', icon: UserIcon },
+    { label: t('nav.support', { defaultValue: 'Support Tickets' }), path: '/support', icon: LifeBuoy },
   ];
 
   const providerName = profile?.full_name || (user?.email ? user.email.split('@')[0] : 'Partner');
@@ -220,8 +224,11 @@ export const ProviderLayout: React.FC = () => {
             {/* Verification Status Pill */}
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border shadow-xs bg-emerald-50 text-emerald-700 border-emerald-200">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-              <span>Verified Partner</span>
+              <span>{t('common.verified_partner', { defaultValue: 'Verified Partner' })}</span>
             </span>
+
+            {/* Language Selector */}
+            <LanguageSelector />
 
             {/* Profile Dropdown */}
             <div className="relative" ref={dropdownRef}>

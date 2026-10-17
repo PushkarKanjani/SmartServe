@@ -258,6 +258,9 @@ class ProviderBookingResponse(BaseModel):
     total_price: Decimal
     otp_code: Optional[str] = None
     emergency_flag: Optional[str] = None
+    customer_notes: Optional[str] = None
+    before_photos: Optional[List[str]] = None
+    after_photos: Optional[List[str]] = None
     timeline: Optional[List[Dict[str, Any]]] = None
     created_at: datetime
 

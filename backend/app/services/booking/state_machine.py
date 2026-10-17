@@ -192,6 +192,26 @@ def transition_booking_status(
     if next_status == BookingStatus.COMPLETED.value:
         booking.payment_status = "Completed"
         try:
+            from app.models.customer import BookingWarranty
+            from datetime import timedelta
+            existing_w = db.query(BookingWarranty).filter(BookingWarranty.booking_id == booking.id).first()
+            if not existing_w:
+                now_utc = datetime.now(timezone.utc)
+                new_w = BookingWarranty(
+                    id=uuid.uuid4(),
+                    booking_id=booking.id,
+                    customer_id=booking.customer_id,
+                    provider_id=booking.provider_id,
+                    service_name=booking.service_name or "Home Service",
+                    issued_at=now_utc,
+                    expires_at=now_utc + timedelta(days=7),
+                    is_active=True,
+                    claim_status="None",
+                )
+                db.add(new_w)
+        except Exception as e:
+            pass
+        try:
             from app.models.provider import ProviderLocation
             if booking.provider_id:
                 loc = db.query(ProviderLocation).filter(ProviderLocation.provider_id == booking.provider_id).first()

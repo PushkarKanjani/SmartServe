@@ -8,6 +8,9 @@ from app.models.customer import (
     SupportTicket,
     TicketMessage,
     BookingFeedback,
+    BookingWarranty,
+    CombinedBooking,
+    CombinedBookingItem,
 )
 from app.models.security import AuditLog, FailedLoginAttempt, AdminRole
 from app.models.email import EmailTemplate, EmailLog
@@ -23,6 +26,9 @@ __all__ = [
     "SupportTicket",
     "TicketMessage",
     "BookingFeedback",
+    "BookingWarranty",
+    "CombinedBooking",
+    "CombinedBookingItem",
     "UserSession",
     "Service",
     "AuditLog",
@@ -31,4 +37,5 @@ __all__ = [
     "EmailTemplate",
     "EmailLog",
 ]
+
 

@@ -29,12 +29,17 @@ import {
   Send,
   User,
   ShieldCheck,
+  FileText,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { subscribeToRealtime } from '../utils/realtime';
 import { CustomerLiveMap } from '../components/CustomerLiveMap';
 import { CustomerProviderCard, BookingTimeline } from '../components/CustomerProviderCard';
+import { WarrantyCard } from '../components/common/WarrantyCard';
+import { PhotoGallery } from '../components/common/PhotoGallery';
 
 export const CustomerBookingDetail: React.FC = () => {
+  const { t } = useTranslation();
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -554,6 +559,43 @@ export const CustomerBookingDetail: React.FC = () => {
       {/* ========================================================= */}
       <BookingTimeline status={booking.status} />
 
+      {/* ========================================================= */}
+      {/* 4. DIGITAL WARRANTY CARD (7-Day Guarantee)                */}
+      {/* ========================================================= */}
+      {(stLower === 'completed' || stLower === 'paid' || Boolean(booking.warranty)) && (
+        <WarrantyCard
+          bookingId={booking.id}
+          serviceName={booking.service_name}
+          warranty={booking.warranty}
+          onClaimRaised={() => {
+            getBookingDetail(booking.id).then(setBooking).catch(() => {});
+          }}
+        />
+      )}
+
+      {/* ========================================================= */}
+      {/* 5. BEFORE & AFTER PROOF PHOTOS                            */}
+      {/* ========================================================= */}
+      {((booking.before_photos && booking.before_photos.length > 0) ||
+        (booking.after_photos && booking.after_photos.length > 0)) && (
+        <div className="space-y-4">
+          {booking.before_photos && booking.before_photos.length > 0 && (
+            <PhotoGallery
+              title={t('photos.before_title', { defaultValue: 'Before-Service Proof' })}
+              badge="Pre-Service"
+              photos={booking.before_photos}
+            />
+          )}
+          {booking.after_photos && booking.after_photos.length > 0 && (
+            <PhotoGallery
+              title={t('photos.after_title', { defaultValue: 'After-Service Proof' })}
+              badge="Post-Service"
+              photos={booking.after_photos}
+            />
+          )}
+        </div>
+      )}
+
       {/* Details Grid */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 sm:p-8 space-y-6">
         <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">Appointment Information</h3>
@@ -591,6 +633,22 @@ export const CustomerBookingDetail: React.FC = () => {
               {booking.address_line1 || booking.address || 'Address provided at booking'}
             </p>
           </div>
+
+          {/* Customer Notes / Special Instructions */}
+          {(booking.customer_notes || booking.notes) && (
+            <div className="space-y-2 p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 md:col-span-2">
+              <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-4 h-4 text-amber-700" />
+                <span>Special Instructions & Notes</span>
+              </h4>
+              <p className="text-xs text-[#1F2A1E] font-medium leading-relaxed whitespace-pre-wrap">
+                {booking.customer_notes || booking.notes}
+              </p>
+              <p className="text-[10px] text-[#1F2A1E]/50">
+                Shared exclusively with your assigned service expert for this appointment.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

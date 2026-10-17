@@ -1,6 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -9,7 +10,7 @@ from app.repositories.db import get_db
 from app.repositories import booking_repository, audit_repository
 from app.models.user import User
 from app.models.provider import Provider
-from app.models.customer import Customer
+from app.models.customer import Customer, BookingWarranty
 from app.models.booking import Booking, BookingStatus, PaymentStatus
 from app.schemas.booking import (
     BookingCreateRequest,
@@ -46,6 +47,28 @@ def safe_timeline(raw_timeline):
     if isinstance(raw_timeline, dict):
         return [raw_timeline]
     return []
+
+def format_warranty(w):
+    if not w:
+        return None
+    now_utc = datetime.now(timezone.utc)
+    exp = w.expires_at
+    if exp and exp.tzinfo is None:
+        exp = exp.replace(tzinfo=timezone.utc)
+    is_valid = w.is_active and (exp > now_utc if exp else True)
+    return {
+        "id": str(w.id),
+        "service_name": w.service_name,
+        "issued_at": w.issued_at.isoformat() if w.issued_at else None,
+        "expires_at": w.expires_at.isoformat() if w.expires_at else None,
+        "is_active": w.is_active,
+        "is_valid": is_valid,
+        "claim_status": w.claim_status or "None",
+        "claim_description": w.claim_description,
+        "claim_submitted_at": w.claim_submitted_at.isoformat() if w.claim_submitted_at else None,
+        "claim_resolved_at": w.claim_resolved_at.isoformat() if w.claim_resolved_at else None,
+        "claim_notes": w.claim_notes,
+    }
 
 @router.get("/", response_model=List[BookingDetailResponse])
 def list_admin_bookings(
@@ -100,6 +123,10 @@ def list_admin_bookings(
                     allowed_next_statuses=allowed_next,
                     emergency_flag=b.emergency_flag,
                     cancellation_reason=b.cancellation_reason,
+                    customer_notes=b.customer_notes,
+                    before_photos=b.before_photos or [],
+                    after_photos=b.after_photos or [],
+                    warranty=format_warranty(b.warranty),
                     created_at=b.created_at.isoformat() if b.created_at else ""
                 )
             )
@@ -148,6 +175,10 @@ def get_admin_booking_detail(
         allowed_next_statuses=allowed_next,
         emergency_flag=b.emergency_flag,
         cancellation_reason=b.cancellation_reason,
+        customer_notes=b.customer_notes,
+        before_photos=b.before_photos or [],
+        after_photos=b.after_photos or [],
+        warranty=format_warranty(b.warranty),
         created_at=b.created_at.isoformat() if b.created_at else ""
     )
 
@@ -634,4 +665,49 @@ def get_admin_booking_location(
     }
 
 
+class WarrantyClaimResolutionRequest(BaseModel):
+    action: str  # "Resolved" | "Rejected"
+    admin_notes: Optional[str] = None
 
+
+@router.patch("/{booking_id}/warranty/resolve", response_model=Dict[str, Any])
+def resolve_admin_warranty_claim(
+    booking_id: str,
+    req: WarrantyClaimResolutionRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission("bookings:manage"))
+):
+    """Admin resolves or rejects a customer-raised warranty claim."""
+    try:
+        b_uuid = uuid.UUID(booking_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid booking ID format")
+
+    warranty = db.query(BookingWarranty).filter(BookingWarranty.booking_id == b_uuid).first()
+    if not warranty:
+        raise HTTPException(status_code=404, detail="No warranty found for this booking")
+
+    action_norm = req.action.capitalize()
+    if action_norm not in ["Resolved", "Rejected"]:
+        raise HTTPException(status_code=400, detail="Action must be 'Resolved' or 'Rejected'")
+
+    warranty.claim_status = action_norm
+    warranty.claim_resolved_at = datetime.now(timezone.utc)
+    if req.admin_notes:
+        warranty.claim_notes = req.admin_notes.strip()
+
+    # Append audit entry to booking timeline
+    booking = db.query(Booking).filter(Booking.id == b_uuid).first()
+    if booking:
+        tl = list(booking.timeline or [])
+        tl.append({
+            "event": f"Warranty Claim {action_norm}",
+            "reason": req.admin_notes or f"Claim marked as {action_norm} by Admin",
+            "admin": admin.email,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        booking.timeline = tl
+
+    db.commit()
+    db.refresh(warranty)
+    return format_warranty(warranty)

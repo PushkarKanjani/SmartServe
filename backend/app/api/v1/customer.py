@@ -17,6 +17,7 @@ from app.models.customer import (
     SupportTicket,
     TicketMessage,
     BookingFeedback,
+    BookingWarranty,
 )
 from app.schemas.customer_schemas import (
     CustomerRegisterPayload,
@@ -45,6 +46,8 @@ from app.schemas.customer_schemas import (
     MessageItem,
     SessionListItem,
     EligibleProviderResponse,
+    WarrantyClaimPayload,
+    WarrantyCardResponse,
 )
 
 router = APIRouter(prefix="/customer", tags=["Customer API"])
@@ -676,6 +679,20 @@ def get_customer_bookings(
             payment_method=b.payment_method,
             cancellation_reason=b.cancellation_reason,
             notes=b.notes,
+            customer_notes=b.customer_notes or b.notes,
+            before_photos=b.before_photos or [],
+            after_photos=b.after_photos or [],
+            warranty={
+                "id": str(b.warranty.id),
+                "booking_id": str(b.warranty.booking_id),
+                "service_name": b.warranty.service_name,
+                "issued_at": b.warranty.issued_at.isoformat() if b.warranty.issued_at else None,
+                "expires_at": b.warranty.expires_at.isoformat() if b.warranty.expires_at else None,
+                "is_active": b.warranty.is_active,
+                "claim_status": b.warranty.claim_status,
+                "claim_description": b.warranty.claim_description,
+                "days_remaining": max(0, (b.warranty.expires_at.date() - datetime.utcnow().date()).days) if b.warranty.expires_at else 0,
+            } if b.warranty else None,
             provider_id=str(b.provider_id) if b.provider_id else None,
             provider_name=b.provider.full_name if b.provider else None,
             otp_code=b.otp_code,
@@ -931,11 +948,124 @@ def get_booking_by_id(
         payment_method=record.payment_method,
         cancellation_reason=record.cancellation_reason,
         notes=record.notes,
+        customer_notes=record.customer_notes or record.notes,
+        before_photos=record.before_photos or [],
+        after_photos=record.after_photos or [],
+        warranty={
+            "id": str(record.warranty.id),
+            "booking_id": str(record.warranty.booking_id),
+            "service_name": record.warranty.service_name,
+            "issued_at": record.warranty.issued_at.isoformat() if record.warranty.issued_at else None,
+            "expires_at": record.warranty.expires_at.isoformat() if record.warranty.expires_at else None,
+            "is_active": record.warranty.is_active,
+            "claim_status": record.warranty.claim_status,
+            "claim_description": record.warranty.claim_description,
+            "days_remaining": max(0, (record.warranty.expires_at.date() - datetime.utcnow().date()).days) if record.warranty.expires_at else 0,
+        } if record.warranty else None,
         otp_code=record.otp_code,
         emergency_flag=record.emergency_flag,
         timeline=safe_timeline(record.timeline),
         created_at=record.created_at,
     )
+
+
+# 16a. GET /customer/bookings/{id}/warranty
+@router.get("/bookings/{booking_id}/warranty", response_model=WarrantyCardResponse)
+def get_booking_warranty(
+    booking_id: str,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db),
+):
+    booking = (
+        db.query(Booking)
+        .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
+        .first()
+    )
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking.customer_id != current_customer.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    warranty = db.query(BookingWarranty).filter(BookingWarranty.booking_id == booking.id).first()
+    if not warranty:
+        raise HTTPException(status_code=404, detail="No warranty card found for this booking")
+
+    days_rem = max(0, (warranty.expires_at.date() - datetime.utcnow().date()).days)
+    return WarrantyCardResponse(
+        id=str(warranty.id),
+        booking_id=str(warranty.booking_id),
+        customer_id=str(warranty.customer_id),
+        provider_id=str(warranty.provider_id) if warranty.provider_id else None,
+        service_name=warranty.service_name,
+        issued_at=warranty.issued_at,
+        expires_at=warranty.expires_at,
+        is_active=warranty.is_active,
+        claim_status=warranty.claim_status,
+        claim_description=warranty.claim_description,
+        claim_submitted_at=warranty.claim_submitted_at,
+        claim_resolved_at=warranty.claim_resolved_at,
+        claim_notes=warranty.claim_notes,
+        days_remaining=days_rem,
+    )
+
+
+# 16a-claim. POST /customer/bookings/{id}/warranty/claim
+@router.post("/bookings/{booking_id}/warranty/claim")
+def raise_warranty_claim(
+    booking_id: str,
+    payload: WarrantyClaimPayload,
+    current_customer: Customer = Depends(get_current_customer),
+    db: Session = Depends(get_db),
+):
+    booking = (
+        db.query(Booking)
+        .filter((Booking.id == booking_id) | (Booking.booking_reference == booking_id))
+        .first()
+    )
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if booking.customer_id != current_customer.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    warranty = db.query(BookingWarranty).filter(BookingWarranty.booking_id == booking.id).first()
+    if not warranty:
+        raise HTTPException(status_code=404, detail="No warranty card found for this booking")
+
+    if not warranty.is_active:
+        raise HTTPException(status_code=400, detail="This warranty card is inactive or has been revoked")
+
+    if datetime.utcnow() > warranty.expires_at:
+        raise HTTPException(status_code=400, detail="Warranty claim period has expired (7-day validity exceeded)")
+
+    if warranty.claim_status in ["Pending", "Resolved"]:
+        raise HTTPException(status_code=400, detail=f"A warranty claim has already been filed (Status: {warranty.claim_status})")
+
+    warranty.claim_status = "Pending"
+    warranty.claim_description = payload.description.strip()
+    warranty.claim_submitted_at = datetime.utcnow()
+
+    # Append to booking timeline
+    cur_tl = list(booking.timeline or [])
+    cur_tl.append({
+        "event": "Warranty Claim Raised",
+        "claim_description": warranty.claim_description,
+        "timestamp": datetime.utcnow().isoformat(),
+        "actor": current_customer.full_name,
+        "role": "customer",
+    })
+    booking.timeline = cur_tl
+
+    db.add(warranty)
+    db.add(booking)
+    db.commit()
+    db.refresh(warranty)
+
+    return {
+        "success": True,
+        "message": "Warranty claim raised successfully. Our support team will inspect and resolve within 24 hours.",
+        "claim_status": warranty.claim_status,
+        "claim_submitted_at": warranty.claim_submitted_at.isoformat(),
+    }
 
 
 # 16b. GET /customer/bookings/{id}/location

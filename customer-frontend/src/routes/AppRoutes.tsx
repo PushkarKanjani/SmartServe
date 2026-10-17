@@ -15,6 +15,7 @@ import CustomerBookingDetail from '../pages/CustomerBookingDetail';
 import CustomerSupport from '../pages/CustomerSupport';
 import CustomerSupportDetail from '../pages/CustomerSupportDetail';
 import CustomerProfile from '../pages/CustomerProfile';
+import CustomerCombinedBooking from '../pages/CustomerCombinedBooking';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -80,6 +81,24 @@ export const AppRoutes: React.FC = () => {
         element={
           <CustomerLayout>
             <CustomerServiceDetail />
+          </CustomerLayout>
+        }
+      />
+
+      {/* Multi-Service Combined Booking / Bundle */}
+      <Route
+        path="/bundle"
+        element={
+          <CustomerLayout>
+            <CustomerCombinedBooking />
+          </CustomerLayout>
+        }
+      />
+      <Route
+        path="/combined-booking"
+        element={
+          <CustomerLayout>
+            <CustomerCombinedBooking />
           </CustomerLayout>
         }
       />

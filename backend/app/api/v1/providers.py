@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 from decimal import Decimal
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import AuthUser, require_provider
@@ -446,6 +446,9 @@ def _serialize_booking_response(b: Booking) -> ProviderBookingResponse:
         total_price=Decimal(str(b.total_price or "0.00")),
         otp_code=None,
         emergency_flag=b.emergency_flag,
+        customer_notes=b.customer_notes or b.notes,
+        before_photos=b.before_photos or [],
+        after_photos=b.after_photos or [],
         timeline=b.timeline,
         created_at=b.created_at,
     )
@@ -928,6 +931,133 @@ def update_booking_status(
     broadcast_realtime(channels, status_msg)
 
     return _serialize_booking_response(updated)
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/photos/before",
+    summary="Upload before-service proof photo",
+)
+async def upload_before_service_photo(
+    booking_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    import os
+    from datetime import datetime
+    booking = db.query(Booking).filter(
+        Booking.id == booking_id,
+        Booking.provider_id == current_user.id
+    ).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found or not assigned to you")
+
+    os.makedirs("customer_uploads", exist_ok=True)
+    filename = f"before_{uuid.uuid4().hex[:8]}_{file.filename}"
+    filepath = os.path.join("customer_uploads", filename)
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+    url = f"/static/uploads/{filename}"
+
+    current_photos = list(booking.before_photos or [])
+    current_photos.append(url)
+    booking.before_photos = current_photos
+
+    cur_tl = list(booking.timeline or [])
+    cur_tl.append({
+        "event": "Before-Service Photo Uploaded",
+        "actor": current_user.full_name or "Provider",
+        "role": "provider",
+        "photo_url": url,
+        "timestamp": datetime.utcnow().isoformat(),
+    })
+    booking.timeline = cur_tl
+
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+
+    return {
+        "success": True,
+        "photo_url": url,
+        "before_photos": booking.before_photos,
+    }
+
+
+@router.post(
+    "/providers/me/bookings/{booking_id}/photos/after",
+    summary="Upload after-service proof photo",
+)
+async def upload_after_service_photo(
+    booking_id: uuid.UUID,
+    file: UploadFile = File(...),
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    import os
+    from datetime import datetime
+    booking = db.query(Booking).filter(
+        Booking.id == booking_id,
+        Booking.provider_id == current_user.id
+    ).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found or not assigned to you")
+
+    os.makedirs("customer_uploads", exist_ok=True)
+    filename = f"after_{uuid.uuid4().hex[:8]}_{file.filename}"
+    filepath = os.path.join("customer_uploads", filename)
+    content = await file.read()
+    with open(filepath, "wb") as f:
+        f.write(content)
+    url = f"/static/uploads/{filename}"
+
+    current_photos = list(booking.after_photos or [])
+    current_photos.append(url)
+    booking.after_photos = current_photos
+
+    cur_tl = list(booking.timeline or [])
+    cur_tl.append({
+        "event": "After-Service Photo Uploaded",
+        "actor": current_user.full_name or "Provider",
+        "role": "provider",
+        "photo_url": url,
+        "timestamp": datetime.utcnow().isoformat(),
+    })
+    booking.timeline = cur_tl
+
+    db.add(booking)
+    db.commit()
+    db.refresh(booking)
+
+    return {
+        "success": True,
+        "photo_url": url,
+        "after_photos": booking.after_photos,
+    }
+
+
+@router.get(
+    "/providers/me/bookings/{booking_id}/photos",
+    summary="Get before and after service photos for a booking",
+)
+def get_service_photos(
+    booking_id: uuid.UUID,
+    current_user: AuthUser = Depends(require_provider),
+    db: Session = Depends(get_db),
+):
+    booking = db.query(Booking).filter(
+        Booking.id == booking_id,
+        Booking.provider_id == current_user.id
+    ).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found or not assigned to you")
+
+    return {
+        "booking_id": str(booking.id),
+        "before_photos": booking.before_photos or [],
+        "after_photos": booking.after_photos or [],
+    }
 
 
 
