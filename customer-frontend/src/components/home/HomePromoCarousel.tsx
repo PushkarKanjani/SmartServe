@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, 
@@ -128,7 +129,123 @@ export const PROMO_SLIDES: PromoSlideData[] = [
   }
 ];
 
+
+const SLIDE_TRANSLATIONS: Record<string, Record<string, { categoryBadge: string; headline: string; supportingText: string; ctaText: string; featurePill: string; discountTag?: string }>> = {
+  'ac-repair': {
+    hi: {
+      categoryBadge: 'एसी व उपकरण मरम्मत',
+      headline: 'एसी कूलिंग नहीं कर रहा?',
+      supportingText: 'त्वरित जांच, असली पार्ट्स और पारदर्शी अग्रिम दरों के साथ घर बैठे विशेषज्ञ तकनीशियन।',
+      ctaText: 'अभी बुक करें',
+      featurePill: '⚡ 45-मिनट में आगमन'
+    },
+    gu: {
+      categoryBadge: 'એસી અને ઉપકરણ રિપેરિંગ',
+      headline: 'એસી કૂલિંગ નથી કરતું?',
+      supportingText: 'ઝડપી તપાસ, અસલી પાર્ટ્સ અને પારદર્શક ભાવો સાથે તમારા ઘરઆંગણે નિષ્ણાત ટેકનિશિયન.',
+      ctaText: 'હમણાં બુક કરો',
+      featurePill: '⚡ 45-મિનિટમાં આગમન'
+    }
+  },
+  'discount-cleaning': {
+    hi: {
+      categoryBadge: 'सीमित समय ऑफर',
+      discountTag: '20% छूट',
+      headline: 'घर की डीप क्लीनिंग',
+      supportingText: 'ताजा स्वच्छ घर। बेहतर मूल्य। प्रमाणित विशेषज्ञों द्वारा आपके घर पर संपूर्ण डीप सफाई।',
+      ctaText: 'अभी बुक करें',
+      featurePill: '✨ 20% सफाई छूट'
+    },
+    gu: {
+      categoryBadge: 'મર્યાદિત સમયની ઑફર',
+      discountTag: '20% છૂટ',
+      headline: 'ઘરની ડીપ સફાઈ',
+      supportingText: 'તાજગીસભર સ્વચ્છ ઘર. ઉત્તમ ભાવ. પ્રમાણિત નિષ્ણાતો દ્વારા તમારા ઘરઆંગણે પ્રોફેશનલ ડીપ સફાઈ.',
+      ctaText: 'હમણાં બુક કરો',
+      featurePill: '✨ 20% સફાઈ છૂટ'
+    }
+  },
+  'salon-beauty': {
+    hi: {
+      categoryBadge: 'सैलून और ब्यूटी',
+      headline: 'घर पर पार्लर व सैलून अनुभव',
+      supportingText: 'लक्जरी पार्लर फेशियल, हेयर स्टाइलिंग, मेनिक्योर व स्पा के लिए विश्वसनीय ब्यूटी प्रोफेशनल्स बुक करें।',
+      ctaText: 'सेवाएं देखें',
+      featurePill: '🌿 सीलबंद सिंगल-यूज किट'
+    },
+    gu: {
+      categoryBadge: 'સલૂન અને બ્યુટી',
+      headline: 'ઘરે સલૂન અને પાર્લરનો અનુભવ',
+      supportingText: 'લક્ઝરી પાર્લર ફેશિયલ, હેર સ્ટાઇલિંગ, મેનિક્યોર અને સ્પા માટે વિશ્વસનીય બ્યુટી નિષ્ણાતો બુક કરો.',
+      ctaText: 'સેવાઓ જુઓ',
+      featurePill: '🌿 સીલબંધ સિંગલ-યુઝ કીટ'
+    }
+  },
+  'discount-first-booking': {
+    hi: {
+      categoryBadge: 'वेलकम ऑफर',
+      discountTag: '₹200 छूट',
+      headline: 'अपनी पहली बुकिंग पर',
+      supportingText: 'विशेष पहली बार की बचत के साथ सभी श्रेणियों में सत्यापित डोरस्टेप सेवाओं का अनुभव लें।',
+      ctaText: 'ऑफर पाएं',
+      featurePill: '🎁 कोड: SMART200'
+    },
+    gu: {
+      categoryBadge: 'સ્વાગત ઑફર',
+      discountTag: '₹200 છૂટ',
+      headline: 'તમારી પ્રથમ બુકિંગ પર',
+      supportingText: 'ખાસ પ્રથમ વખતના ડિસ્કાઉન્ટ સાથે તમામ શ્રેણીઓમાં પ્રમાણિત સેવાઓનો લાભ લો.',
+      ctaText: 'ઑફર મેળવો',
+      featurePill: '🎁 કોડ: SMART200'
+    }
+  },
+  'plumbing-electrical': {
+    hi: {
+      categoryBadge: 'प्लंबिंग व इलेक्ट्रिकल',
+      headline: 'कुछ रिपेयर करवाना है?',
+      supportingText: 'रोजमर्रा की मरम्मत, वायरिंग, लीकेज और स्विच फिटिंग के लिए घर बैठे सत्यापित विशेषज्ञ प्राप्त करें।',
+      ctaText: 'सहायता लें',
+      featurePill: '🛡️ 30-दिन कार्य वारंटी'
+    },
+    gu: {
+      categoryBadge: 'પ્લમ્બિંગ અને ઇલેક્ટ્રિકલ',
+      headline: 'કંઈક રિપેર કરાવવું છે?',
+      supportingText: 'રોજિંદા સમારકામ, વાયરિંગ, લિકેજ અને સ્વિચ ફિટિંગ માટે તમારા ઘરે પ્રમાણિત નિષ્ણાતો મેળવો.',
+      ctaText: 'મદદ મેળવો',
+      featurePill: '🛡️ 30-દિવસ કાર્ય વૉરંટી'
+    }
+  },
+  'discount-selected': {
+    hi: {
+      categoryBadge: 'स्मार्टसर्व स्पेशल',
+      discountTag: '15% तक छूट',
+      headline: 'चुनिंदा घरेलू सेवाओं पर',
+      supportingText: 'पेस्ट कंट्रोल, वॉल पेंटिंग और उपकरण रखरखाव पैकेज पर सीमित समय के स्मार्टसर्व स्पेशल ऑफर्स।',
+      ctaText: 'ऑफर्स देखें',
+      featurePill: '🏷️ सीमित समय ऑफर'
+    },
+    gu: {
+      categoryBadge: 'સ્માર્ટસર્વ સ્પેશિયલ',
+      discountTag: '15% સુધી છૂટ',
+      headline: 'પસંદગીની ઘર સેવાઓ પર',
+      supportingText: 'પેસ્ટ કંટ્રોલ, વોલ પેઇન્ટિંગ અને એપ્લાયન્સ મેન્ટેનન્સ પેકેજ પર સ્માર્ટસર્વ સ્પેશિયલ ઑફર્સ.',
+      ctaText: 'ઑફર્સ જુઓ',
+      featurePill: '🏷️ મર્યાદિત સમય ઑફર્સ'
+    }
+  }
+};
+
+
+const getSlideTranslation = (slideId: string, lang: string) => {
+  if (lang === 'hi' || lang === 'gu') {
+    return SLIDE_TRANSLATIONS[slideId]?.[lang];
+  }
+  return undefined;
+};
+
 export const HomePromoCarousel: React.FC = () => {
+  const { i18n } = useTranslation();
+  const lang = (i18n.language || 'en').slice(0, 2);
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -217,13 +334,20 @@ export const HomePromoCarousel: React.FC = () => {
           {PROMO_SLIDES.map((slide, index) => {
             const Icon = slide.badgeIcon;
             const isCurrent = currentIndex === index;
+            const tr = getSlideTranslation(slide.id, lang);
+            const catBadge = tr?.categoryBadge || slide.categoryBadge;
+            const featurePill = tr?.featurePill || slide.featurePill;
+            const discountTag = tr?.discountTag || slide.discountTag;
+            const headline = tr?.headline || slide.headline;
+            const supportingText = tr?.supportingText || slide.supportingText;
+            const ctaText = tr?.ctaText || slide.ctaText;
 
             return (
               <div
                 key={slide.id}
                 role="group"
                 aria-roledescription="slide"
-                aria-label={`Slide ${index + 1} of ${totalSlides}: ${slide.categoryBadge}`}
+                aria-label={`Slide ${index + 1} of ${totalSlides}: ${catBadge}`}
                 aria-hidden={!isCurrent}
                 style={{ backgroundColor: '#1F2B22' }}
                 className="w-full flex-shrink-0 relative overflow-hidden"
@@ -239,7 +363,7 @@ export const HomePromoCarousel: React.FC = () => {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-white/12 text-white border border-white/20 backdrop-blur-xs shadow-2xs">
                           <Icon className="w-3.5 h-3.5 text-[#C9A15A]" />
-                          <span>{slide.categoryBadge}</span>
+                          <span>{catBadge}</span>
                         </span>
 
                         {slide.promoCode && (
@@ -251,7 +375,7 @@ export const HomePromoCarousel: React.FC = () => {
                         {!slide.promoCode && (
                           <span className="text-[11px] font-semibold text-white/90 bg-black/20 px-2.5 py-0.5 rounded-full border border-white/15 hidden sm:inline-flex items-center gap-1">
                             <Clock className="w-3 h-3 text-[#C9A15A]" />
-                            <span>{slide.featurePill}</span>
+                            <span>{featurePill}</span>
                           </span>
                         )}
                       </div>
@@ -260,21 +384,21 @@ export const HomePromoCarousel: React.FC = () => {
                       {slide.isDiscount ? (
                         <div className="space-y-1">
                           <div className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-[#C9A15A] leading-none drop-shadow-xs">
-                            {slide.discountTag}
+                            {discountTag}
                           </div>
                           <h2 className="font-serif text-xl sm:text-2xl lg:text-3xl font-normal tracking-tight text-white leading-tight">
-                            {slide.headline}
+                            {headline}
                           </h2>
                         </div>
                       ) : (
                         <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl font-normal tracking-tight text-white leading-[1.18]">
-                          {slide.headline}
+                          {headline}
                         </h2>
                       )}
 
                       {/* Supporting Promotional Text: Soft Warm White */}
                       <p className="text-xs sm:text-sm font-normal text-[#FAF7F0]/85 leading-relaxed max-w-lg">
-                        {slide.supportingText}
+                        {supportingText}
                       </p>
 
                       {/* Mobile Image: Compact clean banner on mobile */}
@@ -308,7 +432,7 @@ export const HomePromoCarousel: React.FC = () => {
                           onClick={() => navigate(slide.targetUrl)}
                           className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm tracking-wide bg-[#C9A15A] hover:bg-[#DFBA73] text-[#1F2B22] shadow-sm hover:shadow-md transition-all cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
                         >
-                          <span>{slide.ctaText}</span>
+                          <span>{ctaText}</span>
                           <ArrowRight className="w-4 h-4 text-[#1F2B22]" />
                         </button>
 
@@ -337,7 +461,7 @@ export const HomePromoCarousel: React.FC = () => {
                         {/* Overlay floating badge */}
                         <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-xs font-semibold text-white drop-shadow-sm">
                           <span className="bg-black/50 backdrop-blur-xs px-2.5 py-0.5 rounded-md border border-white/20 text-[11px]">
-                            {slide.discountTag ? `🏷️ ${slide.discountTag}` : slide.featurePill}
+                            {slide.discountTag ? `🏷️ ${discountTag}` : slide.featurePill}
                           </span>
                           <span className="bg-[#1F2B22]/90 backdrop-blur-xs px-2.5 py-0.5 rounded-md text-[#DFBA73] font-bold border border-[#C9A15A]/30 text-[11px]">
                             {slide.ratingText}
@@ -399,7 +523,7 @@ export const HomePromoCarousel: React.FC = () => {
               type="button"
               role="tab"
               aria-selected={isActive}
-              aria-label={`Go to slide ${idx + 1}: ${slide.categoryBadge}`}
+              aria-label={`Go to slide ${idx + 1}: ${getSlideTranslation(slide.id, lang)?.categoryBadge || slide.categoryBadge}`}
               onClick={() => setCurrentIndex(idx)}
               style={{
                 width: isActive ? '8px' : '6px',

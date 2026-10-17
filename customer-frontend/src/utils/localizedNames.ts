@@ -236,6 +236,80 @@ export function getLocalizedSubcategory(subcategoryName?: string | null): string
   return clean;
 }
 
+// 3. Common Service Word Translators
+export const WORD_TRANSLATIONS: Record<string, { hi: string; gu: string }> = {
+  'face': { hi: 'फेस', gu: 'ફેસ' },
+  'facial': { hi: 'फेशियल', gu: 'ફેશિયલ' },
+  'classic': { hi: 'क्लासिक', gu: 'ક્લાસિક' },
+  'fruit': { hi: 'फ्रूट', gu: 'ફ્રૂટ' },
+  'gold': { hi: 'गोल्ड', gu: 'ગોલ્ડ' },
+  'diamond': { hi: 'डायमंड', gu: 'ડાયમંડ' },
+  'charcoal': { hi: 'चारकोल', gu: 'ચારકોલ' },
+  'herbal': { hi: 'हर्बल', gu: 'હર્બલ' },
+  'hydrating': { hi: 'हाइड्रेटिंग', gu: 'હાઇડ્રેટિંગ' },
+  'korean': { hi: 'कोरियन', gu: 'કોરિયન' },
+  'detan': { hi: 'डी-टैन', gu: 'ડી-ટેન' },
+  'de-tan': { hi: 'डी-टैन', gu: 'ડી-ટેન' },
+  'bleach': { hi: 'ब्लीच', gu: 'બ્લીચ' },
+  'cleanup': { hi: 'क्लीनअप', gu: 'ક્લીનઅપ' },
+  'clean-up': { hi: 'क्लीनअप', gu: 'ક્લીનઅપ' },
+  'anti-aging': { hi: 'एंटी-एजिंग', gu: 'એન્ટી-એજિંગ' },
+  'anti aging': { hi: 'एंटी-एजिंग', gu: 'એન્ટી-એજિંગ' },
+  'brightening': { hi: 'ब्राइटनिंग', gu: 'બ્રાઇટનિંગ' },
+  'skin brightening': { hi: 'स्किन ब्राइटनिंग', gu: 'સ્કિન બ્રાઇટનિંગ' },
+  'whitening': { hi: 'व्हाइटनिंग', gu: 'વ્હાઇટનિંગ' },
+  'glow': { hi: 'ग्लो', gu: 'ગ્લો' },
+  'express': { hi: 'एक्सप्रेस', gu: 'એક્સપ્રેસ' },
+  'premium': { hi: 'प्रीमियम', gu: 'પ્રીમિયમ' },
+  'standard': { hi: 'स्टैंडर्ड', gu: 'સ્ટાન્ડર્ડ' },
+  'luxury': { hi: 'लक्जरी', gu: 'લક્ઝરી' },
+  'deep': { hi: 'डीप', gu: 'ડીપ' },
+  'full': { hi: 'फुल', gu: 'સંપૂર્ણ' },
+  'home': { hi: 'होम', gu: 'ઘર' },
+  'house': { hi: 'हाउस', gu: 'હાઉસ' },
+  'sofa': { hi: 'सोफा', gu: 'સોફા' },
+  'carpet': { hi: 'कारपेट', gu: 'કાર્પેટ' },
+  'cushion': { hi: 'कुशन', gu: 'કુશન' },
+  'mattress': { hi: 'गद्दे (मैट्रेस)', gu: 'ગાદલા (મેટ્રેસ)' },
+  'curtain': { hi: 'पर्दे (कर्टेन)', gu: 'પડદા' },
+  'kitchen': { hi: 'किचन', gu: 'રસોડું' },
+  'bathroom': { hi: 'बाथरूम', gu: 'બાથરૂમ' },
+  'balcony': { hi: 'बालकनी', gu: 'બાલ્કની' },
+  'ac': { hi: 'एसी', gu: 'એસી' },
+  'fan': { hi: 'पंखा', gu: 'પંખો' },
+  'switch': { hi: 'स्विच', gu: 'સ્વિચ' },
+  'socket': { hi: 'सॉकेट', gu: 'સોકેટ' },
+  'wire': { hi: 'वायरिंग', gu: 'વાયરિંગ' },
+  'wiring': { hi: 'वायरिंग', gu: 'વાયરિંગ' },
+  'tap': { hi: 'नल (टैप)', gu: 'નળ (ટેપ)' },
+  'pipe': { hi: 'पाइप', gu: 'પાઇપ' },
+  'drain': { hi: 'ड्रेन', gu: 'ડ્રેન' },
+  'leakage': { hi: 'रिसाव (लीकेज)', gu: 'લિકેજ' },
+  'tank': { hi: 'पानी की टंकी', gu: 'પાણીની ટાંકી' },
+  'pest': { hi: 'पेस्ट', gu: 'પેસ્ટ' },
+  'hair': { hi: 'हेयर', gu: 'હેર' },
+  'beard': { hi: 'दाढ़ी', gu: 'દાઢી' },
+  'head': { hi: 'हेड', gu: 'હેડ' },
+  'body': { hi: 'बॉडी', gu: 'બોડી' },
+  'nail': { hi: 'नाखून', gu: 'નખ' }
+};
+
+export function localizePrefix(prefix: string, lang: string): string {
+  if (!prefix) return '';
+  const lower = prefix.trim().toLowerCase();
+  const direct = WORD_TRANSLATIONS[lower];
+  if (direct) {
+    return lang === 'hi' ? direct.hi : direct.gu;
+  }
+  const words = prefix.trim().split(/\s+/);
+  const translated = words.map((w) => {
+    const wDirect = WORD_TRANSLATIONS[w.toLowerCase()];
+    if (wDirect) return lang === 'hi' ? wDirect.hi : wDirect.gu;
+    return w;
+  });
+  return translated.join(' ');
+}
+
 /**
  * Intelligent Service Name Translator:
  * 1. Checks exact dictionary entry
@@ -257,7 +331,72 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     if (lang === 'gu' && direct.gu) return direct.gu;
   }
 
-  // 2. Pattern: "[N] BHK Cleaning" or "[N] BHK [Variation] Cleaning"
+  // 2. Specific standalone modifiers
+  if (/^detan(\s+facial)?$/i.test(trimmed) || /^de-tan(\s+facial)?$/i.test(trimmed)) {
+    return lang === 'hi' ? 'डी-टैन फेशियल' : 'ડી-ટેન ફેશિયલ';
+  }
+  if (lower === 'hydrating') {
+    return lang === 'hi' ? 'हाइड्रेटिंग फेशियल' : 'હાઇડ્રેટિંગ ફેશિયલ';
+  }
+  if (lower === 'korean') {
+    return lang === 'hi' ? 'कोरियन फेशियल' : 'કોરિયન ફેશિયલ';
+  }
+
+  // 3. Prefix Modifiers
+  if (lower.startsWith('hydrating')) {
+    const rest = getLocalizedServiceName(trimmed.slice(9).trim());
+    return lang === 'hi' ? `हाइड्रेटिंग ${rest}` : `હાઇડ્રેટિંગ ${rest}`;
+  }
+  if (lower.startsWith('korean')) {
+    const rest = getLocalizedServiceName(trimmed.slice(6).trim());
+    return lang === 'hi' ? `कोरियन ${rest}` : `કોરિયન ${rest}`;
+  }
+  if (lower.startsWith('anti-aging') || lower.startsWith('anti aging')) {
+    const rest = getLocalizedServiceName(trimmed.replace(/^anti[- ]aging/i, '').trim());
+    return lang === 'hi' ? `एंटी-एजिंग ${rest}` : `એન્ટી-એજિંગ ${rest}`;
+  }
+  if (lower.startsWith('skin brightening')) {
+    const rest = getLocalizedServiceName(trimmed.slice(16).trim());
+    return lang === 'hi' ? `स्किन ब्राइटनिंग ${rest}` : `સ્કિન બ્રાઇટનિંગ ${rest}`;
+  }
+  if (lower.startsWith('charcoal')) {
+    const rest = getLocalizedServiceName(trimmed.slice(8).trim());
+    return lang === 'hi' ? `चारकोल ${rest}` : `ચારકોલ ${rest}`;
+  }
+  if (lower.startsWith('herbal')) {
+    const rest = getLocalizedServiceName(trimmed.slice(6).trim());
+    return lang === 'hi' ? `हर्बल ${rest}` : `હર્બલ ${rest}`;
+  }
+  if (lower.startsWith('gold')) {
+    const rest = getLocalizedServiceName(trimmed.slice(4).trim());
+    return lang === 'hi' ? `गोल्ड ${rest}` : `ગોલ્ડ ${rest}`;
+  }
+  if (lower.startsWith('diamond')) {
+    const rest = getLocalizedServiceName(trimmed.slice(7).trim());
+    return lang === 'hi' ? `डायमंड ${rest}` : `ડાયમંડ ${rest}`;
+  }
+  if (lower.startsWith('fruit')) {
+    const rest = getLocalizedServiceName(trimmed.slice(5).trim());
+    return lang === 'hi' ? `फ्रूट ${rest}` : `ફ્રૂટ ${rest}`;
+  }
+  if (lower.startsWith('express')) {
+    const rest = getLocalizedServiceName(trimmed.slice(7).trim());
+    return lang === 'hi' ? `एक्सप्रेस ${rest}` : `એક્સપ્રેસ ${rest}`;
+  }
+  if (lower.startsWith('premium')) {
+    const rest = getLocalizedServiceName(trimmed.slice(7).trim());
+    return lang === 'hi' ? `प्रीमियम ${rest}` : `પ્રીમિયમ ${rest}`;
+  }
+  if (lower.startsWith('standard')) {
+    const rest = getLocalizedServiceName(trimmed.slice(8).trim());
+    return lang === 'hi' ? `स्टैंडर्ड ${rest}` : `સ્ટાન્ડર્ડ ${rest}`;
+  }
+  if (lower.startsWith('luxury')) {
+    const rest = getLocalizedServiceName(trimmed.slice(6).trim());
+    return lang === 'hi' ? `लक्जरी ${rest}` : `લક્ઝરી ${rest}`;
+  }
+
+  // 4. Pattern: "[N] BHK Cleaning" or "[N] BHK [Variation] Cleaning"
   const bhkMatch = trimmed.match(/^(\d+)\s*BHK\s*(.*?)Cleaning$/i);
   if (bhkMatch && bhkMatch[1]) {
     const num = bhkMatch[1];
@@ -271,7 +410,7 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     return lang === 'hi' ? `${num} बीएचके ${modifier} सफाई` : `${num} બીએચકે ${modifier} સફાઈ`;
   }
 
-  // 3. Pattern: "[Subcategory] Service Variation [N]"
+  // 5. Pattern: "[Subcategory] Service Variation [N]"
   const varMatch = trimmed.match(/(.*?)Service Variation\s*(\d+)/i);
   if (varMatch && varMatch[1] && varMatch[2]) {
     const base = getLocalizedSubcategory(varMatch[1]);
@@ -279,56 +418,224 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     return lang === 'hi' ? `${base} सेवा विकल्प ${num}` : `${base} સેવા વિકલ્પ ${num}`;
   }
 
-  // 4. Common keywords & suffix transliterations
+  // 6. Common keywords & suffix transliterations with localized prefix
   if (lower.includes('facial')) {
     const prefix = trimmed.replace(/facial/gi, '').trim();
     if (!prefix) return lang === 'hi' ? 'फेशियल' : 'ફેશિયલ';
-    if (prefix.toLowerCase() === 'classic') return lang === 'hi' ? 'क्लासिक फेशियल' : 'ક્લાસિક ફેશિયલ';
-    if (prefix.toLowerCase() === 'fruit') return lang === 'hi' ? 'फ्रूट फेशियल' : 'ફ્રૂટ ફેશિયલ';
-    if (prefix.toLowerCase() === 'gold') return lang === 'hi' ? 'गोल्ड फेशियल' : 'ગોલ્ડ ફેશિયલ';
-    if (prefix.toLowerCase() === 'diamond') return lang === 'hi' ? 'डायमंड फेशियल' : 'ડાયમંડ ફેશિયલ';
-    return lang === 'hi' ? `${prefix} फेशियल` : `${prefix} ફેશિયલ`;
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} फेशियल` : `${locPrefix} ફેશિયલ`;
   }
   if (lower.includes('cleanup')) {
     const prefix = trimmed.replace(/cleanup/gi, '').trim();
-    return lang === 'hi' ? `${prefix} क्लीनअप`.trim() : `${prefix} ક્લીનઅપ`.trim();
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} क्लीनअप.trim()` : `${locPrefix} ક્લીનઅપ.trim()`;
   }
   if (lower.includes('massage')) {
     const prefix = trimmed.replace(/massage/gi, '').trim();
-    return lang === 'hi' ? `${prefix} मसाज`.trim() : `${prefix} મસાજ`.trim();
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} मसाज.trim()` : `${locPrefix} મસાજ.trim()`;
   }
   if (lower.includes('waxing')) {
     const prefix = trimmed.replace(/waxing/gi, '').trim();
-    return lang === 'hi' ? `${prefix} वैक्सिंग`.trim() : `${prefix} વેક્સિંગ`.trim();
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} वैक्सिंग.trim()` : `${locPrefix} વેક્સિંગ.trim()`;
   }
   if (lower.includes('manicure')) {
     const prefix = trimmed.replace(/manicure/gi, '').trim();
-    return lang === 'hi' ? `${prefix} मेनिक्योर`.trim() : `${prefix} મેનિક્યોર`.trim();
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} मेनिक्योर.trim()` : `${locPrefix} મેનિક્યોર.trim()`;
   }
   if (lower.includes('pedicure')) {
     const prefix = trimmed.replace(/pedicure/gi, '').trim();
-    return lang === 'hi' ? `${prefix} पेदिक्योर`.trim() : `${prefix} પેડિક્યોર`.trim();
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} पेदिक्योर.trim()` : `${locPrefix} પેડિક્યોર.trim()`;
   }
   if (lower.includes('haircut')) {
     const prefix = trimmed.replace(/haircut/gi, '').trim();
-    return lang === 'hi' ? `${prefix} हेयरकट`.trim() : `${prefix} હેરકટ`.trim();
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} हेयरकट.trim()` : `${locPrefix} હેરકટ.trim()`;
   }
   if (lower.endsWith('cleaning')) {
     const prefix = trimmed.slice(0, -8).trim();
-    return lang === 'hi' ? `${prefix} सफाई` : `${prefix} સફાઈ`;
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} सफाई` : `${locPrefix} સફાઈ`;
   }
   if (lower.endsWith('repair')) {
     const prefix = trimmed.slice(0, -6).trim();
-    return lang === 'hi' ? `${prefix} मरम्मत` : `${prefix} રિપેરિંગ`;
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} मरम्मत` : `${locPrefix} રિપેરિંગ`;
   }
   if (lower.endsWith('installation')) {
     const prefix = trimmed.slice(0, -12).trim();
-    return lang === 'hi' ? `${prefix} इंस्टॉलेशन` : `${prefix} ઇન્સ્ટોલેશન`;
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} इंस्टॉलेशन` : `${locPrefix} ઇન્સ્ટોલેશન`;
   }
   if (lower.endsWith('service')) {
     const prefix = trimmed.slice(0, -7).trim();
-    return lang === 'hi' ? `${prefix} सर्विस` : `${prefix} સર્વિસ`;
+    const locPrefix = localizePrefix(prefix, lang);
+    return lang === 'hi' ? `${locPrefix} सर्विस` : `${locPrefix} સર્વિસ`;
   }
 
   return serviceName;
+}
+
+// 4. Feature / Inclusion Checklist Phrases (High Frequency Home Service Operations)
+export const FEATURE_TRANSLATIONS: Record<string, { hi: string; gu: string }> = {
+  // Beauty & Facial Features
+  'skin cleansing': { hi: 'त्वचा की सफाई (क्लींजिंग)', gu: 'ત્વચા સફાઈ (ક્લીનિંગ)' },
+  'patch test': { hi: 'पैच टेस्ट', gu: 'પેચ ટેસ્ટ' },
+  'whitehead extraction': { hi: 'व्हाइटहेड निष्कासन', gu: 'વ્હાઇટહેડ નિષ્કાસન' },
+  'blackhead extraction': { hi: 'ब्लैकहेड निष्कासन', gu: 'બ્લેકહેડ નિષ્કાસન' },
+  'exfoliating scrub application': { hi: 'एक्सफ़ोलीएटिंग स्क्रब', gu: 'એક્સફોલિએટિંગ સ્ક્રબ' },
+  'skin type analysis': { hi: 'त्वचा विश्लेषण', gu: 'ત્વચા વિશ્લેષણ' },
+  'lymphatic drainage strokes': { hi: 'लिम्फैटिक मसाज स्ट्रोक', gu: 'મસાજ સ્ટ્રોક' },
+  'pack drying time monitoring': { hi: 'फेस पैक मॉनिटरिंग', gu: 'ફેસ પેક મોનિટરિંગ' },
+  'neck massage': { hi: 'गर्दन की मसाज', gu: 'ગરદન મસાજ' },
+  'gua sha massage': { hi: 'गुआ शा मसाज', gu: 'ગુઆ શા મસાજ' },
+  'pre cleansing': { hi: 'प्री-क्लींजिंग', gu: 'પ્રી-ક્લીનિંગ' },
+  'steam application': { hi: 'स्टीम वेपोराइज़र', gu: 'સ્ટીમ એપ્લિકેશન' },
+  'toning treatment': { hi: 'टोनिंग ट्रीटमेंट', gu: 'ટોનિંગ ટ્રીટમેન્ટ' },
+  'serum infusion': { hi: 'सीरम इन्फ्यूजन', gu: 'સીરમ ઇન્ફ્યુઝન' },
+  'face mask': { hi: 'फेस मास्क', gu: 'ફેસ માસ્ક' },
+  'moisturizer application': { hi: 'मॉइस्चराइज़र एप्लीकेशन', gu: 'મોઇશ્ચરાઇઝર' },
+  'sunscreen shield': { hi: 'सनस्क्रीन शील्ड', gu: 'સનસ્ક્રીન શિલ્ડ' },
+  'hair wash': { hi: 'हेयर वॉश', gu: 'હેર વોશ' },
+  'blow dry': { hi: 'ब्लो ड्राई', gu: 'બ્લો ડ્રાય' },
+  'split end trim': { hi: 'स्प्लिट एंड ट्रिम', gu: 'સ્પ્લિટ એન્ડ ટ્રિમ' },
+  'cuticle care': { hi: 'क्यूटिकल केयर', gu: 'ક્યુટિકલ કેર' },
+  'nail shaping': { hi: 'नाखून शेपिंग व पॉलिश', gu: 'નખ શેપિંગ અને પોલિશ' },
+
+  // Cleaning & Home Improvement Features
+  'final dry wipe': { hi: 'अंतिम ड्राई वाइप', gu: 'અંતિમ ડ્રાય વાઇપ' },
+  'furniture exterior wiping': { hi: 'फर्नीचर बाहरी सफाई', gu: 'ફર્નિચર સફાઈ' },
+  'equipment stain assessment': { hi: 'उपकरण दाग जांच', gu: 'સાધન ડાઘ તપાસ' },
+  'service area cleanup': { hi: 'सर्विस एरिया सफाई', gu: 'સર્વિસ એરિયા સફાઈ' },
+  'door handle sanitization': { hi: 'डोर हैंडल सैनिटाइजेशन', gu: 'ડોર હેન્ડલ સેનિટાઇઝેશન' },
+  'kitchen counter degreasing': { hi: 'किचन काउंटर डीग्रीजिंग', gu: 'રસોડા કાઉન્ટર ડીગ્રીઝિંગ' },
+  'dry dusting of ceiling': { hi: 'छत की डस्टिंग', gu: 'છતની ડસ્ટિંગ' },
+  'area equipment setup': { hi: 'उपकरण सेटअप', gu: 'સાધન સેટઅપ' },
+  'material preparation': { hi: 'सामग्री तैयारी', gu: 'સામગ્રી તૈયારી' },
+  'floor deep mopping': { hi: 'फर्श डीप मोपिंग', gu: 'ફ્લોર ડીપ મોપિંગ' },
+  'bathroom tile scrubbing': { hi: 'बाथरूम टाइल स्क्रबिंग', gu: 'બાથરૂમ ટાઇલ્સ સ્ક્રબિંગ' },
+  'mirror glass polishing': { hi: 'दर्पण व कांच पॉलिशिंग', gu: 'અરીસા અને કાચ પોલિશિંગ' },
+  'sink drain cleaning': { hi: 'सिंक ड्रेन सफाई', gu: 'સિંક ડ્રેન સફાઈ' },
+  'cobweb removal': { hi: 'मकड़ी के जाले हटाना', gu: 'કરોળિયાના જાળા હટાવવા' },
+  'trash bin emptying': { hi: 'कचरा बिन खाली करना', gu: 'કચરાપેટી ખાલી કરવી' },
+  'carpet vacuuming': { hi: 'कारपेट वैक्यूमिंग', gu: 'કાર્પેટ વેક્યુમિંગ' },
+  'sofa vacuuming': { hi: 'सोफा वैक्यूमिंग', gu: 'સોફા વેક્યુમિંગ' },
+
+  // Repair, AC, Electrical & Plumbing Features
+  'gas pressure check': { hi: 'गैस प्रेशर जांच', gu: 'ગેસ પ્રેશર તપાસ' },
+  'cooling performance test': { hi: 'कूलिंग परफॉर्मेंस टेस्ट', gu: 'કૂલિંગ પરફોર્મન્સ ટેસ્ટ' },
+  'coil cleaning': { hi: 'कॉइल सफाई', gu: 'કોઈલ સફાઈ' },
+  'filter mesh wash': { hi: 'फिल्टर जाली धुलाई', gu: 'ફિલ્ટર જાળી સફાઈ' },
+  'wiring continuity check': { hi: 'वायरिंग निरंतरता टेस्ट', gu: 'વાયરિંગ ટેસ્ટિંગ' },
+  'voltage assessment': { hi: 'वोल्टेज जांच', gu: 'વોલ્ટેજ તપાસ' },
+  'leakage inspection': { hi: 'रिसाव (लीकेज) जांच', gu: 'લિકેજ તપાસ' },
+  'pipe fitting verification': { hi: 'पाइप फिटिंग जांच', gu: 'પાઇપ ફિટિંગ તપાસ' },
+  'safety grounding test': { hi: 'सुरक्षा ग्राउंडिंग टेस्ट', gu: 'સુરક્ષા અર્થિંગ ટેસ્ટ' }
+};
+
+export function getLocalizedFeature(featureText?: string | null): string {
+  if (!featureText) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return featureText;
+
+  const norm = normalizeKey(featureText);
+  const entry = FEATURE_TRANSLATIONS[norm];
+  if (entry) {
+    if (lang === 'hi' && entry.hi) return entry.hi;
+    if (lang === 'gu' && entry.gu) return entry.gu;
+  }
+
+  // Fallback keyword transliterations
+  if (norm.includes('cleansing') || norm.includes('cleaning')) {
+    return lang === 'hi' ? `${featureText.replace(/cleansing|cleaning/gi, 'सफाई')}` : `${featureText.replace(/cleansing|cleaning/gi, 'સફાઈ')}`;
+  }
+  if (norm.includes('massage')) {
+    return lang === 'hi' ? `${featureText.replace(/massage/gi, 'मसाज')}` : `${featureText.replace(/massage/gi, 'મસાજ')}`;
+  }
+  if (norm.includes('scrub')) {
+    return lang === 'hi' ? `${featureText.replace(/scrub/gi, 'स्क्रब')}` : `${featureText.replace(/scrub/gi, 'સ્ક્રબ')}`;
+  }
+  if (norm.includes('test')) {
+    return lang === 'hi' ? `${featureText.replace(/test/gi, 'टेस्ट')}` : `${featureText.replace(/test/gi, 'ટેસ્ટ')}`;
+  }
+  if (norm.includes('wipe') || norm.includes('wiping')) {
+    return lang === 'hi' ? `${featureText.replace(/wiping|wipe/gi, 'वाइप')}` : `${featureText.replace(/wiping|wipe/gi, 'વાઇપ')}`;
+  }
+  if (norm.includes('inspection') || norm.includes('check')) {
+    return lang === 'hi' ? `${featureText.replace(/inspection|check/gi, 'जांच')}` : `${featureText.replace(/inspection|check/gi, 'તપાસ')}`;
+  }
+
+  return featureText;
+}
+
+// 5. Intelligent Service Description Localizer
+export function getLocalizedDescription(description?: string | null): string {
+  if (!description) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return description;
+
+  const lower = description.toLowerCase();
+
+  if (lower.includes('rapid facial brightening treatment')) {
+    return lang === 'hi'
+      ? 'त्वचा की प्राकृतिक चमक बढ़ाने और चेहरे के रोमछिद्रों को साफ करने के लिए एक त्वरित व प्रभावी फेशियल ट्रीटमेंट।'
+      : 'ત્વચાની કુદરતી ચમક વધારવા અને ચહેરાના વાળને અનુકૂળ બનાવવા માટે એક ઝડપી અને અસરકારક ફેશિયલ ટ્રીટમેન્ટ.';
+  }
+  if (lower.includes('all-around rejuvenating facial') || lower.includes('all around rejuvenating facial')) {
+    return lang === 'hi'
+      ? 'सभी प्रकार की त्वचा के लिए उपयुक्त पुनर्योजी फेशियल। यह सुस्त व थकी हुई त्वचा को गहराई से तरोताजा करता है।'
+      : 'તમામ પ્રકારની ત્વચા માટે યોગ્ય પાવન ફેશિયલ. તે નિર્જીવ અને થાકેલી ત્વચાને ઊંડાણપૂર્વક તાજગી આપે છે.';
+  }
+  if (lower.includes('quick, highly effective skin-refreshing') || lower.includes('skin refreshing service designed')) {
+    return lang === 'hi'
+      ? 'व्यस्त दिनचर्या और नियमित देखभाल के लिए डिज़ाइन की गई त्वरित व अत्यधिक प्रभावी त्वचा ताजगी सेवा।'
+      : 'વ્યસ્ત દિનચર્યા અને નિયમિત જાળવણી માટે રચાયેલ ઝડપી અને અત્યંત અસરકારક ત્વચા તાજગી સેવા.';
+  }
+  if (lower.includes('sun-damage reversal') || lower.includes('sun damage reversal') || lower.includes('melanin buildup')) {
+    return lang === 'hi'
+      ? 'धूप से होने वाली टैनिंग को दूर करने और त्वचा के प्राकृतिक निखार को पुनर्स्थापित करने वाला प्रभावी डी-टैन उपचार।'
+      : 'સૂર્યપ્રકાશથી થતા ટેનિંગને દૂર કરવા અને ત્વચાના કુદરતી નિખારને પાછો મેળવવા માટે અસરકારક ડી-ટેન ટ્રીટમેન્ટ.';
+  }
+  if (lower.includes('moisture-infusion') || lower.includes('moisture infusion') || lower.includes('dehydrated')) {
+    return lang === 'hi'
+      ? 'रूखी और बेजान त्वचा के लिए गहन नमी युक्त हाइड्रेटिंग फेशियल, जो त्वचा को कोमल और चमकदार बनाता है।'
+      : 'શુષ્ક અને નિર્જીવ ત્વચા માટે ભેજયુક્ત હાઇડ્રેટિંગ ફેશિયલ, જે ત્વચાને મુલાયમ અને ચમકદાર બનાવે છે.';
+  }
+  if (lower.includes('glass-skin') || lower.includes('glass skin') || lower.includes('k-beauty')) {
+    return lang === 'hi'
+      ? 'के-ब्यूटी अनुष्ठानों से प्रेरित बहु-चरणीय ग्लास-स्किन फेशियल थेरेपी, जो बेदाग व चमकदार त्वचा प्रदान करती है।'
+      : 'કે-બ્યુટીથી પ્રેરિત મલ્ટિ-સ્ટેપ ગ્લાસ-સ્કિન ફેશિયલ થેરાપી, જે દોષરહિત અને ચમકદાર ત્વચા પ્રદાન કરે છે.';
+  }
+  if (lower.includes('complete standardized full-home cleaning') || lower.includes('standardized full home cleaning')) {
+    return lang === 'hi'
+      ? 'अपार्टमेंट और घरों के लिए विशेष रूप से इंजीनियर की गई व्यापक मानकीकृत डीप होम सफाई सेवा।'
+      : 'એપાર્ટમેન્ટ અને ઘરો માટે ખાસ તૈયાર કરવામાં આવેલી વ્યાપક પ્રમાણિત ડીપ હોમ સફાઈ સેવા.';
+  }
+  if (lower.includes('all-inclusive turnkey apartment cleaning') || lower.includes('turnkey apartment cleaning')) {
+    return lang === 'hi'
+      ? 'आवासीय फ्लैटों और अपार्टमेंट के लिए सभी समावेशी टर्नकी रूटीन और पोस्ट-टेनेंसी सफाई सेवा।'
+      : 'રહેણાંક ફ્લેટ અને એપાર્ટમેન્ટ્સ માટે તમામ સુવિધાયુક્ત ટર્નકી રૂટીન અને ડીપ સફાઈ સેવા.';
+  }
+  if (lower.includes('estate-grade deep cleaning') || lower.includes('bungalows, villas')) {
+    return lang === 'hi'
+      ? 'स्वतंत्र बंगलों, विला और डुप्लेक्स घरों के लिए एस्टेट-ग्रेड प्रीमियम डीप सफाई सेवा।'
+      : 'સ્વતંત્ર બંગલા, વિલા અને ડુપ્લેક્સ ઘરો માટે પ્રીમિયમ ડીપ સફાઈ સેવા.';
+  }
+  if (lower.includes('customizable, targeted cleaning') || lower.includes('partial home cleaning')) {
+    return lang === 'hi'
+      ? 'घर के चुनिंदा कमरों या अधिक उपयोग वाले क्षेत्रों के लिए कस्टमाइज़ेबल लक्षित सफाई सेवा।'
+      : 'ઘરના પસંદગીના રૂમ અથવા વધુ વપરાશવાળા વિસ્તારો માટે કસ્ટમાઇઝ કરી શકાય તેવી સફાઈ સેવા.';
+  }
+  if (lower.includes('verified service delivered by trained professionals')) {
+    return lang === 'hi'
+      ? 'प्रशिक्षित पेशेवरों द्वारा 7-दिवसीय स्मार्टसर्व गारंटी के साथ प्रदान की जाने वाली सत्यापित सेवा।'
+      : 'પ્રશિક્ષિત વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ ગેરંટી સાથે પૂરી પાડવામાં આવતી પ્રમાણિત સેવા.';
+  }
+
+  return lang === 'hi'
+    ? 'प्रशिक्षित और बैकग्राउंड-सत्यापित पेशेवरों द्वारा 7-दिवसीय स्मार्टसर्व वारंटी के साथ पूरी की जाने वाली सुरक्षित होम सेवा।'
+    : 'પ્રશિક્ષિત અને બેકગ્રાઉન્ડ-ચકાસાયેલ વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ વોરંટી સાથે પૂરી પાડવામાં આવતી સુરક્ષિત સેવા.';
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/useAuth';
 import { updateCustomerProfile } from '../api/profile';
 import { useToast } from '../hooks/useToast';
@@ -7,6 +8,7 @@ import { User, Mail, Phone, ShieldCheck, CheckCircle2, Loader2, Save } from 'luc
 export const CustomerProfile: React.FC = () => {
   const { user, refreshUser } = useAuth();
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const [fullName, setFullName] = useState<string>(user?.full_name || '');
   const [phone, setPhone] = useState<string>(user?.phone || '');
@@ -50,9 +52,9 @@ export const CustomerProfile: React.FC = () => {
       
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Account Profile & Security</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{t("profile.title", { defaultValue: "Account Profile & Security" })}</h1>
         <p className="text-sm text-slate-500 font-medium">
-          Manage your personal information, saved preferences, and authentication details.
+          {t("profile.subtitle", { defaultValue: "Manage your personal information, saved preferences, and authentication details." })}
         </p>
       </div>
 
@@ -73,25 +75,25 @@ export const CustomerProfile: React.FC = () => {
             <div className="pt-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Verified Account</span>
+                <span>{t("profile.verified_account", { defaultValue: "Verified Account" })}</span>
               </span>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-3">
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Customer Privileges</h4>
+            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t("profile.privileges", { defaultValue: "Customer Privileges" })}</h4>
             <div className="space-y-2 text-xs font-semibold text-slate-700">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>30-Day SmartServe Warranty</span>
+                <span>{t("profile.warranty_privilege", { defaultValue: "7-Day SmartServe Warranty" })}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Priority Emergency Dispatch</span>
+                <span>{t("profile.emergency_privilege", { defaultValue: "Priority Emergency Dispatch" })}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Direct Support Operations Access</span>
+                <span>{t("profile.support_privilege", { defaultValue: "Direct Support Operations Access" })}</span>
               </div>
             </div>
           </div>
@@ -100,11 +102,11 @@ export const CustomerProfile: React.FC = () => {
         {/* Right Column (Edit Form) */}
         <div className="md:col-span-2 space-y-6">
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-md space-y-6">
-            <h3 className="text-lg font-extrabold text-slate-900 border-b border-slate-100 pb-4">Personal Details</h3>
+            <h3 className="text-lg font-extrabold text-slate-900 border-b border-slate-100 pb-4">{t("profile.personal_details", { defaultValue: "Personal Details" })}</h3>
 
             <form onSubmit={handleSaveProfile} className="space-y-5">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Full Name</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">{t("profile.full_name", { defaultValue: "Full Name" })}</label>
                 <div className="relative">
                   <User className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -118,7 +120,7 @@ export const CustomerProfile: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Email Address (Primary Login)</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">{t("profile.email_label", { defaultValue: "Email Address (Primary Login)" })}</label>
                 <div className="relative">
                   <Mail className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -131,7 +133,7 @@ export const CustomerProfile: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Mobile Phone Number</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">{t("profile.mobile_label", { defaultValue: "Mobile Phone Number" })}</label>
                 <div className="relative">
                   <Phone className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
@@ -151,7 +153,7 @@ export const CustomerProfile: React.FC = () => {
                   className="px-6 py-3 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-xs transition-all disabled:opacity-70 flex items-center gap-2"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>Save Profile Changes</span>
+                  <span>{t("profile.save_profile", { defaultValue: "Save Profile Changes" })}</span>
                 </button>
               </div>
             </form>

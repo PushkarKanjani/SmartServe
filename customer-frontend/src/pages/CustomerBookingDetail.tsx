@@ -13,6 +13,7 @@ import {
 } from '../api/bookings';
 import { getBookingChat, sendBookingChatMessage, SupportTicketDetail, MessageItem } from '../api/support';
 import { formatCurrencyINR } from '../utils/formatters';
+import { getLocalizedServiceName } from '../utils/localizedNames';
 import { useToast } from '../hooks/useToast';
 import { 
   ArrowLeft, 
@@ -332,7 +333,7 @@ export const CustomerBookingDetail: React.FC = () => {
           className="px-5 py-2.5 bg-[#2563EB] text-white font-bold text-xs rounded-xl inline-flex items-center gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to My Bookings</span>
+          <span>{t("common.back", { defaultValue: "Back to My Bookings" })}</span>
         </button>
       </div>
     );
@@ -366,7 +367,7 @@ export const CustomerBookingDetail: React.FC = () => {
         className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-[#2563EB] transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        <span>Back to My Bookings</span>
+        <span>{t("common.back", { defaultValue: "Back to My Bookings" })}</span>
       </button>
 
       {/* Reconnecting banner if WebSocket is offline or reconnecting (Requirement 9) */}
@@ -396,15 +397,15 @@ export const CustomerBookingDetail: React.FC = () => {
             {showLiveTracking && (
               <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Active Job</span>
+                <span>{t("common.active_job", { defaultValue: "Active Job" })}</span>
               </span>
             )}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{booking.service_name}</h1>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{getLocalizedServiceName(booking.service_name)}</h1>
         </div>
 
         <div className="text-left sm:text-right">
-          <span className="text-xs text-slate-400 font-semibold block">Total Amount</span>
+          <span className="text-xs text-slate-400 font-semibold block">{t("booking.total", { defaultValue: "Total Amount" })}</span>
           <span className="text-2xl font-extrabold text-white font-mono">
             {formatCurrencyINR(booking.total_price || booking.total_amount || 0)}
           </span>
@@ -419,12 +420,12 @@ export const CustomerBookingDetail: React.FC = () => {
               <Zap className="w-5 h-5 text-white animate-pulse" />
             </div>
             <div>
-              <h4 className="font-bold text-amber-950 text-sm">Emergency Fast-Track Service</h4>
+              <h4 className="font-bold text-amber-950 text-sm">{t("common.emergency_fast_track", { defaultValue: "Emergency Fast-Track Service" })}</h4>
               <p className="text-xs text-amber-800">Priority safety dispatch auto-assigned per SmartServe safety protocols.</p>
             </div>
           </div>
           <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 bg-amber-500 text-white rounded-lg shadow-2xs">
-            Emergency Dispatch
+            {t("common.emergency_dispatch", { defaultValue: "Emergency Dispatch" })}
           </span>
         </div>
       )}
@@ -437,7 +438,7 @@ export const CustomerBookingDetail: React.FC = () => {
           </div>
           <div className="space-y-1">
             <h4 className="font-bold text-rose-950 text-sm">
-              {stLower === 'rejected' ? 'Service Request Declined by Partner' : 'Booking Cancelled'}
+              {stLower === 'rejected' ? t('common.service_declined', { defaultValue: 'Service Request Declined by Partner' }) : t('common.booking_cancelled', { defaultValue: 'Booking Cancelled' })}
             </h4>
             <p className="text-xs text-rose-800 font-semibold">
               Reason: {booking.cancellation_reason || (booking as any).rejection_reason || 'Provider unavailable'}

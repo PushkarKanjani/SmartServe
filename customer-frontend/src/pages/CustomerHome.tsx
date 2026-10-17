@@ -6,7 +6,7 @@ import { getCatalogCategories, getCatalogServices, CategoryItem, ServiceItem } f
 import { getCustomerBookings, BookingDetail } from '../api/bookings';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getCategoryImageUrl, getServiceImage } from '../utils/serviceImages';
-import { getLocalizedCategory } from '../utils/localizedNames';
+import { getLocalizedCategory, getLocalizedServiceName, getLocalizedDescription } from '../utils/localizedNames';
 import { 
   Search, 
   ArrowRight, 
@@ -78,7 +78,7 @@ export const CustomerHome: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search AC repair, salon, deep cleaning, electrician, plumbing, pest control..."
+              placeholder={t("home.search_placeholder", { defaultValue: "Search AC repair, salon, deep cleaning, electrician, plumbing, pest control..." })}
               className="w-full h-11 bg-transparent text-[#1F2A1E] placeholder-[#1F2A1E]/45 font-medium text-sm focus:outline-none"
             />
           </div>
@@ -119,7 +119,7 @@ export const CustomerHome: React.FC = () => {
                     </span>
                     <span className="text-xs font-mono font-bold text-[#1F2A1E]/50">{b.booking_reference}</span>
                   </div>
-                  <h4 className="font-bold text-[#1F2A1E] text-base">{b.service_name}</h4>
+                  <h4 className="font-bold text-[#1F2A1E] text-base">{getLocalizedServiceName(b.service_name)}</h4>
                   <p className="text-xs text-[#1F2A1E]/60 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-[#C9A15A]" />
                     <span>{b.scheduled_date} at {b.scheduled_time}</span>
@@ -143,7 +143,7 @@ export const CustomerHome: React.FC = () => {
             <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1F2A1E] tracking-tight">
               {t('home.popular_categories', { defaultValue: 'Explore Categories' })}
             </h2>
-            <p className="text-xs text-[#1F2A1E]/60 font-medium mt-0.5">Browse verified services managed in the SmartServe master catalog.</p>
+            <p className="text-xs text-[#1F2A1E]/60 font-medium mt-0.5">{t("home.browse_catalog_desc", { defaultValue: "Browse verified services managed in the SmartServe master catalog." })}</p>
           </div>
           <button
             onClick={() => navigate('/catalog')}
@@ -197,14 +197,12 @@ export const CustomerHome: React.FC = () => {
         <div className="relative z-10 max-w-xl space-y-3">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2F5233]/10 text-[#2F5233] border border-[#2F5233]/20 text-xs font-bold uppercase tracking-wider">
             <Tag className="w-3.5 h-3.5 text-[#C9A15A]" />
-            Standard SmartServe Guarantee
+            {t('home.standard_guarantee', { defaultValue: 'Standard SmartServe Guarantee' })}
           </span>
           <h3 className="font-serif text-2xl sm:text-3xl font-normal tracking-tight text-[#1F2A1E] leading-tight">
             {t('home.trust_warranty_banner', { defaultValue: 'Transparent Upfront Pricing & 7-Day Service Warranty' })}
           </h3>
-          <p className="text-xs sm:text-sm text-[#1F2A1E]/75 font-normal leading-relaxed">
-            All services booked through SmartServe are executed by verified specialists with clear inclusions, standard process steps, and genuine customer protection.
-          </p>
+          <p className="text-xs sm:text-sm text-[#1F2A1E]/75 font-normal leading-relaxed">{t("home.guarantee_desc", { defaultValue: "All services booked through SmartServe are executed by verified specialists with clear inclusions, standard process steps, and genuine customer protection." })}</p>
           <div className="pt-2">
             <button
               onClick={() => navigate('/catalog')}
@@ -222,15 +220,15 @@ export const CustomerHome: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#1F2A1E] tracking-tight">
-              {t('home.popular_categories', { defaultValue: 'Popular Home Services' })}
+              {t('home.popular_services', { defaultValue: 'Popular Home Services' })}
             </h2>
-            <p className="text-xs text-[#1F2A1E]/60 font-medium mt-0.5">Top-rated services booked across the marketplace</p>
+            <p className="text-xs text-[#1F2A1E]/60 font-medium mt-0.5">{t("home.popular_services_desc", { defaultValue: "Top-rated services booked across the marketplace" })}</p>
           </div>
           <button
             onClick={() => navigate('/catalog')}
             className="text-xs font-bold text-[#2F5233] hover:text-[#3D6B42] cursor-pointer"
           >
-            {t('home.view_all', { defaultValue: 'View All Services' })}
+            {t('home.view_all_services', { defaultValue: 'View All Services' })}
           </button>
         </div>
 
@@ -261,24 +259,24 @@ export const CustomerHome: React.FC = () => {
 
                   <div className="p-5 space-y-2">
                     <span className="text-[10px] font-bold text-[#2F5233] uppercase tracking-wider block">
-                      {srv.category}
+                      {getLocalizedCategory(srv.category)}
                     </span>
                     <h3 className="font-bold text-[#1F2A1E] text-base leading-snug group-hover:text-[#2F5233] transition-colors">
-                      {srv.name}
+                      {getLocalizedServiceName(srv.name)}
                     </h3>
                     <p className="text-xs text-[#1F2A1E]/65 line-clamp-2 leading-relaxed font-normal">
-                      {srv.description || 'Verified service delivered by trained professionals with standard service guarantee.'}
+                      {getLocalizedDescription(srv.description)}
                     </p>
                   </div>
                 </div>
 
                 <div className="p-5 pt-0 flex items-center justify-between border-t border-[#E5DEC9]/50 mt-3">
                   <div>
-                    <span className="text-[10px] text-[#1F2A1E]/50 font-semibold block uppercase">Fixed Rate</span>
+                    <span className="text-[10px] text-[#1F2A1E]/50 font-semibold block uppercase">{t("home.fixed_rate", { defaultValue: "Fixed Rate" })}</span>
                     <span className="font-serif text-lg font-normal text-[#1F2A1E]">{formatCurrencyINR(srv.base_price)}</span>
                   </div>
                   <button className="px-4 py-2 bg-[#FAF7F0] border border-[#E5DEC9] text-[#2F5233] font-bold text-xs rounded-xl hover:bg-[#2F5233] hover:text-white transition-colors cursor-pointer">
-                    View Details
+                    {t("home.view_details", { defaultValue: "View Details" })}
                   </button>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { getCustomerTickets, createSupportTicket, SupportTicketDetail } from '../api/support';
 import { formatDateINR } from '../utils/formatters';
@@ -9,6 +10,7 @@ import { subscribeToRealtime } from '../utils/realtime';
 export const CustomerSupport: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const [tickets, setTickets] = useState<SupportTicketDetail[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -91,9 +93,9 @@ export const CustomerSupport: React.FC = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Customer Support Center</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{t("support.center_title", { defaultValue: "Customer Support Center" })}</h1>
           <p className="text-sm text-slate-500 font-medium mt-1">
-            Submit inquiry tickets and chat with SmartServe operations support.
+            {t("support.center_subtitle", { defaultValue: "Submit inquiry tickets and chat with SmartServe operations support." })}
           </p>
         </div>
 
@@ -103,7 +105,7 @@ export const CustomerSupport: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 shadow-2xs transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-            <span>Sync Live</span>
+            <span>{t("common.sync_live", { defaultValue: "Sync Live" })}</span>
           </button>
           
           <button

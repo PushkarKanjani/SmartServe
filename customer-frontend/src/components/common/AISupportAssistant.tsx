@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Sparkles,
@@ -32,6 +33,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
   role = 'customer',
   bookingId: propBookingId
 }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const params = useParams<{ bookingId?: string }>();
   const { user } = useAuth();
@@ -233,12 +235,12 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full" />
           </div>
           <span className="font-semibold text-xs tracking-wide text-white">
-            AI Support
+            {t('common.ai_support', { defaultValue: 'AI Support' })}
           </span>
 
           {/* Micro-label tooltip */}
           <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block whitespace-nowrap bg-[#1F2A1E] text-[#FAF7F0] text-[11px] font-medium py-1.5 px-3 rounded-xl shadow-md border border-[#E5DEC9]/20 pointer-events-none">
-            AI Support • Human support available
+            {t('support.ai_assistant_subtitle', { defaultValue: 'AI Support • Human support available' })}
           </div>
         </button>
       </div>
@@ -259,10 +261,10 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white tracking-tight leading-tight flex items-center gap-1.5">
-                  SmartServe Assistant
+                  {t('support.ai_assistant_title', { defaultValue: 'SmartServe Assistant' })}
                 </h3>
                 <p className="text-[10px] text-white/80 font-medium">
-                  AI Support • Human support available
+                  {t('support.ai_assistant_subtitle', { defaultValue: 'AI Support • Human support available' })}
                 </p>
               </div>
             </div>
@@ -399,7 +401,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
             {messages.length <= 2 && !escalatedTicket && !loading && (
               <div className="pt-2 space-y-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block px-1">
-                  Suggested Questions
+                  {t('support.suggested_questions', { defaultValue: 'Suggested Questions' })}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {activeQuickPrompts.map((prompt, idx) => (
@@ -431,7 +433,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                placeholder="Type your issue..."
+                placeholder={t("support.type_issue", { defaultValue: "Type your issue..." })}
                 disabled={loading || !!escalatedTicket}
                 className="flex-1 bg-[#FAF7F0] border border-[#E5DEC9] rounded-xl px-3 py-2 text-xs text-[#1F2A1E] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] disabled:opacity-60"
               />
@@ -447,7 +449,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
 
             {/* Micro-copy footer */}
             <div className="flex items-center justify-between text-[10px] text-slate-500 font-normal px-1">
-              <span>AI Support • Human support available</span>
+              <span>{t("support.ai_assistant_subtitle", { defaultValue: "AI Support • Human support available" })}</span>
               {messageCount > 0 && (
                 <span className="text-slate-400">
                   Message {messageCount} of {maxMessages}

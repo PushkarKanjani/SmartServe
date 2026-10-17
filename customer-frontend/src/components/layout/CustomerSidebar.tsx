@@ -122,7 +122,7 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
               <span className="font-bold text-[#C9A15A] text-lg tracking-tight leading-none ml-0.5">Serve</span>
             </div>
             <span className="text-[10px] font-bold text-[#1F2A1E]/60 tracking-wider uppercase mt-1 block font-sans">
-              Customer Portal
+              {t('nav.customer_portal', { defaultValue: 'Customer Portal' })}
             </span>
           </div>
         </Link>
@@ -140,7 +140,9 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
 
       {/* 2. Navigation Links */}
       <nav className="flex-1 px-3.5 py-5 space-y-1.5 overflow-y-auto">
-        <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#1F2A1E]/40 mb-2">Main Menu</p>
+        <p className="px-3 text-[10px] font-bold uppercase tracking-wider text-[#1F2A1E]/40 mb-2">
+          {t('nav.main_menu', { defaultValue: 'Main Menu' })}
+        </p>
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = item.isActive;
@@ -199,13 +201,13 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
                 {user.full_name?.charAt(0) || user.email?.charAt(0) || 'C'}
               </div>
               <div className="min-w-0 text-xs">
-                <p className="font-bold text-[#1F2A1E] truncate">{user.full_name || user.email?.split('@')[0] || 'Customer'}</p>
-                <p className="text-[11px] text-[#1F2A1E]/50 truncate font-medium">Verified Customer</p>
+                <p className="font-bold text-[#1F2A1E] truncate">{user.full_name || user.email?.split('@')[0] || t('common.customer', { defaultValue: 'Customer' })}</p>
+                <p className="text-[11px] text-[#1F2A1E]/50 truncate font-medium">{t('common.verified_customer', { defaultValue: 'Verified Customer' })}</p>
               </div>
             </Link>
             <button
               onClick={handleLogout}
-              title="Sign Out"
+              title={t('nav.logout', { defaultValue: 'Sign Out' })}
               className="p-1.5 text-[#1F2A1E]/40 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer flex-shrink-0"
             >
               <LogOut className="w-4 h-4" />
@@ -214,22 +216,22 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
         ) : (
           <div className="p-3 rounded-2xl bg-white border border-[#E5DEC9] shadow-xs space-y-2">
             <div>
-              <p className="text-xs font-bold text-[#1F2A1E]">Welcome to SmartServe</p>
-              <p className="text-[11px] text-[#1F2A1E]/60 font-medium leading-tight">Access bookings & personalized services.</p>
+              <p className="text-xs font-bold text-[#1F2A1E]">{t('common.welcome_title', { defaultValue: 'Welcome to SmartServe' })}</p>
+              <p className="text-[11px] text-[#1F2A1E]/60 font-medium leading-tight">{t('common.welcome_desc', { defaultValue: 'Access bookings & personalized services.' })}</p>
             </div>
             <Link
               to="/login"
               onClick={onClose}
               className="block text-center py-2 px-3 rounded-xl bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-xs shadow-xs transition-colors"
             >
-              Sign In
+              {t('nav.login', { defaultValue: 'Sign In' })}
             </Link>
             <Link
               to="/register"
               onClick={onClose}
               className="block text-center py-1.5 px-3 rounded-xl text-[#1F2A1E]/75 hover:bg-[#FAF7F0] font-semibold text-xs transition-colors"
             >
-              Create Account
+              {t('nav.register', { defaultValue: 'Create Account' })}
             </Link>
           </div>
         )}

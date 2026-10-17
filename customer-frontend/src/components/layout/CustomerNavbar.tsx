@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/useAuth';
-import { BackendPulse } from '../common/BackendPulse';
 import { LanguageSelector } from '../common/LanguageSelector';
 import { getBundleItems } from '../../utils/bundleCart';
 import { 
@@ -89,7 +88,7 @@ export const CustomerNavbar: React.FC = () => {
                 <span className="font-bold text-[#C9A15A] text-lg tracking-tight leading-none ml-0.5">Serve</span>
               </div>
               <span className="text-[10px] font-bold text-[#1F2A1E]/60 tracking-wider uppercase mt-1 block font-sans">
-                Marketplace
+                {t('nav.marketplace', { defaultValue: 'Marketplace' })}
               </span>
             </div>
           </Link>
@@ -101,12 +100,12 @@ export const CustomerNavbar: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search AC repair, cleaning, plumbing..."
+              placeholder={t('home.search_placeholder', { defaultValue: 'Search AC repair, cleaning, plumbing...' })}
               className="w-full h-10 bg-[#F2EDE1]/60 border border-[#E5DEC9] rounded-xl pl-10 pr-4 text-xs font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/40 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] focus:bg-white transition-all"
             />
           </form>
 
-          {/* 3. Navigation Links, Language Selector & Backend Pulse */}
+          {/* 3. Navigation Links, Language Selector & Profile */}
           <div className="hidden lg:flex items-center gap-4">
             <nav className="flex items-center gap-1">
               {navLinks.map((link) => {
@@ -151,8 +150,6 @@ export const CustomerNavbar: React.FC = () => {
             {/* Multilingual Selector */}
             <LanguageSelector />
 
-            <BackendPulse />
-
             {/* Auth Buttons / Profile */}
             {user ? (
               <div className="flex items-center gap-3 pl-2 border-l border-[#E5DEC9]">
@@ -164,14 +161,14 @@ export const CustomerNavbar: React.FC = () => {
                     {user.full_name ? user.full_name.charAt(0) : 'C'}
                   </div>
                   <div className="text-left">
-                    <span className="text-xs font-bold text-[#1F2A1E] block truncate max-w-[110px]">{user.full_name || 'Customer'}</span>
-                    <span className="text-[10px] text-[#1F2A1E]/50 font-medium block">Verified Customer</span>
+                    <span className="text-xs font-bold text-[#1F2A1E] block truncate max-w-[110px]">{user.full_name || t('common.customer', { defaultValue: 'Customer' })}</span>
+                    <span className="text-[10px] text-[#1F2A1E]/50 font-medium block">{t('common.verified_customer', { defaultValue: 'Verified Customer' })}</span>
                   </div>
                 </Link>
 
                 <button
                   onClick={handleLogout}
-                  title="Sign Out"
+                  title={t('nav.logout', { defaultValue: 'Sign Out' })}
                   className="p-2 text-[#1F2A1E]/50 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
@@ -209,7 +206,6 @@ export const CustomerNavbar: React.FC = () => {
                 </span>
               )}
             </Link>
-            <BackendPulse />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-[#1F2A1E] hover:bg-[#F2EDE1] rounded-xl cursor-pointer"

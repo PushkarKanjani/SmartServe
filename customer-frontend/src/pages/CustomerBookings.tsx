@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { getLocalizedServiceName } from '../utils/localizedNames';
 import { useNavigate } from 'react-router-dom';
 import { getCustomerBookings, BookingDetail } from '../api/bookings';
 import { formatCurrencyINR } from '../utils/formatters';
@@ -7,6 +9,7 @@ import { Calendar, Clock, ChevronRight, Loader2, Plus, AlertCircle, RefreshCw, K
 import { subscribeToRealtime } from '../utils/realtime';
 
 export const CustomerBookings: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<BookingDetail[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -127,7 +130,7 @@ export const CustomerBookings: React.FC = () => {
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">My Service Bookings</h1>
+          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{t("nav.bookings", { defaultValue: "My Service Bookings" })}</h1>
           <p className="text-sm text-slate-500 font-medium mt-1">
             Track real-time status and technician assignments for your bookings.
           </p>
@@ -139,7 +142,7 @@ export const CustomerBookings: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 shadow-2xs transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-            <span>Sync Live</span>
+            <span>{t("common.sync_live", { defaultValue: "Sync Live" })}</span>
           </button>
           
           <button
@@ -147,7 +150,7 @@ export const CustomerBookings: React.FC = () => {
             className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Book New Service</span>
+            <span>{t("common.book_new", { defaultValue: "+ Book New Service" })}</span>
           </button>
         </div>
       </div>
@@ -155,10 +158,10 @@ export const CustomerBookings: React.FC = () => {
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
         {[
-          { key: 'all', label: `All (${bookings.length})` },
-          { key: 'active', label: 'Active & In-Progress' },
-          { key: 'completed', label: 'Completed' },
-          { key: 'cancelled', label: 'Cancelled' },
+          { key: 'all', label: `${t('common.all', { defaultValue: 'All' })} (${bookings.length})` },
+          { key: 'active', label: t('common.active', { defaultValue: 'Active & In-Progress' }) },
+          { key: 'completed', label: t('common.completed', { defaultValue: 'Completed' }) },
+          { key: 'cancelled', label: t('common.cancelled', { defaultValue: 'Cancelled' }) },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -231,7 +234,7 @@ export const CustomerBookings: React.FC = () => {
                     </div>
 
                     <h3 className="font-extrabold text-slate-900 text-base truncate group-hover:text-[#2563EB] transition-colors">
-                      {b.service_name}
+                      {getLocalizedServiceName(b.service_name)}
                     </h3>
 
                     <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
@@ -262,7 +265,7 @@ export const CustomerBookings: React.FC = () => {
                     <span className="text-lg font-extrabold text-slate-900 font-mono block">
                       {formatCurrencyINR(b.total_price || b.total_amount || 0)}
                     </span>
-                    <span className="text-[11px] font-semibold text-slate-400 block">Tap to view detail</span>
+                    <span className="text-[11px] font-semibold text-slate-400 block">{t("common.tap_to_view", { defaultValue: "Tap to view detail" })}</span>
                   </div>
                   <ChevronRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
                 </div>
@@ -274,15 +277,15 @@ export const CustomerBookings: React.FC = () => {
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-4">
           <Calendar className="w-12 h-12 text-slate-400 mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-slate-800">No Bookings Found</h3>
-            <p className="text-xs text-slate-500">You have no active or completed service bookings recorded.</p>
+            <h3 className="text-base font-bold text-slate-800">{t("common.no_bookings", { defaultValue: "No Bookings Found" })}</h3>
+            <p className="text-xs text-slate-500">{t("common.no_bookings_desc", { defaultValue: "You have no active or completed service bookings recorded." })}</p>
           </div>
           <button
             onClick={() => navigate('/catalog')}
             className="px-5 py-2.5 bg-[#2563EB] text-white font-bold text-xs rounded-xl inline-flex items-center gap-2 shadow-xs"
           >
             <Plus className="w-4 h-4" />
-            <span>Book Your First Service</span>
+            <span>{t("common.book_first", { defaultValue: "Book Your First Service" })}</span>
           </button>
         </div>
       )}

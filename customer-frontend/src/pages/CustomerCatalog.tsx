@@ -9,7 +9,7 @@ import {
 } from '../api/catalog';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage, DEFAULT_SERVICE_IMAGE } from '../utils/serviceImages';
-import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName } from '../utils/localizedNames';
+import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription } from '../utils/localizedNames';
 import { addBundleItem, removeBundleItem, getBundleItems } from '../utils/bundleCart';
 import { 
   Search, 
@@ -652,7 +652,7 @@ export const CustomerCatalog: React.FC = () => {
                         </h3>
                         {svc.description && (
                           <p className="text-xs text-[#1F2A1E]/65 font-normal line-clamp-2 mt-1 leading-relaxed">
-                            {svc.description}
+                            {getLocalizedDescription(svc.description)}
                           </p>
                         )}
                       </div>
@@ -663,7 +663,7 @@ export const CustomerCatalog: React.FC = () => {
                           {featuresPreview.map((f, i) => (
                             <div key={i} className="flex items-center gap-1.5 truncate">
                               <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                              <span className="truncate">{f}</span>
+                              <span className="truncate">{getLocalizedFeature(f)}</span>
                             </div>
                           ))}
                         </div>
@@ -746,7 +746,7 @@ export const CustomerCatalog: React.FC = () => {
                         </h3>
                         {svc.description && (
                           <p className="text-xs text-[#1F2A1E]/65 font-normal line-clamp-1 max-w-xl">
-                            {svc.description}
+                            {getLocalizedDescription(svc.description)}
                           </p>
                         )}
                       </div>

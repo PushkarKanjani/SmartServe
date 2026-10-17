@@ -33,6 +33,7 @@ import {
 import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
+import { getLocalizedServiceName, getLocalizedCategory } from '../utils/localizedNames';
 
 export const CustomerCombinedBooking: React.FC = () => {
   const { t } = useTranslation();
@@ -256,9 +257,9 @@ export const CustomerCombinedBooking: React.FC = () => {
                 {bundleItems.map((item) => (
                   <div key={item.id} className="py-3.5 flex items-center justify-between gap-4">
                     <div>
-                      <h4 className="font-bold text-xs text-[#1F2A1E]">{item.name}</h4>
+                      <h4 className="font-bold text-xs text-[#1F2A1E]">{getLocalizedServiceName(item.name)}</h4>
                       <span className="text-[10px] text-[#1F2A1E]/50 uppercase tracking-wider font-semibold">
-                        {item.category}
+                        {getLocalizedCategory(item.category)}
                       </span>
                     </div>
                     <div className="flex items-center gap-4">

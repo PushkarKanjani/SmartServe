@@ -96,7 +96,7 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
                   : localClaimStatus === 'Resolved'
                   ? t('warranty.claim_resolved', { defaultValue: 'Claim Resolved' })
                   : isExpired
-                  ? 'Expired'
+                  ? t('warranty.expired', { defaultValue: 'Expired' })
                   : t('warranty.badge', { defaultValue: 'Active Warranty' })}
               </span>
             </div>
@@ -133,14 +133,14 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
           {localClaimStatus === 'Pending' && (
             <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200">
               <Clock className="w-4 h-4" />
-              <span>Claim Under Inspection</span>
+              <span>{t("warranty.claim_pending", { defaultValue: "Claim Under Inspection" })}</span>
             </div>
           )}
 
           {localClaimStatus === 'Resolved' && (
             <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
               <CheckCircle className="w-4 h-4" />
-              <span>Claim Resolved</span>
+              <span>{t("warranty.claim_resolved", { defaultValue: "Claim Resolved" })}</span>
             </div>
           )}
         </div>
@@ -179,7 +179,7 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
             <form onSubmit={handleClaimSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[#1F2A1E] mb-1.5">
-                  Issue Description *
+                  {t("warranty.issue_description", { defaultValue: "Issue Description *" })}
                 </label>
                 <textarea
                   value={description}
