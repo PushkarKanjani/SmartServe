@@ -427,33 +427,33 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
   }
   if (lower.includes('cleanup')) {
     const prefix = trimmed.replace(/cleanup/gi, '').trim();
-    const locPrefix = localizePrefix(prefix, lang);
-    return lang === 'hi' ? `${locPrefix} क्लीनअप.trim()` : `${locPrefix} ક્લીનઅપ.trim()`;
+    const locPrefix = localizePrefix(prefix, lang).trim();
+    return lang === 'hi' ? `${locPrefix} क्लीनअप`.trim() : `${locPrefix} ક્લીનઅપ`.trim();
   }
   if (lower.includes('massage')) {
     const prefix = trimmed.replace(/massage/gi, '').trim();
-    const locPrefix = localizePrefix(prefix, lang);
-    return lang === 'hi' ? `${locPrefix} मसाज.trim()` : `${locPrefix} મસાજ.trim()`;
+    const locPrefix = localizePrefix(prefix, lang).trim();
+    return lang === 'hi' ? `${locPrefix} मसाज`.trim() : `${locPrefix} મસાજ`.trim();
   }
   if (lower.includes('waxing')) {
     const prefix = trimmed.replace(/waxing/gi, '').trim();
-    const locPrefix = localizePrefix(prefix, lang);
-    return lang === 'hi' ? `${locPrefix} वैक्सिंग.trim()` : `${locPrefix} વેક્સિંગ.trim()`;
+    const locPrefix = localizePrefix(prefix, lang).trim();
+    return lang === 'hi' ? `${locPrefix} वैक्सिंग`.trim() : `${locPrefix} વેક્સિંગ`.trim();
   }
   if (lower.includes('manicure')) {
     const prefix = trimmed.replace(/manicure/gi, '').trim();
-    const locPrefix = localizePrefix(prefix, lang);
-    return lang === 'hi' ? `${locPrefix} मेनिक्योर.trim()` : `${locPrefix} મેનિક્યોર.trim()`;
+    const locPrefix = localizePrefix(prefix, lang).trim();
+    return lang === 'hi' ? `${locPrefix} मेनिक्योर`.trim() : `${locPrefix} મેનિક્યોર`.trim();
   }
   if (lower.includes('pedicure')) {
     const prefix = trimmed.replace(/pedicure/gi, '').trim();
-    const locPrefix = localizePrefix(prefix, lang);
-    return lang === 'hi' ? `${locPrefix} पेदिक्योर.trim()` : `${locPrefix} પેડિક્યોર.trim()`;
+    const locPrefix = localizePrefix(prefix, lang).trim();
+    return lang === 'hi' ? `${locPrefix} पेदिक्योर`.trim() : `${locPrefix} પેડિક્યોર`.trim();
   }
   if (lower.includes('haircut')) {
     const prefix = trimmed.replace(/haircut/gi, '').trim();
-    const locPrefix = localizePrefix(prefix, lang);
-    return lang === 'hi' ? `${locPrefix} हेयरकट.trim()` : `${locPrefix} હેરકટ.trim()`;
+    const locPrefix = localizePrefix(prefix, lang).trim();
+    return lang === 'hi' ? `${locPrefix} हेयरकट`.trim() : `${locPrefix} હેરકટ`.trim();
   }
   if (lower.endsWith('cleaning')) {
     const prefix = trimmed.slice(0, -8).trim();

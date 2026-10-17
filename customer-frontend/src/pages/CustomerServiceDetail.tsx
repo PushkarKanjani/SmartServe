@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
-import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName } from '../utils/localizedNames';
+import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription } from '../utils/localizedNames';
 import { 
   Clock, 
   Star, 
@@ -457,7 +457,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {t('service_detail.overview', { defaultValue: 'Service Overview' })}
               </h3>
               <p className="text-sm text-[#1F2A1E]/80 leading-relaxed font-sans">
-                {service.description}
+                {getLocalizedDescription(service.description)}
               </p>
               {service.keywords && service.keywords.length > 0 && (
                 <div className="pt-2 flex items-center gap-1.5 flex-wrap border-t border-[#E5DEC9]/60">
@@ -488,7 +488,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#FAF7F0] text-[#2F5233] border border-[#C9A15A]/40 rounded-full text-xs font-semibold"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-[#C9A15A]" />
-                    <span>{hl}</span>
+                    <span>{getLocalizedFeature(hl)}</span>
                   </span>
                 ))}
               </div>
@@ -509,10 +509,10 @@ export const CustomerServiceDetail: React.FC = () => {
                   <div key={idx} className="p-4 rounded-2xl bg-[#FAF7F0] border border-[#E5DEC9]/70 space-y-1">
                     <h4 className="text-sm font-bold text-[#1F2A1E] flex items-center gap-2">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#C9A15A]" />
-                      {feat.title}
+                      {getLocalizedFeature(feat.title)}
                     </h4>
                     {feat.description && (
-                      <p className="text-xs text-[#1F2A1E]/70 leading-relaxed font-sans">{feat.description}</p>
+                      <p className="text-xs text-[#1F2A1E]/70 leading-relaxed font-sans">{getLocalizedDescription(feat.description)}</p>
                     )}
                   </div>
                 ))}
@@ -532,7 +532,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="w-5 h-5 rounded-full bg-[#10B981]/15 text-[#10B981] flex items-center justify-center flex-shrink-0 mt-0.5">
                       <Check className="w-3.5 h-3.5 stroke-[3]" />
                     </div>
-                    <span className="text-xs sm:text-sm">{feat}</span>
+                    <span className="text-xs sm:text-sm">{getLocalizedFeature(feat)}</span>
                   </div>
                 ))}
               </div>
@@ -551,7 +551,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="w-5 h-5 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <XCircle className="w-3.5 h-3.5 text-rose-500" />
                     </div>
-                    <span className="text-xs sm:text-sm text-[#1F2A1E]/75">{item}</span>
+                    <span className="text-xs sm:text-sm text-[#1F2A1E]/75">{getLocalizedFeature(item)}</span>
                   </div>
                 ))}
               </div>
@@ -578,7 +578,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="space-y-1 flex-1">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="text-sm font-bold text-[#1F2A1E]">{step.title}</h4>
+                          <h4 className="text-sm font-bold text-[#1F2A1E]">{getLocalizedFeature(step.title)}</h4>
                           {step.is_key_step && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#C9A15A]/15 text-[#8C6B28] text-[10px] font-bold uppercase tracking-wider border border-[#C9A15A]/30">
                               Key Step
@@ -593,7 +593,7 @@ export const CustomerServiceDetail: React.FC = () => {
                         )}
                       </div>
                       {step.description && (
-                        <p className="text-xs text-[#1F2A1E]/70 leading-relaxed">{step.description}</p>
+                        <p className="text-xs text-[#1F2A1E]/70 leading-relaxed">{getLocalizedDescription(step.description)}</p>
                       )}
                     </div>
                   </div>
@@ -653,8 +653,8 @@ export const CustomerServiceDetail: React.FC = () => {
                     key={idx} 
                     className="px-3.5 py-1.5 bg-[#F2EDE1]/70 border border-[#E5DEC9] rounded-xl text-xs font-semibold text-[#1F2A1E]"
                   >
-                    {tm}
-                  </span>
+                     {getLocalizedFeature(tm)}
+                   </span>
                 ))}
               </div>
             </div>
@@ -670,7 +670,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {service.customer_setup.map((req, idx) => (
                   <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1F2A1E]/80 bg-[#FAF7F0] p-3 rounded-xl border border-[#E5DEC9]/60">
                     <span className="w-2 h-2 rounded-full bg-[#C9A15A] flex-shrink-0 mt-1.5" />
-                    <span className="font-medium">{req}</span>
+                    <span className="font-medium">{getLocalizedFeature(req)}</span>
                   </div>
                 ))}
               </div>
@@ -687,7 +687,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {service.aftercare.map((tip, idx) => (
                   <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C9A15A]/30">
                     <AlertTriangle className="w-4 h-4 text-[#C9A15A] flex-shrink-0 mt-0.5" />
-                    <span className="font-medium">{tip}</span>
+                    <span className="font-medium">{getLocalizedFeature(tip)}</span>
                   </div>
                 ))}
               </div>
@@ -704,7 +704,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {service.expected_results.map((res, idx) => (
                   <div key={idx} className="flex items-center gap-3 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3 rounded-xl border border-[#E5DEC9]/60">
                     <div className="w-2 h-2 rounded-full bg-[#10B981] flex-shrink-0" />
-                    <span className="font-medium">{res}</span>
+                    <span className="font-medium">{getLocalizedFeature(res)}</span>
                   </div>
                 ))}
               </div>
@@ -724,7 +724,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {service.important_notes.map((note, idx) => (
                   <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-[#1F2A1E]/80 bg-[#FAF7F0] p-3.5 rounded-xl border border-[#E5DEC9]/70">
                     <AlertCircle className="w-4 h-4 text-[#1F2A1E]/50 flex-shrink-0 mt-0.5" />
-                    <span className="font-medium">{note}</span>
+                    <span className="font-medium">{getLocalizedFeature(note)}</span>
                   </div>
                 ))}
               </div>
@@ -777,7 +777,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <span className="w-5 h-5 rounded-full bg-[#C9A15A]/20 text-[#C9A15A] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                       ★
                     </span>
-                    <span className="font-medium">{tip}</span>
+                    <span className="font-medium">{getLocalizedFeature(tip)}</span>
                   </div>
                 ))}
               </div>
@@ -799,7 +799,7 @@ export const CustomerServiceDetail: React.FC = () => {
                       {service.dos.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3 rounded-xl border border-[#10B981]/20">
                           <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
-                          <span>{item}</span>
+                          <span>{getLocalizedFeature(item)}</span>
                         </div>
                       ))}
                     </div>
@@ -815,7 +815,7 @@ export const CustomerServiceDetail: React.FC = () => {
                       {service.donts.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-rose-950 bg-[#FDFCF7] p-3 rounded-xl border border-rose-200">
                           <span className="text-rose-600 font-bold flex-shrink-0">✕</span>
-                          <span>{item}</span>
+                          <span>{getLocalizedFeature(item)}</span>
                         </div>
                       ))}
                     </div>
@@ -853,8 +853,8 @@ export const CustomerServiceDetail: React.FC = () => {
                       }`}
                     >
                       <div className="space-y-0.5">
-                        <h4 className="font-bold text-[#1F2A1E] text-sm">{addon.name}</h4>
-                        {addon.description && <p className="text-xs text-[#1F2A1E]/60">{addon.description}</p>}
+                        <h4 className="font-bold text-[#1F2A1E] text-sm">{getLocalizedServiceName(addon.name)}</h4>
+                        {addon.description && <p className="text-xs text-[#1F2A1E]/60">{getLocalizedDescription(addon.description)}</p>}
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-bold text-[#1F2A1E] text-sm font-sans">+{formatCurrencyINR(addon.price)}</span>
