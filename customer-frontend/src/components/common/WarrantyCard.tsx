@@ -46,7 +46,7 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
   const handleClaimSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (description.trim().length < 5) {
-      showToast('Please provide a detailed description (at least 5 characters).', 'error');
+      showToast(t('warranty.toast_min_chars', { defaultValue: 'Please provide a detailed description (at least 5 characters).' }), 'error');
       return;
     }
 
@@ -61,7 +61,7 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
       setDescription('');
       if (onClaimRaised) onClaimRaised();
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to submit warranty claim.';
+      const msg = err.response?.data?.detail || t('warranty.toast_submit_failed', { defaultValue: 'Failed to submit warranty claim.' });
       showToast(msg, 'error');
     } finally {
       setSubmitting(false);
@@ -112,7 +112,7 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
               <div className="flex items-center gap-2 mt-2 text-[11px] font-semibold text-[#1F2A1E]/60">
                 <Clock className="w-3.5 h-3.5 text-[#C9A15A]" />
                 <span>
-                  {t('warranty.expires_on', { defaultValue: 'Valid until' })}: {expiresDate.toLocaleDateString()} ({t('warranty.days_left', { days: daysRemaining, defaultValue: `${daysRemaining} days left` })})
+                  {t('warranty.expires_summary', { date: expiresDate.toLocaleDateString(), days: daysRemaining, defaultValue: `Valid until: ${expiresDate.toLocaleDateString()} (${daysRemaining} days left)` })}
                 </span>
               </div>
             )}

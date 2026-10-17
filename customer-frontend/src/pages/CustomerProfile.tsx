@@ -32,7 +32,7 @@ export const CustomerProfile: React.FC = () => {
       await refreshUser();
       showToast(t('profile.profile_updated', { defaultValue: 'Profile updated successfully!' }), 'success');
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Failed to update profile.', 'error');
+      showToast(err.response?.data?.detail || t('profile.failed_update', { defaultValue: 'Failed to update profile.' }), 'error');
     } finally {
       setSaving(false);
     }
@@ -68,7 +68,7 @@ export const CustomerProfile: React.FC = () => {
             </div>
 
             <div className="space-y-1">
-              <h3 className="font-extrabold text-slate-900 text-lg">{user.full_name || 'Customer'}</h3>
+              <h3 className="font-extrabold text-slate-900 text-lg">{user.full_name || t('profile.default_customer_name', { defaultValue: 'Customer' })}</h3>
               <p className="text-xs text-slate-500 font-medium">{user.email}</p>
             </div>
 

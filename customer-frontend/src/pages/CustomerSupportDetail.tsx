@@ -30,7 +30,7 @@ export const CustomerSupportDetail: React.FC = () => {
       const data = await getTicketDetail(ticketId);
       setTicket(data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to load support ticket details from database.');
+      setError(err.response?.data?.detail || t('support.failed_load_details', { defaultValue: 'Failed to load support ticket details from database.' }));
     } finally {
       setLoading(false);
     }
@@ -73,11 +73,11 @@ export const CustomerSupportDetail: React.FC = () => {
     setReplying(true);
     try {
       await addTicketMessage(ticketId, newMessage.trim());
-      showToast('Reply sent to support!', 'success');
+      showToast(t('support.toast_reply_sent', { defaultValue: 'Reply sent to support!' }), 'success');
       setNewMessage('');
       fetchDetail();
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Failed to send reply.', 'error');
+      showToast(err.response?.data?.detail || t('support.toast_send_reply_failed', { defaultValue: 'Failed to send reply.' }), 'error');
     } finally {
       setReplying(false);
     }
@@ -97,7 +97,7 @@ export const CustomerSupportDetail: React.FC = () => {
       <div className="max-w-md mx-auto my-12 p-8 bg-white border border-slate-200 rounded-3xl text-center space-y-4 shadow-sm">
         <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
         <h3 className="text-lg font-bold text-slate-900">{t('support.ticket_not_found', { defaultValue: 'Ticket Not Found' })}</h3>
-        <p className="text-xs text-slate-600">{error || 'The requested support ticket does not exist in the database.'}</p>
+        <p className="text-xs text-slate-600">{error || t('support.ticket_not_found_desc', { defaultValue: 'The requested support ticket does not exist in the database.' })}</p>
         <button
           onClick={() => navigate('/support')}
           className="px-5 py-2.5 bg-[#2563EB] text-white font-bold text-xs rounded-xl inline-flex items-center gap-2"
@@ -197,12 +197,12 @@ export const CustomerSupportDetail: React.FC = () => {
                       ) : isProvider ? (
                         <>
                           <User className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>{msg.sender_name || 'Service Provider'} <span className="opacity-70 text-[10px] uppercase font-normal">(Provider)</span></span>
+                          <span>{msg.sender_name || t('support.role_provider', { defaultValue: 'Service Provider' })} <span className="opacity-70 text-[10px] uppercase font-normal">({t('support.role_provider', { defaultValue: 'Provider' })})</span></span>
                         </>
                       ) : (
                         <>
                           <ShieldCheck className="w-3.5 h-3.5 text-[#2563EB]" />
-                          <span>{t('support.support_ops', { defaultValue: 'SmartServe Support Operations' })} <span className="opacity-70 text-[10px] uppercase font-normal">({isAdmin ? 'Admin' : 'Operations'})</span></span>
+                          <span>{t('support.support_ops', { defaultValue: 'SmartServe Support Operations' })} <span className="opacity-70 text-[10px] uppercase font-normal">({isAdmin ? t('support.role_admin', { defaultValue: 'Admin' }) : t('support.role_operations', { defaultValue: 'Operations' })})</span></span>
                         </>
                       )}
                       <span className="text-[10px] text-slate-400 font-normal">

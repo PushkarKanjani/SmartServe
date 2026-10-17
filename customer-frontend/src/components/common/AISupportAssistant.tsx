@@ -340,7 +340,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
                     {!isUser && (
                       <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#2F5233] tracking-wide">
                         <Sparkles className="w-3.5 h-3.5 text-[#C9A15A]" />
-                        <span>SmartServe Assistant</span>
+                        <span>{t('support.assistant_name', { defaultValue: 'SmartServe Assistant' })}</span>
                       </div>
                     )}
                     <div>{isUser ? msg.content : cleanAIMessageContent(msg.content)}</div>
@@ -355,7 +355,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
                 <div className="bg-white border border-[#E5DEC9] p-3.5 rounded-2xl rounded-bl-xs shadow-xs space-y-2 max-w-[85%]">
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#2F5233] tracking-wide">
                     <Sparkles className="w-3.5 h-3.5 text-[#C9A15A]" />
-                    <span>SmartServe Assistant</span>
+                    <span>{t('support.assistant_name', { defaultValue: 'SmartServe Assistant' })}</span>
                   </div>
                   <div className="flex items-center gap-1.5 py-0.5 px-0.5">
                     <span className="w-2 h-2 rounded-full bg-[#2F5233] smartserve-typing-dot-1" />
@@ -379,7 +379,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
                 <div className="bg-white px-3 py-2 rounded-xl border border-[#E5DEC9] flex items-center justify-between text-xs">
                   <span className="text-slate-600 font-medium">{t('support.reference', { defaultValue: 'Reference:' })}</span>
                   <span className="font-mono font-bold text-[#2F5233]">
-                    Ticket #{escalatedTicket.reference.replace(/^TKT-/, '')}
+                    {t('support.ticket_ref_display', { ref: escalatedTicket.reference.replace(/^TKT-/, ''), defaultValue: `Ticket #${escalatedTicket.reference.replace(/^TKT-/, '')}` })}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-normal">
@@ -463,7 +463,7 @@ export const AISupportAssistant: React.FC<AISupportAssistantProps> = ({
               <button
                 type="submit"
                 disabled={loading || !inputMessage.trim() || !!escalatedTicket}
-                aria-label="Send message"
+                aria-label={t('support.send_message', { defaultValue: 'Send message' })}
                 className="p-2 bg-[#2F5233] hover:bg-[#3D6B42] disabled:bg-slate-200 text-white disabled:text-slate-400 rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed shrink-0 flex items-center justify-center shadow-xs"
               >
                 <Send className="w-3.5 h-3.5" />

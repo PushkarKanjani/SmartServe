@@ -99,13 +99,13 @@ export const CustomerCombinedBooking: React.FC = () => {
     try {
       const text = await navigator.clipboard.readText();
       if (!text.trim()) {
-        showToast('Clipboard is empty.', 'error');
+        showToast(t('bundle.toast_clipboard_empty', { defaultValue: 'Clipboard is empty.' }), 'error');
         return;
       }
       setCustomerNotes((prev) => (prev ? `${prev}\n${text.trim()}` : text.trim()));
-      showToast('Pasted instructions from clipboard ✓', 'success');
+      showToast(t('bundle.toast_pasted_instructions', { defaultValue: 'Pasted instructions from clipboard ✓' }), 'success');
     } catch {
-      showToast('Clipboard access was denied. Please paste manually.', 'error');
+      showToast(t('bundle.toast_clipboard_denied', { defaultValue: 'Clipboard access was denied. Please paste manually.' }), 'error');
     }
   };
 
@@ -119,7 +119,7 @@ export const CustomerCombinedBooking: React.FC = () => {
       const content = event.target?.result as string;
       if (content) {
         setCustomerNotes((prev) => (prev ? `${prev}\n${content.trim()}` : content.trim()));
-        showToast(`Imported notes from ${file.name} ✓`, 'success');
+        showToast(t('bundle.toast_imported_notes', { fileName: file.name, defaultValue: `Imported notes from ${file.name} ✓` }), 'success');
       }
     };
     reader.readAsText(file);
@@ -135,12 +135,12 @@ export const CustomerCombinedBooking: React.FC = () => {
     }
 
     if (bundleItems.length < 2) {
-      showToast('A combined booking requires at least 2 services. Please add more from the catalog.', 'error');
+      showToast(t('bundle.toast_min_services', { defaultValue: 'A combined booking requires at least 2 services. Please add more from the catalog.' }), 'error');
       return;
     }
 
     if (!addressLine1.trim() || addressLine1.length < 5) {
-      showToast('Please enter a valid service address.', 'error');
+      showToast(t('bundle.toast_valid_address', { defaultValue: 'Please enter a valid service address.' }), 'error');
       return;
     }
 
@@ -232,7 +232,7 @@ export const CustomerCombinedBooking: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Layers className="w-5 h-5 text-[#2F5233]" />
                   <h3 className="font-bold text-sm text-[#1F2A1E]">
-                    {t('bundle.services_in_bundle', { defaultValue: 'Selected Services' })} ({bundleItems.length})
+                    {t('bundle.services_in_bundle_count', { count: bundleItems.length, defaultValue: `Selected Services (${bundleItems.length})` })}
                   </h3>
                 </div>
                 <div className="flex items-center gap-3">
@@ -269,7 +269,7 @@ export const CustomerCombinedBooking: React.FC = () => {
                       <button
                         onClick={() => handleRemove(item.id)}
                         className="p-1.5 text-[#1F2A1E]/40 hover:text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
-                        title="Remove service"
+                        title={t('bundle.remove_service', { defaultValue: 'Remove service' })}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -475,7 +475,7 @@ export const CustomerCombinedBooking: React.FC = () => {
                   className="w-full bg-white border border-[#E5DEC9] rounded-xl p-3 text-xs text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233]"
                 />
                 <span className="text-[10px] text-[#1F2A1E]/40 block text-right mt-1">
-                  {customerNotes.length} characters
+                  {t('bundle.characters_count', { count: customerNotes.length, defaultValue: `${customerNotes.length} characters` })}
                 </span>
               </div>
             </div>

@@ -158,7 +158,7 @@ export const CustomerBookings: React.FC = () => {
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
         {[
-          { key: 'all', label: `${t('common.all', { defaultValue: 'All' })} (${bookings.length})` },
+          { key: 'all', label: t('common.all_count', { count: bookings.length, defaultValue: `All (${bookings.length})` }) },
           { key: 'active', label: t('common.active', { defaultValue: 'Active & In-Progress' }) },
           { key: 'completed', label: t('common.completed', { defaultValue: 'Completed' }) },
           { key: 'cancelled', label: t('common.cancelled', { defaultValue: 'Cancelled' }) },
@@ -181,14 +181,14 @@ export const CustomerBookings: React.FC = () => {
       {error && (
         <div className="p-8 bg-white border border-red-200 rounded-3xl text-center space-y-3 shadow-sm">
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
-          <h3 className="text-base font-bold text-slate-900">Failed to Load Bookings</h3>
+          <h3 className="text-base font-bold text-slate-900">{t('booking.failed_to_load_bookings', { defaultValue: 'Failed to Load Bookings' })}</h3>
           <p className="text-xs text-slate-600 max-w-md mx-auto">{error}</p>
           <button
             onClick={fetchBookings}
             className="px-4 py-2 bg-[#2563EB] text-white text-xs font-bold rounded-xl inline-flex items-center gap-2"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Retry Connection</span>
+            <span>{t('booking.retry_connection', { defaultValue: 'Retry Connection' })}</span>
           </button>
         </div>
       )}
@@ -240,7 +240,13 @@ export const CustomerBookings: React.FC = () => {
                     <div className="flex items-center gap-4 text-xs text-slate-500 font-medium">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{b.scheduled_date} at {b.scheduled_time}</span>
+                        <span>
+                          {t('booking.date_at_time', {
+                            date: b.scheduled_date,
+                            time: b.scheduled_time,
+                            defaultValue: `${b.scheduled_date} at ${b.scheduled_time}`
+                          })}
+                        </span>
                       </span>
                       <span>• {t("booking.provider_label", { defaultValue: "Provider" })}: <strong className="text-slate-700">{b.provider_name || t("booking.assigned_soon", { defaultValue: "Assigned Soon" })}</strong></span>
                     </div>
@@ -248,7 +254,7 @@ export const CustomerBookings: React.FC = () => {
                     {b.otp_code && ['accepted', 'on the way', 'arrived'].includes(stLower) && (
                       <div className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-bold w-fit mt-1">
                         <KeyRound className="w-3.5 h-3.5" />
-                        <span>{t("booking.start_otp_label", { defaultValue: "Start OTP" })}: {b.otp_code}</span>
+                        <span>{t("booking.start_otp_display", { otp: b.otp_code, defaultValue: `Start OTP: ${b.otp_code}` })}</span>
                       </div>
                     )}
 

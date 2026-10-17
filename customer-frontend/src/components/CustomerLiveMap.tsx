@@ -22,6 +22,7 @@ import {
   computeHaversineKm, 
   calculateDynamicEta 
 } from '../utils/routeGeometry';
+import { useTranslation } from 'react-i18next';
 
 interface CustomerLiveMapProps {
   bookingId: string;
@@ -40,6 +41,7 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
   customerLocation,
   serviceName,
 }) => {
+  const { t } = useTranslation();
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const providerMarkerRef = useRef<L.Marker | null>(null);
@@ -426,8 +428,8 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
         .addTo(map)
         .bindPopup(
           `<div style="font-family: inherit; font-size: 12px; padding: 4px;">
-            <strong style="color: #1e3a8a;">Customer Destination</strong>
-            <div style="color: #64748b; font-size: 11px; margin-top: 2px;">${customerLocation.address || 'Service Location'}</div>
+            <strong style="color: #1e3a8a;">${t('booking.customer_destination', { defaultValue: 'Customer Destination' })}</strong>
+            <div style="color: #64748b; font-size: 11px; margin-top: 2px;">${customerLocation.address || t('booking.service_location', { defaultValue: 'Service Location' })}</div>
           </div>`
         );
       customerMarkerRef.current = custMarker;
@@ -452,10 +454,10 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
         .bindPopup(
           `<div style="font-family: inherit; font-size: 12px; padding: 4px;">
             <strong style="color: #064e3b; display: flex; align-items: center; gap: 4px;">
-              <span>${provider?.full_name || 'Service Partner'}</span>
-              <span style="background: #ecfdf5; color: #059669; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 700;">LIVE DISPATCH</span>
+              <span>${provider?.full_name || t('booking.provider_fallback', { defaultValue: 'Service Partner' })}</span>
+              <span style="background: #ecfdf5; color: #059669; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 700;">${t('booking.live_dispatch_badge', { defaultValue: 'LIVE DISPATCH' })}</span>
             </strong>
-            <div style="color: #047857; font-size: 11px; margin-top: 2px;">Status: ${bookingStatus}</div>
+            <div style="color: #047857; font-size: 11px; margin-top: 2px;">${t('booking.status_label', { defaultValue: 'Status' })}: ${bookingStatus}</div>
           </div>`
         );
       providerMarkerRef.current = provMarker;
@@ -654,13 +656,13 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
                   isArrived ? 'text-teal-400' : isStarted ? 'text-purple-400' : 'text-emerald-400'
                 }`}>
                   {isArrived
-                    ? 'Provider has arrived at your location'
+                    ? t('booking.live_status_arrived', { defaultValue: 'Provider has arrived at your address' })
                     : isStarted
-                    ? 'Service in progress'
-                    : 'Provider is on the way'}
+                    ? t('booking.service_in_progress', { defaultValue: 'Service in progress' })
+                    : t('booking.live_status_on_the_way', { defaultValue: 'Provider is on the way' })}
                 </span>
                 <span className="text-[11px] text-slate-400">
-                  • {serviceName} {isRouting && <span className="text-blue-300 font-semibold">(calculating route...)</span>}
+                  • {serviceName} {isRouting && <span className="text-blue-300 font-semibold">{t('booking.calculating_route', { defaultValue: '(calculating route...)' })}</span>}
                 </span>
               </div>
             </div>
@@ -670,7 +672,7 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
           <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-4 py-2 rounded-2xl backdrop-blur-xs self-start sm:self-auto flex-wrap">
             {displayDistance && (
               <div className="text-right">
-                <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Remaining</span>
+                <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">{t('booking.remaining_label', { defaultValue: 'Remaining' })}</span>
                 <span className="text-sm font-black text-emerald-400 font-mono">{displayDistance}</span>
               </div>
             )}
@@ -678,15 +680,15 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
             {/* Dynamic ETA: Paused when stale, dynamic when live */}
             {!isArrived && !isStarted && !isCompleted && (
               <div className="text-right border-l border-white/10 pl-3">
-                <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">Est. Arrival</span>
+                <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">{t('booking.est_arrival_label', { defaultValue: 'Est. Arrival' })}</span>
                 {isGpsStale ? (
                   <span className="text-xs font-black text-amber-400 font-mono flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                    <span>Paused</span>
+                    <span>{t('booking.paused_label', { defaultValue: 'Paused' })}</span>
                   </span>
                 ) : (
                   <span className="text-sm font-black text-blue-400 font-mono">
-                    ~{etaMinutes !== null ? etaMinutes : 1} min
+                    {t('booking.eta_minutes_display', { mins: etaMinutes !== null ? etaMinutes : 1, defaultValue: `~${etaMinutes !== null ? etaMinutes : 1} min` })}
                   </span>
                 )}
               </div>
@@ -694,7 +696,7 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
 
             {/* GPS Signal Status: LIVE vs STALE (Requirement 6) */}
             <div className="text-right border-l border-white/10 pl-3">
-              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">GPS Signal</span>
+              <span className="text-[10px] text-slate-400 block font-semibold uppercase tracking-wider">{t('booking.gps_signal_label', { defaultValue: 'GPS Signal' })}</span>
               {isGpsStale ? (
                 <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
@@ -735,37 +737,37 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
         <div className="mt-3.5 pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-bold text-slate-400 flex-wrap sm:flex-nowrap gap-y-1">
           <div className="flex items-center gap-1 text-emerald-400">
             <CheckCircle2 className="w-3 h-3" />
-            <span>Accepted</span>
+            <span>{t('booking.step_accepted', { defaultValue: 'Accepted' })}</span>
           </div>
           <div className="h-0.5 flex-1 mx-1.5 bg-emerald-500/40 rounded-full min-w-3"></div>
 
           <div className={`flex items-center gap-1 ${isOnTheWay || isArrived || isStarted || isCompleted ? 'text-emerald-400' : 'text-slate-500'}`}>
             <Navigation className="w-3 h-3" />
-            <span>On The Way</span>
+            <span>{t('booking.step_on_the_way', { defaultValue: 'On The Way' })}</span>
           </div>
           <div className={`h-0.5 flex-1 mx-1.5 rounded-full min-w-3 ${isArrived || isStarted || isCompleted ? 'bg-emerald-500/40' : 'bg-white/10'}`}></div>
 
           <div className={`flex items-center gap-1 ${isArrived || isStarted || isCompleted ? 'text-teal-400 font-extrabold' : 'text-slate-500'}`}>
             <span className={`w-2 h-2 rounded-full ${isArrived ? 'bg-teal-400 animate-ping' : isStarted || isCompleted ? 'bg-teal-400' : 'bg-slate-600'}`}></span>
-            <span>Arrived</span>
+            <span>{t('booking.step_arrived', { defaultValue: 'Arrived' })}</span>
           </div>
           <div className={`h-0.5 flex-1 mx-1.5 rounded-full min-w-3 ${isStarted || isCompleted ? 'bg-purple-500/40' : 'bg-white/10'}`}></div>
 
           <div className={`flex items-center gap-1 ${isArrived ? 'text-amber-400 font-extrabold' : isStarted || isCompleted ? 'text-emerald-400' : 'text-slate-500'}`}>
             <KeyRound className="w-3 h-3" />
-            <span>OTP Verification</span>
+            <span>{t('booking.step_otp', { defaultValue: 'OTP Verification' })}</span>
           </div>
           <div className={`h-0.5 flex-1 mx-1.5 rounded-full min-w-3 ${isStarted || isCompleted ? 'bg-purple-500/40' : 'bg-white/10'}`}></div>
 
           <div className={`flex items-center gap-1 ${isStarted || isCompleted ? 'text-purple-400 font-extrabold' : 'text-slate-500'}`}>
             <span className={`w-2 h-2 rounded-full ${isStarted ? 'bg-purple-400 animate-pulse' : isCompleted ? 'bg-purple-400' : 'bg-slate-600'}`}></span>
-            <span>Started</span>
+            <span>{t('booking.step_started', { defaultValue: 'Started' })}</span>
           </div>
           <div className={`h-0.5 flex-1 mx-1.5 rounded-full min-w-3 ${isCompleted ? 'bg-emerald-500/40' : 'bg-white/10'}`}></div>
 
           <div className={`flex items-center gap-1 ${isCompleted ? 'text-emerald-400 font-extrabold' : 'text-slate-500'}`}>
             <span className={`w-2 h-2 rounded-full ${isCompleted ? 'bg-emerald-400' : 'bg-slate-600'}`}></span>
-            <span>Completed</span>
+            <span>{t('booking.step_completed', { defaultValue: 'Completed' })}</span>
           </div>
         </div>
       </div>
@@ -774,7 +776,7 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
       {!customerLocation && (
         <div className="px-5 py-2.5 bg-amber-50 border-b border-amber-200/80 flex items-center gap-2 text-xs text-amber-900 font-medium">
           <MapPinOff className="w-4 h-4 text-amber-700 shrink-0" />
-          <span>Customer destination coordinates not available. Showing provider location.</span>
+          <span>{t('booking.dest_coords_missing', { defaultValue: 'Customer destination coordinates not available. Showing provider location.' })}</span>
         </div>
       )}
 
@@ -804,13 +806,13 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
                 <AlertCircle className="w-6 h-6" />
               </div>
-              <h4 className="font-bold text-slate-900 text-base">Awaiting Provider GPS Signal</h4>
+              <h4 className="font-bold text-slate-900 text-base">{t('booking.awaiting_gps', { defaultValue: 'Awaiting Provider GPS Signal' })}</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
                 {provider?.full_name || 'Your technician'} is on assignment. Live road tracking activates automatically once their device broadcasts GPS coordinates.
               </p>
               <div className="pt-2 text-xs font-semibold text-slate-500 flex items-center justify-center gap-2">
                 <Radio className="w-4 h-4 text-amber-500 animate-pulse" />
-                <span>Live WebSocket channel connected</span>
+                <span>{t('booking.ws_connected', { defaultValue: 'Live WebSocket channel connected' })}</span>
               </div>
             </div>
           </div>
@@ -820,7 +822,7 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
         <div className="absolute bottom-4 left-4 bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-lg z-10 text-xs space-y-1.5">
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-[#2563EB] inline-block border-2 border-white shadow-2xs"></span>
-            <span className="font-bold text-slate-800">Your Location</span>
+            <span className="font-bold text-slate-800">{t('booking.your_location', { defaultValue: 'Your Location' })}</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-3 h-3 rounded-full bg-[#059669] inline-block border-2 border-white shadow-2xs"></span>
@@ -828,11 +830,11 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
           </div>
           <div className="flex items-center gap-2 pt-1 border-t border-slate-100 text-[11px]">
             <span className="w-4 h-1 bg-[#2563EB] inline-block rounded-full"></span>
-            <span className="text-slate-700 font-semibold">Remaining Route</span>
+            <span className="text-slate-700 font-semibold">{t('booking.remaining_route', { defaultValue: 'Remaining Route' })}</span>
           </div>
           <div className="flex items-center gap-2 text-[11px]">
             <span className="w-4 h-1 bg-[#94A3B8] inline-block rounded-full"></span>
-            <span className="text-slate-500">Travelled Route</span>
+            <span className="text-slate-500">{t('booking.travelled_route', { defaultValue: 'Travelled Route' })}</span>
           </div>
         </div>
 
@@ -861,7 +863,7 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
               className="bg-white/95 hover:bg-white text-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 shadow-md text-xs font-bold transition-all flex items-center gap-1.5"
             >
               <Navigation className="w-3.5 h-3.5 text-blue-600" />
-              <span>Recenter</span>
+              <span>{t('booking.recenter_btn', { defaultValue: 'Recenter' })}</span>
             </button>
           )}
         </div>

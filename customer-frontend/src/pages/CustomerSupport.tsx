@@ -62,7 +62,7 @@ export const CustomerSupport: React.FC = () => {
   const handleCreateTicket = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject.trim() || !description.trim()) {
-      showToast('Please fill in both subject and description.', 'error');
+      showToast(t('support.toast_fill_fields', { defaultValue: 'Please fill in both subject and description.' }), 'error');
       return;
     }
 
@@ -75,14 +75,14 @@ export const CustomerSupport: React.FC = () => {
         description,
       });
 
-      showToast('Support ticket submitted successfully!', 'success');
+      showToast(t('support.toast_ticket_submitted', { defaultValue: 'Support ticket submitted successfully!' }), 'success');
       setShowModal(false);
       setSubject('');
       setDescription('');
       fetchTickets();
       navigate(`/support/${newTicket.id}`);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Failed to submit support ticket.', 'error');
+      showToast(err.response?.data?.detail || t('support.toast_submit_failed', { defaultValue: 'Failed to submit support ticket.' }), 'error');
     } finally {
       setSubmitting(false);
     }
