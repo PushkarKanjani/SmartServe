@@ -64,15 +64,17 @@ export function getLocalizedSubcategory(subcategoryName?: string | null): string
     if (lang === 'gu' && entry.gu) return entry.gu;
   }
 
-  // Fallback keyword replacements
-  if (norm.includes('cleaning')) {
-    return lang === 'hi' ? `${clean.replace(/cleaning/gi, 'सफाई')}` : `${clean.replace(/cleaning/gi, 'સફાઈ')}`;
-  }
-  if (norm.includes('repair')) {
-    return lang === 'hi' ? `${clean.replace(/repair/gi, 'मरम्मत')}` : `${clean.replace(/repair/gi, 'રિપેરિંગ')}`;
-  }
-
   return clean;
+}
+
+function hasLatin(str?: string | null): boolean {
+  if (!str) return false;
+  return /[a-zA-Z]/.test(str);
+}
+
+function hasIndic(str?: string | null): boolean {
+  if (!str) return false;
+  return /[\u0900-\u097F\u0A80-\u0AFF]/.test(str);
 }
 
 export function localizePrefix(prefix: string, lang: string): string {
@@ -93,7 +95,12 @@ export function localizePrefix(prefix: string, lang: string): string {
     }
     return w;
   });
-  return translated.join(' ');
+  const res = translated.join(' ');
+  // STRICT: If result contains both Latin and Indic characters, reject hybrid and keep clean
+  if (hasLatin(res) && hasIndic(res)) {
+    return clean;
+  }
+  return res;
 }
 
 /**
@@ -215,67 +222,80 @@ export function getLocalizedServiceName(serviceName?: string | null): string {
     return lang === 'hi' ? `${base} सेवा विकल्प ${num}` : `${base} સેવા વિકલ્પ ${num}`;
   }
 
-  // 7. Suffix / Substring patterns with localized prefix
+  // 7. Suffix / Substring patterns with localized prefix (only when prefix is pure Indic)
   if (lower.includes('facial')) {
     const prefix = trimmed.replace(/facial/gi, '').trim();
     if (!prefix) return lang === 'hi' ? 'फेशियल' : 'ફેશિયલ';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} फेशियल` : `${locPrefix} ફેશિયલ`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} फेशियल` : `${locPrefix} ફેશિયલ`;
   }
   if (lower.includes('cleanup')) {
     const prefix = trimmed.replace(/cleanup/gi, '').trim();
+    if (!prefix) return lang === 'hi' ? 'क्लीनअप' : 'ક્લીનઅપ';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} क्लीनअप` : `${locPrefix} ક્લીનઅપ`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} क्लीनअप` : `${locPrefix} ક્લીનઅપ`;
   }
   if (lower.includes('massage')) {
     const prefix = trimmed.replace(/massage/gi, '').trim();
+    if (!prefix) return lang === 'hi' ? 'मसाज' : 'મસાજ';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} मसाज` : `${locPrefix} મસાજ`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} मसाज` : `${locPrefix} મસાજ`;
   }
   if (lower.includes('waxing')) {
     const prefix = trimmed.replace(/waxing/gi, '').trim();
+    if (!prefix) return lang === 'hi' ? 'वैक्सिंग' : 'વેક્સિંગ';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} वैक्सिंग` : `${locPrefix} વેક્સિંગ`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} वैक्सिंग` : `${locPrefix} વેક્સિંગ`;
   }
   if (lower.includes('manicure')) {
     const prefix = trimmed.replace(/manicure/gi, '').trim();
+    if (!prefix) return lang === 'hi' ? 'मेनिक्योर' : 'મેનિક્યોર';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} मेनिक्योर` : `${locPrefix} મેનિક્યોર`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} मेनिक्योर` : `${locPrefix} મેનિક્યોર`;
   }
   if (lower.includes('pedicure')) {
     const prefix = trimmed.replace(/pedicure/gi, '').trim();
+    if (!prefix) return lang === 'hi' ? 'पेडीक्योर' : 'પેડિક્યોર';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} पेडीक्योर` : `${locPrefix} પેડિક્યોર`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} पेडीक्योर` : `${locPrefix} પેડિક્યોર`;
   }
   if (lower.includes('haircut')) {
     const prefix = trimmed.replace(/haircut/gi, '').trim();
+    if (!prefix) return lang === 'hi' ? 'हेयरकट' : 'હેરકટ';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} हेयरकट` : `${locPrefix} હેરકટ`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} हेयरकट` : `${locPrefix} હેરકટ`;
   }
   if (lower.endsWith('cleaning')) {
     const prefix = trimmed.slice(0, -8).trim();
+    if (!prefix) return lang === 'hi' ? 'सफाई' : 'સફાઈ';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} सफाई` : `${locPrefix} સફાઈ`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} सफाई` : `${locPrefix} સફાઈ`;
   }
   if (lower.endsWith('repair')) {
     const prefix = trimmed.slice(0, -6).trim();
+    if (!prefix) return lang === 'hi' ? 'मरम्मत' : 'રિપેરિંગ';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} मरम्मत` : `${locPrefix} રિપેરિંગ`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} मरम्मत` : `${locPrefix} રિપેરિંગ`;
   }
   if (lower.endsWith('installation')) {
     const prefix = trimmed.slice(0, -12).trim();
+    if (!prefix) return lang === 'hi' ? 'इंस्टॉलेशन' : 'ઇન્સ્ટોલેશન';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} इंस्टॉलेशन` : `${locPrefix} ઇન્સ્ટોલેશન`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} इंस्टॉलेशन` : `${locPrefix} ઇન્સ્ટોલેશન`;
   }
   if (lower.endsWith('service')) {
     const prefix = trimmed.slice(0, -7).trim();
+    if (!prefix) return lang === 'hi' ? 'सर्विस' : 'સર્વિસ';
     const locPrefix = localizePrefix(prefix, lang).trim();
-    return lang === 'hi' ? `${locPrefix} सर्विस` : `${locPrefix} સર્વિસ`;
+    if (!hasLatin(locPrefix)) return lang === 'hi' ? `${locPrefix} सर्विस` : `${locPrefix} સર્વિસ`;
   }
 
-  // 8. Tokenized fallback: word-by-word translation
+  // 8. Clean fallback: do not return partial franken-strings
   const tokenized = localizePrefix(trimmed, lang);
-  return tokenized || serviceName;
+  if (tokenized && !hasLatin(tokenized)) {
+    return tokenized;
+  }
+  return serviceName;
 }
 
 /**
@@ -314,29 +334,8 @@ export function getLocalizedFeature(featureText?: string | null): string {
     return lang === 'hi' ? `पूर्ण ${svcLoc} प्रक्रिया` : `સંપૂર્ણ ${svcLoc} પ્રક્રિયા`;
   }
 
-  // 3. Fallback keyword transliterations
-  if (norm.includes('cleansing') || norm.includes('cleaning')) {
-    return lang === 'hi' ? `${trimmed.replace(/cleansing|cleaning/gi, 'सफाई')}` : `${trimmed.replace(/cleansing|cleaning/gi, 'સફાઈ')}`;
-  }
-  if (norm.includes('massage')) {
-    return lang === 'hi' ? `${trimmed.replace(/massage/gi, 'मसाज')}` : `${trimmed.replace(/massage/gi, 'મસાજ')}`;
-  }
-  if (norm.includes('scrub')) {
-    return lang === 'hi' ? `${trimmed.replace(/scrub/gi, 'स्क्रब')}` : `${trimmed.replace(/scrub/gi, 'સ્ક્રબ')}`;
-  }
-  if (norm.includes('test')) {
-    return lang === 'hi' ? `${trimmed.replace(/test/gi, 'टेस्ट')}` : `${trimmed.replace(/test/gi, 'ટેસ્ટ')}`;
-  }
-  if (norm.includes('wipe') || norm.includes('wiping')) {
-    return lang === 'hi' ? `${trimmed.replace(/wiping|wipe/gi, 'वाइप')}` : `${trimmed.replace(/wiping|wipe/gi, 'વાઇપ')}`;
-  }
-  if (norm.includes('inspection') || norm.includes('check')) {
-    return lang === 'hi' ? `${trimmed.replace(/inspection|check/gi, 'जांच')}` : `${trimmed.replace(/inspection|check/gi, 'તપાસ')}`;
-  }
-
-  // 4. Tokenized fallback
-  const locTokens = localizePrefix(trimmed, lang);
-  return locTokens || featureText;
+  // 3. Fallback: Return original cleanly without partial character corruption
+  return featureText;
 }
 
 /**
