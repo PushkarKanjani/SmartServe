@@ -110,7 +110,10 @@ backend/test_*.py
 backend/test_*.js
 backend/tests/test_*_regression.py
 backend/tests/test_catalog_persistence.py
+!backend/tests/test_aaa_cia_security_suite.py
+!backend/tests/test_oauth_social_login.py
 backend/verify_*.py
+
 backend/audit_*.py
 backend/check_*.py
 backend/inspect_*.py

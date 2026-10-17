@@ -11,17 +11,42 @@ from app.models.user import User
 from app.models.session import ActiveSession
 from app.models.suspicious_activity import SuspiciousActivity
 
-def setup_totp_2fa(db: Session, user: User) -> Dict[str, str]:
-    """Generate TOTP secret key for Admin 2FA setup."""
+def setup_totp_2fa(db: Session, user: User) -> Dict[str, Any]:
+    """Generate TOTP secret key and backup recovery codes for Admin/Provider 2FA setup."""
+    import secrets
+    from app.models.security import TwoFactorRecoveryCode
+
     if not user.totp_secret:
         user.totp_secret = pyotp.random_base32()
-        db.commit()
+
+    # Clear old unused recovery codes for this user
+    db.query(TwoFactorRecoveryCode).filter(
+        TwoFactorRecoveryCode.user_id == user.id,
+        TwoFactorRecoveryCode.is_used == False
+    ).delete(synchronize_session=False)
+
+    recovery_codes = []
+    for _ in range(5):
+        raw_code = f"{secrets.token_hex(2).upper()}-{secrets.token_hex(2).upper()}"
+        recovery_codes.append(raw_code)
+        code_hash = hashlib.sha256(raw_code.encode("utf-8")).hexdigest()
+        rc = TwoFactorRecoveryCode(
+            id=uuid.uuid4(),
+            user_id=user.id,
+            code_hash=code_hash,
+            is_used=False
+        )
+        db.add(rc)
+
+    db.commit()
 
     totp = pyotp.TOTP(user.totp_secret)
-    provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name="SmartServe Admin")
+    issuer = "SmartServe Admin" if user.role in ["admin", "super_admin"] else "SmartServe Provider"
+    provisioning_uri = totp.provisioning_uri(name=user.email, issuer_name=issuer)
     return {
         "secret": user.totp_secret,
-        "provisioning_uri": provisioning_uri
+        "provisioning_uri": provisioning_uri,
+        "recovery_codes": recovery_codes,
     }
 
 def verify_totp_2fa(db: Session, user: User, code: str) -> bool:
@@ -34,6 +59,32 @@ def verify_totp_2fa(db: Session, user: User, code: str) -> bool:
         user.is_2fa_enabled = True
         db.commit()
     return is_valid
+
+def verify_recovery_code(db: Session, user: User, code: str) -> bool:
+    """Validate and atomically burn a single-use backup recovery code."""
+    from app.models.security import TwoFactorRecoveryCode
+    from sqlalchemy import update
+    clean_code = (code or "").strip().upper()
+    if not clean_code:
+        return False
+    code_hash = hashlib.sha256(clean_code.encode("utf-8")).hexdigest()
+    now = datetime.now(timezone.utc)
+
+    stmt = (
+        update(TwoFactorRecoveryCode)
+        .where(
+            TwoFactorRecoveryCode.user_id == user.id,
+            TwoFactorRecoveryCode.code_hash == code_hash,
+            TwoFactorRecoveryCode.is_used == False,
+        )
+        .values(is_used=True, used_at=now)
+    )
+    res = db.execute(stmt)
+    if res.rowcount > 0:
+        db.commit()
+        return True
+    return False
+
 
 def create_active_session(
     db: Session,
@@ -101,3 +152,26 @@ def log_suspicious_activity(
     db.commit()
     db.refresh(activity)
     return activity
+
+def verify_signed_evidence_url(ticket_id: str, file_path: str, expires_ts: int, signature: str) -> bool:
+    """Verify time-limited HMAC signature for evidence stream access."""
+    now_ts = int(datetime.now(timezone.utc).timestamp())
+    if now_ts > expires_ts:
+        return False
+    raw_str = f"{ticket_id}:{file_path}:{expires_ts}"
+    expected_sig = hmac.new(
+        settings.JWT_SECRET_KEY.encode('utf-8'),
+        raw_str.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected_sig, signature)
+
+def revoke_all_user_sessions(db: Session, user_id: uuid.UUID) -> int:
+    """Revoke all active sessions for a user (e.g. upon password reset, password change, or suspension)."""
+    count = (
+        db.query(ActiveSession)
+        .filter(ActiveSession.user_id == user_id, ActiveSession.is_revoked == False)
+        .update({"is_revoked": True}, synchronize_session=False)
+    )
+    db.commit()
+    return count

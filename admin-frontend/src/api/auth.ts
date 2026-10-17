@@ -3,6 +3,8 @@ import { apiClient } from './client';
 export interface LoginPayload {
   email: string;
   password: string;
+  totp_code?: string;
+  recovery_code?: string;
 }
 
 export interface TokenResponse {

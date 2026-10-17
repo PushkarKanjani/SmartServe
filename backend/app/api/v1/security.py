@@ -18,7 +18,8 @@ from app.schemas.security_ext import (
 )
 from app.services import security_service
 
-from app.core.dependencies import require_admin, require_permission
+from app.core.dependencies import require_admin, require_permission, AuthUser
+
 
 router = APIRouter(prefix="/admin/security", tags=["Admin Security & Risk Center"])
 
@@ -99,35 +100,70 @@ def get_failed_login_attempts(
 @router.post("/2fa/setup", response_model=TotpSetupResponse)
 def setup_admin_2fa(
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin)
+    admin: AuthUser = Depends(require_admin)
 ):
     """Setup TOTP 2FA secret key and QR provisioning URI for Admin."""
-    res = security_service.setup_totp_2fa(db, admin)
+    user = db.query(User).filter(User.id == admin.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+    res = security_service.setup_totp_2fa(db, user)
     return TotpSetupResponse(
         secret=res["secret"],
-        provisioning_uri=res["provisioning_uri"]
+        provisioning_uri=res["provisioning_uri"],
+        recovery_codes=res.get("recovery_codes")
     )
 
 @router.post("/2fa/verify")
 def verify_admin_2fa(
     req: TotpVerifyRequest,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin)
+    admin: AuthUser = Depends(require_admin)
 ):
     """Verify 6-digit TOTP 2FA code."""
-    is_valid = security_service.verify_totp_2fa(db, admin, req.code)
+    user = db.query(User).filter(User.id == admin.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+    is_valid = security_service.verify_totp_2fa(db, user, req.code)
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid TOTP 2FA verification code")
     return {"status": "success", "message": "Admin 2FA verification successful."}
 
+from pydantic import BaseModel
+
+class Disable2FARequest(BaseModel):
+    password: Optional[str] = None
+    totp_code: Optional[str] = None
+    recovery_code: Optional[str] = None
+
 @router.post("/2fa/disable")
 def disable_admin_2fa(
+    req: Optional[Disable2FARequest] = None,
     db: Session = Depends(get_db),
-    admin: User = Depends(require_admin)
+    admin: AuthUser = Depends(require_admin)
 ):
-    """Disable TOTP 2FA for current admin."""
-    admin.is_2fa_enabled = False
-    admin.totp_secret = None
+    """Disable TOTP 2FA for current admin, validating credentials if provided."""
+    from app.models.security import TwoFactorRecoveryCode
+    from app.core.security import verify_password
+    user = db.query(User).filter(User.id == admin.id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin account not found")
+
+    if req and req.password:
+        pwd_hash = user.password_hash or user.hashed_password
+        if not pwd_hash or not verify_password(req.password, pwd_hash):
+            raise HTTPException(status_code=400, detail="Current password verification failed.")
+
+    if req and req.totp_code:
+        if not security_service.verify_totp_2fa(db, user, req.totp_code):
+            raise HTTPException(status_code=400, detail="Invalid TOTP 2FA verification code.")
+
+    if req and req.recovery_code:
+        if not security_service.verify_recovery_code(db, user, req.recovery_code):
+            raise HTTPException(status_code=400, detail="Invalid or already used recovery code.")
+
+    user.is_2fa_enabled = False
+    user.totp_secret = None
+    db.query(TwoFactorRecoveryCode).filter(TwoFactorRecoveryCode.user_id == user.id).delete(synchronize_session=False)
     db.commit()
 
     audit_repository.create_audit_log(

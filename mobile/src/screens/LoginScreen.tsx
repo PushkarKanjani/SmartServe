@@ -20,17 +20,38 @@ export const LoginScreen = ({ navigation }: any) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [is2FaRequired, setIs2FaRequired] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
       setErrorMessage('Please enter both your email and password.');
       return;
     }
+    if (is2FaRequired && !twoFactorCode.trim()) {
+      setErrorMessage(isRecoveryMode ? 'Please enter your recovery code.' : 'Please enter your 6-digit authenticator code.');
+      return;
+    }
     setErrorMessage(null);
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(
+        email.trim(),
+        password.trim(),
+        is2FaRequired && !isRecoveryMode ? twoFactorCode.trim() : undefined,
+        is2FaRequired && isRecoveryMode ? twoFactorCode.trim() : undefined
+      );
     } catch (err: any) {
+      const is2FaHeader = err.response?.headers?.['x-2fa-required'] === 'true';
+      const detail = err.response?.data?.detail || '';
+      const is2FaDetail = typeof detail === 'string' && (detail.includes('Two-factor') || detail.includes('2FA'));
+
+      if (err.response?.status === 401 && (is2FaHeader || is2FaDetail) && !is2FaRequired) {
+        setIs2FaRequired(true);
+        setErrorMessage(null);
+        return;
+      }
       if (err.response?.data?.detail) {
         setErrorMessage(err.response.data.detail);
       } else if (err.message?.includes('Network Error') || !err.response) {
@@ -64,9 +85,13 @@ export const LoginScreen = ({ navigation }: any) => {
 
           {/* Form Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Sign In</Text>
+            <Text style={styles.cardTitle}>{is2FaRequired ? 'Two-Factor Verification' : 'Sign In'}</Text>
             <Text style={styles.cardDescription}>
-              Enter your credentials to access your SmartServe account.
+              {is2FaRequired
+                ? (isRecoveryMode
+                    ? 'Enter your single-use backup recovery code.'
+                    : 'Enter the 6-digit verification code from your authenticator app.')
+                : 'Enter your credentials to access your SmartServe account.'}
             </Text>
 
             {errorMessage ? (
@@ -75,37 +100,87 @@ export const LoginScreen = ({ navigation }: any) => {
               </View>
             ) : null}
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="name@example.com"
-                placeholderTextColor="#94A3B8"
-                autoCapitalize="none"
-                keyboardType="email-address"
-                autoCorrect={false}
-                value={email}
-                onChangeText={setEmail}
-              />
-            </View>
+            {!is2FaRequired ? (
+              <>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email Address</Text>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="name@example.com"
+                    placeholderTextColor="#94A3B8"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoCorrect={false}
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+                </View>
 
-            <View style={styles.inputGroup}>
-              <View style={styles.passwordLabelRow}>
-                <Text style={styles.inputLabel}>Password</Text>
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <Text style={styles.togglePasswordText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                <View style={styles.inputGroup}>
+                  <View style={styles.passwordLabelRow}>
+                    <Text style={styles.inputLabel}>Password</Text>
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                      <Text style={styles.togglePasswordText}>{showPassword ? 'Hide' : 'Show'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={styles.textInput}
+                    placeholder="••••••••"
+                    placeholderTextColor="#94A3B8"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.inputGroup}>
+                  <View style={styles.passwordLabelRow}>
+                    <Text style={styles.inputLabel}>
+                      {isRecoveryMode ? 'Recovery Code' : '6-Digit Authenticator Code'}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setIsRecoveryMode(!isRecoveryMode);
+                        setTwoFactorCode('');
+                        setErrorMessage(null);
+                      }}
+                    >
+                      <Text style={styles.togglePasswordText}>
+                        {isRecoveryMode ? 'Use Authenticator App' : 'Use Recovery Code'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={[
+                      styles.textInput,
+                      { fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace', letterSpacing: 2 },
+                    ]}
+                    placeholder={isRecoveryMode ? 'XXXX-XXXX' : '123456'}
+                    placeholderTextColor="#94A3B8"
+                    autoCapitalize="characters"
+                    maxLength={isRecoveryMode ? 20 : 6}
+                    value={twoFactorCode}
+                    onChangeText={setTwoFactorCode}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={{ marginBottom: 16 }}
+                  onPress={() => {
+                    setIs2FaRequired(false);
+                    setTwoFactorCode('');
+                    setErrorMessage(null);
+                  }}
+                >
+                  <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '600' }}>
+                    ← Back to email & password
+                  </Text>
                 </TouchableOpacity>
-              </View>
-              <TextInput
-                style={styles.textInput}
-                placeholder="••••••••"
-                placeholderTextColor="#94A3B8"
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                value={password}
-                onChangeText={setPassword}
-              />
-            </View>
+              </>
+            )}
 
             <TouchableOpacity
               style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
@@ -116,7 +191,9 @@ export const LoginScreen = ({ navigation }: any) => {
               {isLoading ? (
                 <ActivityIndicator color="#FFFFFF" size="small" />
               ) : (
-                <Text style={styles.submitButtonText}>Sign In to SmartServe</Text>
+                <Text style={styles.submitButtonText}>
+                  {is2FaRequired ? 'Verify & Sign In' : 'Sign In to SmartServe'}
+                </Text>
               )}
             </TouchableOpacity>
 

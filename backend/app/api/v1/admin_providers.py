@@ -707,6 +707,13 @@ def update_provider_account_status(
     user.is_active = req.is_active
     db.commit()
 
+    if not req.is_active:
+        try:
+            from app.services.security_service import revoke_all_user_sessions
+            revoke_all_user_sessions(db, user.id)
+        except Exception:
+            pass
+
     action_str = "Reactivated" if req.is_active else "Suspended"
     audit_repository.create_audit_log(
         db,

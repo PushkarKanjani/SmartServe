@@ -12,8 +12,9 @@ from app.models.customer import (
     CombinedBooking,
     CombinedBookingItem,
 )
-from app.models.security import AuditLog, FailedLoginAttempt, AdminRole
+from app.models.security import AuditLog, FailedLoginAttempt, AdminRole, PasswordResetToken, RateLimitEntry, TwoFactorRecoveryCode
 from app.models.email import EmailTemplate, EmailLog
+from app.models.oauth import OAuthAccount
 
 __all__ = [
     "Provider",
@@ -34,8 +35,10 @@ __all__ = [
     "AuditLog",
     "FailedLoginAttempt",
     "AdminRole",
+    "PasswordResetToken",
+    "RateLimitEntry",
+    "TwoFactorRecoveryCode",
     "EmailTemplate",
     "EmailLog",
+    "OAuthAccount",
 ]
-
-

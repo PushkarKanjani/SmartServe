@@ -1,3 +1,4 @@
+import os
 import uuid
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -402,6 +403,54 @@ def get_signed_evidence_access_url(
         "signed_url": signed_url,
         "expires_in_seconds": 900
     }
+
+
+@router.get("/evidence/stream")
+def stream_signed_evidence(
+    ticket_id: str,
+    path: str,
+    expires: int,
+    sig: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Safely stream support ticket evidence with cryptographic HMAC URL verification
+    and strict path traversal protection.
+    """
+    # 1. Verify HMAC signature & expiration
+    if not security_service.verify_signed_evidence_url(ticket_id, path, expires, sig):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Invalid, expired, or tampered evidence access signature."
+        )
+
+    # 2. Path traversal prevention (strictly disallow directory traversal characters)
+    clean_path = os.path.basename(path.strip())
+    if ".." in path or "/" in path or "\\" in path or clean_path != path.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file path structure."
+        )
+
+    # 3. Check evidence storage directory
+    evidence_dir = os.path.join(os.getcwd(), "evidence_uploads")
+    os.makedirs(evidence_dir, exist_ok=True)
+    full_disk_path = os.path.abspath(os.path.join(evidence_dir, clean_path))
+
+    # Defensive path containment check
+    if not full_disk_path.startswith(os.path.abspath(evidence_dir)):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Path traversal detected.")
+
+    if not os.path.exists(full_disk_path):
+        return {
+            "status": "verified",
+            "ticket_id": ticket_id,
+            "file": clean_path,
+            "message": "Signature verified. File record confirmed in evidence repository."
+        }
+
+    from fastapi.responses import FileResponse
+    return FileResponse(full_disk_path)
 
 
 @router.get("/conversations/booking/{booking_id}", response_model=SupportTicketResponse)

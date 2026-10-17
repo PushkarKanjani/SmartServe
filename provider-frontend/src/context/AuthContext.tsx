@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { providerLogin, getProviderSession, type ProviderSession } from '../api/auth';
+import { providerLogin, getProviderSession, providerLogout, type ProviderSession } from '../api/auth';
 import { apiClient } from '../api/client';
 
 interface AuthContextType {
@@ -7,9 +7,9 @@ interface AuthContextType {
   user: ProviderSession | null;
   loading: boolean;
   isVerified: boolean | null; // null = unknown/loading, true/false = known
-  login: (email: string, pass: string) => Promise<void>;
+  login: (email: string, pass: string, totp_code?: string, recovery_code?: string) => Promise<void>;
   setAuthSession: (token: string, user: ProviderSession) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshVerificationStatus: () => Promise<void>;
 }
 
@@ -57,8 +57,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
-  const login = async (email: string, pass: string) => {
-    const data = await providerLogin(email, pass);
+  const login = async (email: string, pass: string, totp_code?: string, recovery_code?: string) => {
+    const data = await providerLogin(email, pass, totp_code, recovery_code);
     localStorage.setItem('smartserve_provider_token', data.access_token);
     setToken(data.access_token);
     const session: ProviderSession = {
@@ -85,7 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('smartserve_provider_verified', 'false');
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await providerLogout();
     localStorage.removeItem('smartserve_provider_token');
     localStorage.removeItem('smartserve_provider_user');
     localStorage.removeItem('smartserve_provider_verified');

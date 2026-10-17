@@ -20,8 +20,18 @@ export interface CustomerTokenResponse {
 
 export const authApi = {
   /** POST /customer/auth/login */
-  login: async (email: string, password: string): Promise<CustomerTokenResponse> => {
-    const res = await apiClient.post<CustomerTokenResponse>('/customer/auth/login', { email, password });
+  login: async (
+    email: string,
+    password: string,
+    totp_code?: string,
+    recovery_code?: string
+  ): Promise<CustomerTokenResponse> => {
+    const res = await apiClient.post<CustomerTokenResponse>('/customer/auth/login', {
+      email,
+      password,
+      ...(totp_code ? { totp_code } : {}),
+      ...(recovery_code ? { recovery_code } : {}),
+    });
     return res.data;
   },
 
@@ -35,5 +45,14 @@ export const authApi = {
   getMe: async (): Promise<CustomerTokenResponse> => {
     const res = await apiClient.get<CustomerTokenResponse>('/customer/auth/me');
     return res.data;
+  },
+
+  /** POST /customer/auth/logout */
+  logout: async (): Promise<void> => {
+    try {
+      await apiClient.post('/customer/auth/logout');
+    } catch {
+      // offline fallback
+    }
   },
 };

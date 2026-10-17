@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Integer, JSON, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 
-from app.models.base import Base
+from app.models.base import Base, GUID
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
@@ -40,3 +40,31 @@ class AdminRole(Base):
     permissions = Column(JSON, nullable=False, default=list)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+class PasswordResetToken(Base):
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    token_hash = Column(String(64), nullable=False, unique=True, index=True) # SHA-256 hex digest
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    is_used = Column(Boolean, default=False, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    used_at = Column(DateTime(timezone=True), nullable=True)
+
+class TwoFactorRecoveryCode(Base):
+    __tablename__ = "two_factor_recovery_codes"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    user_id = Column(GUID(), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    code_hash = Column(String(64), nullable=False, index=True) # SHA-256 hash of recovery code
+    is_used = Column(Boolean, default=False, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    used_at = Column(DateTime(timezone=True), nullable=True)
+
+class RateLimitEntry(Base):
+    __tablename__ = "rate_limit_entries"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    key = Column(String(255), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, index=True, default=lambda: datetime.now(timezone.utc))

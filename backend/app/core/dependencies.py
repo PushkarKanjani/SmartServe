@@ -34,7 +34,10 @@ def get_current_user(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     db: Session = Depends(get_db),
 ) -> AuthUser:
-    """Extracts Bearer token, decodes and verifies JWT, and validates against database."""
+    """
+    Extracts Bearer token, decodes and verifies JWT, checks revocation against ActiveSession,
+    and validates against authoritative database record.
+    """
     if not auth or not auth.credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -51,6 +54,27 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Token Revocation Check (JTI session invalidation)
+    jti = payload.get("jti")
+    if jti:
+        try:
+            from app.models.session import ActiveSession
+            revoked_session = (
+                db.query(ActiveSession)
+                .filter(ActiveSession.token_jti == jti, ActiveSession.is_revoked == True)
+                .first()
+            )
+            if revoked_session:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has been revoked or logged out",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
     sub = payload.get("sub")
     if not sub:
         raise HTTPException(
@@ -59,16 +83,14 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Support lookup by UUID ID or Email identifier for robust integration
+    user = None
     try:
         user_id = uuid.UUID(str(sub))
+        user = db.query(User).filter(User.id == user_id).first()
     except (ValueError, TypeError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid user identifier format in token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        user = db.query(User).filter(User.email == str(sub).strip().lower()).first()
 
-    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -82,7 +104,8 @@ def get_current_user(
             detail="User account is inactive or suspended",
         )
 
-    role = payload.get("role") or user.role
+    # Authoritative DB role enforcement: never trust client-altered or stale role claim
+    role = user.role
     full_name = payload.get("full_name") or user.email
 
     if user.role == "provider":
@@ -121,7 +144,7 @@ def require_admin(
     current_user: AuthUser = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> User:
-    """Guard ensuring caller has Admin role."""
+    """Guard ensuring caller has Admin or Super Admin role."""
     if current_user.role not in ["admin", "super_admin"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -140,7 +163,6 @@ def require_admin(
     return admin_user
 
 
-
 def require_permission(perm: str):
     """Guard checking specific granular admin permission."""
     def permission_guard(
@@ -156,8 +178,18 @@ def require_permission(perm: str):
             .filter(AdminRole.user_id == admin_user.id, AdminRole.is_active == True)
             .first()
         )
-        if role_entry and (perm in role_entry.permissions or "*" in role_entry.permissions):
+        if role_entry:
+            perms_set = set(role_entry.permissions or [])
+
+            if "*" in perms_set or perm in perms_set:
+                return admin_user
+            if ":" in perm:
+                domain, _ = perm.split(":", 1)
+                if f"{domain}:manage" in perms_set or f"{domain}:*" in perms_set:
+                    return admin_user
+        elif admin_user.role == "admin" and perm in ["dashboard:view"]:
             return admin_user
+
 
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -166,14 +198,13 @@ def require_permission(perm: str):
     return permission_guard
 
 
-
 def get_current_customer(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_scheme),
     db: Session = Depends(get_db),
 ) -> Customer:
     """
     Authenticates and retrieves the current Customer entity from JWT token.
-    Enforces that caller has a valid active account with the 'customer' role.
+    Enforces token validity, non-revocation, active state, and customer role.
     """
     if not auth or not auth.credentials:
         raise HTTPException(
@@ -191,6 +222,27 @@ def get_current_customer(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Token Revocation Check
+    jti = payload.get("jti")
+    if jti:
+        try:
+            from app.models.session import ActiveSession
+            revoked_session = (
+                db.query(ActiveSession)
+                .filter(ActiveSession.token_jti == jti, ActiveSession.is_revoked == True)
+                .first()
+            )
+            if revoked_session:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Token has been revoked or logged out",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
     sub = payload.get("sub")
     if not sub:
         raise HTTPException(
@@ -199,16 +251,13 @@ def get_current_customer(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    user = None
     try:
         user_id = uuid.UUID(str(sub))
+        user = db.query(User).filter(User.id == user_id).first()
     except (ValueError, TypeError):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid user identifier format in token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        user = db.query(User).filter(User.email == str(sub).strip().lower()).first()
 
-    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -222,8 +271,7 @@ def get_current_customer(
             detail="User account is inactive or suspended",
         )
 
-    role = payload.get("role") or user.role
-    if role != "customer":
+    if user.role != "customer":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access forbidden: Customer role required",
@@ -241,4 +289,3 @@ def get_current_customer(
         )
 
     return customer
-

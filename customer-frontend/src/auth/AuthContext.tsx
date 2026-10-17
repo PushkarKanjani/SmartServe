@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { CustomerLoginPayload, CustomerSessionResponse, loginCustomer, getCurrentCustomer, logoutCustomer } from '../api/auth';
+import { CustomerLoginPayload, CustomerSessionResponse, CustomerTokenResponse, loginCustomer, getCurrentCustomer, logoutCustomer } from '../api/auth';
 
 interface AuthContextType {
   user: CustomerSessionResponse | null;
@@ -7,6 +7,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (credentials: CustomerLoginPayload) => Promise<void>;
+  setSessionFromTokenResponse: (data: CustomerTokenResponse) => void;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -61,6 +62,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('smartserve_customer_user', JSON.stringify(userObj));
   };
 
+  const setSessionFromTokenResponse = (data: CustomerTokenResponse) => {
+    localStorage.setItem('smartserve_customer_token', data.access_token);
+    setToken(data.access_token);
+
+    const userObj: CustomerSessionResponse = {
+      customer_id: data.customer_id,
+      user_id: data.user_id,
+      email: data.email,
+      full_name: data.full_name,
+      phone: data.phone,
+      is_active: true,
+    };
+    setUser(userObj);
+    localStorage.setItem('smartserve_customer_user', JSON.stringify(userObj));
+  };
+
   const logout = async () => {
     await logoutCustomer();
     localStorage.removeItem('smartserve_customer_token');
@@ -74,7 +91,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, isAuthenticated: !!user, loading, login, setSessionFromTokenResponse, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

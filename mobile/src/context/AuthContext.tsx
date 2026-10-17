@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setSecureItem, getSecureItem, removeSecureItem } from '../utils/secureStore';
 import { authApi, CustomerTokenResponse } from '../api/auth';
 
 interface AuthContextType {
   user: CustomerTokenResponse | null;
   isLoading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
+  login: (email: string, pass: string, totp_code?: string, recovery_code?: string) => Promise<void>;
   register: (fullName: string, email: string, pass: string, phone?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -29,33 +30,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const loadStoredAuth = async () => {
     try {
       const stored = await AsyncStorage.getItem('smartserve_user');
-      if (stored) {
+      const token = await getSecureItem('smartserve_token');
+      if (stored && token) {
         setUser(JSON.parse(stored));
+      } else {
+        setUser(null);
       }
-    } catch (err) {
-      console.warn('Failed to load session', err);
+    } catch {
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const login = async (email: string, pass: string) => {
-    const data = await authApi.login(email, pass);
-    await AsyncStorage.setItem('smartserve_token', data.access_token);
+  const login = async (email: string, pass: string, totp_code?: string, recovery_code?: string) => {
+    const data = await authApi.login(email, pass, totp_code, recovery_code);
+    await setSecureItem('smartserve_token', data.access_token);
     await AsyncStorage.setItem('smartserve_user', JSON.stringify(data));
     setUser(data);
   };
 
   const register = async (fullName: string, email: string, pass: string, phone?: string) => {
     const data = await authApi.register({ full_name: fullName, email, password: pass, phone });
-    await AsyncStorage.setItem('smartserve_token', data.access_token);
+    await setSecureItem('smartserve_token', data.access_token);
     await AsyncStorage.setItem('smartserve_user', JSON.stringify(data));
     setUser(data);
   };
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('smartserve_token');
+      await authApi.logout();
+      await removeSecureItem('smartserve_token');
       await AsyncStorage.removeItem('smartserve_user');
     } finally {
       setUser(null);

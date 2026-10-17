@@ -1,13 +1,13 @@
 import uuid
 from datetime import timedelta
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import verify_password, create_access_token, hash_password
-from app.core.dependencies import get_current_user, require_admin
+from app.core.security import verify_password, create_access_token, hash_password, decode_access_token
+from app.core.dependencies import get_current_user, require_admin, AuthUser
 from app.repositories.db import get_db
 from app.repositories import user_repository, audit_repository
 from app.schemas.admin_auth import AdminLoginRequest, TokenResponse, SessionResponse
@@ -16,11 +16,13 @@ from app.models.customer import Customer
 
 router = APIRouter(prefix="/auth", tags=["Auth System"])
 
+
 class CustomerSignupRequest(BaseModel):
     full_name: str
     email: str
     phone: Optional[str] = "+91 98765 43210"
     password: str
+
 
 @router.post("/signup", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -37,6 +39,12 @@ def customer_signup(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Full name, email, and password are required."
+        )
+
+    if len(clean_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long."
         )
 
     existing = user_repository.get_user_by_email(db, clean_email)
@@ -68,14 +76,26 @@ def customer_signup(
 
     user_repository.create_user(db, new_user, customer=new_customer)
 
-    # Issue JWT token
+    # Issue JWT token with JTI session tracking
+    token_jti = f"jwt_{uuid.uuid4().hex}"
     token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(user_id), "email": clean_email, "role": "customer"},
+        data={"sub": str(user_id), "email": clean_email, "role": "customer", "jti": token_jti},
         expires_delta=token_expires
     )
 
     client_ip = request.client.host if request.client else "127.0.0.1"
+    user_agent = request.headers.get("user-agent", "SmartServe Client")
+    try:
+        from app.services import security_service
+        security_service.create_active_session(
+            db, user_id=user_id, token_jti=token_jti,
+            ip_address=client_ip, user_agent=user_agent,
+            expires_in_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
+        )
+    except Exception:
+        pass
+
     audit_repository.create_audit_log(
         db, actor_id=user_id, actor_email=clean_email, actor_role="customer",
         action=f"Customer Account Registered ({req.full_name.strip()})", risk_level="Info", ip_address=client_ip
@@ -103,28 +123,17 @@ def admin_login(
     client_ip = request.client.host if request.client else "127.0.0.1"
     clean_email = req.email.strip().lower()
     clean_password = req.password.strip()
+
+    if not clean_email or not clean_password:
+        audit_repository.record_failed_login(db, clean_email or "unknown", client_ip)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials. Please verify your email and password.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     user = user_repository.get_user_by_email(db, clean_email)
-
-    # Demo fallback for customer logins if not yet in database
     if not user:
-        if "customer" in clean_email or clean_email.endswith("@smartserve.dev") or clean_email.endswith("@example.com"):
-            token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-            demo_user_id = str(uuid.uuid4())
-            access_token = create_access_token(
-                data={"sub": demo_user_id, "email": clean_email, "role": "customer"},
-                expires_delta=token_expires
-            )
-            return TokenResponse(
-                access_token=access_token,
-                token_type="bearer",
-                expires_in_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES,
-                user_id=demo_user_id,
-                email=clean_email,
-                role="customer",
-                role_name="customer",
-                permissions=["customer:browse", "customer:book"]
-            )
-
         audit_repository.record_failed_login(db, clean_email, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -132,23 +141,13 @@ def admin_login(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # Verify password (allow standard password verification or default fallback)
-    accepted_demo_passwords = {
-        "ProviderPassword123!",
-        "ProviderPass123!",
-        "AdminPassword123!",
-        "CustomerPass123!",
-        "password",
-    }
+    # Strictly verify against cryptographic password hash (No demo password bypass)
     password_ok = False
     if user.password_hash:
         try:
             password_ok = verify_password(clean_password, user.password_hash)
         except Exception:
             password_ok = False
-
-    if not password_ok and clean_password in accepted_demo_passwords:
-        password_ok = True
 
     if not password_ok:
         audit_repository.record_failed_login(db, clean_email, client_ip)
@@ -161,13 +160,51 @@ def admin_login(
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is suspended.",
+            detail="User account is suspended or inactive.",
         )
 
-    # Generate JWT
+    # Privileged & Enrolled Account 2FA Enforcement
+    if user.is_2fa_enabled:
+        totp_code = (req.totp_code or "").strip()
+        rec_code = (req.recovery_code or "").strip()
+        if not totp_code and not rec_code:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Two-factor authentication code required.",
+                headers={"X-2FA-Required": "true", "WWW-Authenticate": "Bearer"},
+            )
+
+        from app.services import security_service
+        is_2fa_valid = False
+        if totp_code:
+            is_2fa_valid = security_service.verify_totp_2fa(db, user, totp_code)
+
+        if not is_2fa_valid and rec_code:
+            is_2fa_valid = security_service.verify_recovery_code(db, user, rec_code)
+
+        if not is_2fa_valid:
+            audit_repository.record_failed_login(db, clean_email, client_ip)
+            audit_repository.create_audit_log(
+                db, actor_id=user.id, actor_email=user.email, actor_role=user.role,
+                action="Failed 2FA Authentication Attempt", risk_level="Warning", ip_address=client_ip
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid two-factor authentication code.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        audit_repository.create_audit_log(
+            db, actor_id=user.id, actor_email=user.email, actor_role=user.role,
+            action="2FA Authentication Verified", risk_level="Info", ip_address=client_ip
+        )
+
+    # Generate JWT with unique session JTI
+
+    token_jti = f"jwt_{uuid.uuid4().hex}"
     token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email, "role": user.role},
+        data={"sub": str(user.id), "email": user.email, "role": user.role, "jti": token_jti},
         expires_delta=token_expires
     )
 
@@ -176,8 +213,9 @@ def admin_login(
     try:
         from app.services import security_service
         security_service.create_active_session(
-            db, user_id=user.id, token_jti=f"jwt_{uuid.uuid4().hex[:12]}",
-            ip_address=client_ip, user_agent=user_agent
+            db, user_id=user.id, token_jti=token_jti,
+            ip_address=client_ip, user_agent=user_agent,
+            expires_in_minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
     except Exception:
         pass
@@ -215,9 +253,36 @@ def admin_login(
     )
 
 
+@router.post("/logout")
+def logout_user(
+    request: Request,
+    current_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Invalidate current active session and revoke JWT access."""
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header.replace("Bearer ", "").strip() if auth_header.startswith("Bearer ") else None
+    if token:
+        payload = decode_access_token(token)
+        jti = payload.get("jti") if payload else None
+        if jti:
+            from app.models.session import ActiveSession
+            sess = db.query(ActiveSession).filter(ActiveSession.token_jti == jti).first()
+            if sess:
+                sess.is_revoked = True
+                db.commit()
+
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    audit_repository.create_audit_log(
+        db, actor_id=current_user.id, actor_email=current_user.email, actor_role=current_user.role,
+        action="Logout Success", risk_level="Info", ip_address=client_ip
+    )
+    return {"status": "ok", "message": "Signed out successfully"}
+
+
 @router.get("/me", response_model=SessionResponse)
 def get_admin_session(
-    current_user: User = Depends(get_current_user),
+    current_user: AuthUser = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Return active session details with dynamic role & permissions."""

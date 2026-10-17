@@ -193,7 +193,8 @@ def create_admin_booking(
         c_uuid = uuid.UUID(req.customer_id)
         s_uuid = uuid.UUID(req.service_id)
         p_uuid = uuid.UUID(req.provider_id) if req.provider_id else None
-        sched_dt = datetime.fromisoformat(req.scheduled_time)
+        raw_sched = req.scheduled_time.replace("Z", "+00:00")
+        sched_dt = datetime.fromisoformat(raw_sched)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid UUID or datetime format")
 
@@ -252,8 +253,8 @@ def create_admin_booking(
         provider_name=p_name,
         service_id=str(booking.service_id),
         service_name=s_name,
-        status=booking.status.value,
-        payment_status=booking.payment_status.value,
+        status=booking.status.value if hasattr(booking.status, "value") else str(booking.status),
+        payment_status=booking.payment_status.value if hasattr(booking.payment_status, "value") else str(booking.payment_status),
         scheduled_time=booking.scheduled_time.isoformat() if booking.scheduled_time else "",
         address=booking.address,
         total_price=booking.total_price,
@@ -532,7 +533,7 @@ def create_customer_mobile_booking(
         payment_status="Pending",
         scheduled_time=sched_dt,
         address=req.service_address or "Address on File",
-        total_price=req.total_amount or float(service.base_price or 499.0),
+        total_price=float(service.base_price if service.base_price is not None else 499.0),
         otp_code=str(uuid.uuid4().int)[:4],
         emergency_flag=None,
         timeline=[{

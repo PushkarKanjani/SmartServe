@@ -1,5 +1,7 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.config import settings
+from app.core.dependencies import require_admin
+from app.models.user import User
 from app.services.kafka import (
     KafkaTopics,
     KafkaEvent,
@@ -34,7 +36,7 @@ def sanitize_text(text: str) -> str:
 
 
 @router.get("/status")
-def get_kafka_status():
+def get_kafka_status(admin: User = Depends(require_admin)):
     """Retrieve operational status, broker configuration, and event counts for Kafka."""
     summary = kafka_event_store.get_summary()
     last_err_raw = getattr(kafka_producer, "last_error", None)
@@ -65,7 +67,7 @@ def get_kafka_status():
 
 
 @router.get("/events")
-def get_kafka_events(limit: int = 50):
+def get_kafka_events(limit: int = 50, admin: User = Depends(require_admin)):
     """Retrieve recent Kafka published and consumed events for audit and verification."""
     return {
         "published": kafka_event_store.get_recent_published(limit=limit),
@@ -75,7 +77,7 @@ def get_kafka_events(limit: int = 50):
 
 
 @router.get("/debug/ws-state")
-def get_ws_state():
+def get_ws_state(admin: User = Depends(require_admin)):
     """Expose active WebSocket channel subscriptions for live diagnostics."""
     from app.core.websockets import ws_manager
     channels = {ch: len(subs) for ch, subs in ws_manager.channel_subscribers.items()}
@@ -88,7 +90,7 @@ def get_ws_state():
 
 
 @router.post("/debug/broadcast-test")
-async def broadcast_test(channel: str, message: str = "test"):
+async def broadcast_test(channel: str, message: str = "test", admin: User = Depends(require_admin)):
     """Directly broadcast a test message to a specific WebSocket channel for diagnostics."""
     from app.core.websockets import ws_manager
     payload = {
@@ -104,7 +106,7 @@ async def broadcast_test(channel: str, message: str = "test"):
 
 
 @router.post("/test-event")
-def publish_test_event(event_type: str = "booking.created"):
+def publish_test_event(event_type: str = "booking.created", admin: User = Depends(require_admin)):
     """Trigger a synthetic Kafka test event."""
     test_event = KafkaEvent(
         event_type=event_type,

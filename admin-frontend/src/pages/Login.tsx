@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, Loader2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Loader2, AlertCircle, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
 import { loginAdmin } from '../api/auth';
 import { AdminLoginVideoCarousel } from '../components/auth/AdminLoginVideoCarousel';
 
@@ -10,6 +10,9 @@ export const Login: React.FC = () => {
   const [password, setPassword] = useState('AdminPassword123!');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [is2FaRequired, setIs2FaRequired] = useState(false);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [forgotSent, setForgotSent] = useState(false);
 
@@ -22,9 +25,19 @@ export const Login: React.FC = () => {
       return;
     }
 
+    if (is2FaRequired && !twoFactorCode.trim()) {
+      setErrorMessage(isRecoveryMode ? 'Please enter your recovery code.' : 'Please enter your 6-digit authenticator code.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const data = await loginAdmin({ email, password });
+      const data = await loginAdmin({
+        email: email.trim(),
+        password,
+        ...(is2FaRequired && !isRecoveryMode ? { totp_code: twoFactorCode.trim() } : {}),
+        ...(is2FaRequired && isRecoveryMode ? { recovery_code: twoFactorCode.trim() } : {}),
+      });
 
       // Store JWT token & admin user session info
       localStorage.setItem('smartserve_token', data.access_token);
@@ -46,12 +59,26 @@ export const Login: React.FC = () => {
       }
     } catch (err: any) {
       if (err.response) {
+        const is2FaHeader = err.response.headers?.['x-2fa-required'] === 'true';
+        const detail = err.response.data?.detail || '';
+        const is2FaDetail = typeof detail === 'string' && (detail.includes('Two-factor') || detail.includes('2FA'));
+
+        if (err.response.status === 401 && (is2FaHeader || is2FaDetail) && !is2FaRequired) {
+          setIs2FaRequired(true);
+          setErrorMessage(null);
+          return;
+        }
+
         if (err.response.status === 401) {
-          setErrorMessage('Invalid admin email or password.');
+          if (is2FaRequired) {
+            setErrorMessage(detail || 'Invalid two-factor authentication code.');
+          } else {
+            setErrorMessage('Invalid admin email or password.');
+          }
         } else if (err.response.status === 403) {
           setErrorMessage('Admin account is suspended.');
         } else {
-          setErrorMessage(err.response.data?.detail || 'Authentication failed. Please check your credentials.');
+          setErrorMessage(detail || 'Authentication failed. Please check your credentials.');
         }
       } else if (err.request) {
         setErrorMessage('Unable to connect to SmartServe API. Please verify backend server availability.');
@@ -123,10 +150,14 @@ export const Login: React.FC = () => {
 
             {/* Page Title */}
             <h1 className="text-2xl sm:text-3xl font-bold text-[#1F2A1E] tracking-tight mb-1.5">
-              Admin Login
+              {is2FaRequired ? 'Two-Factor Verification' : 'Admin Login'}
             </h1>
             <p className="text-sm text-[#1F2A1E]/60 font-medium">
-              Sign in to manage SmartServe.
+              {is2FaRequired
+                ? (isRecoveryMode
+                    ? 'Enter your single-use backup recovery code.'
+                    : 'Enter the 6-digit code from your authenticator app.')
+                : 'Sign in to manage SmartServe.'}
             </p>
           </div>
 
@@ -147,63 +178,121 @@ export const Login: React.FC = () => {
 
           {/* ── Login Form ── */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            
-            {/* Email Address */}
-            <div>
-              <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@smartserve.com"
-                  className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-4 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </div>
+            {!is2FaRequired ? (
+              <>
+                {/* Email Address */}
+                <div>
+                  <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider mb-1.5">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="admin@smartserve.com"
+                      className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-4 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
 
-            {/* Password */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider">
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={handleForgotPassword}
-                  className="text-xs font-semibold text-[#2F5233] hover:text-[#3D6B42] hover:underline transition-colors cursor-pointer"
-                >
-                  Forgot Password?
-                </button>
-              </div>
-              <div className="relative">
-                <Lock className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-11 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
-                  required
-                  disabled={loading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/35 hover:text-[#1F2A1E]/70 focus:outline-none p-0.5 cursor-pointer transition-colors"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
+                {/* Password */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className="text-xs font-semibold text-[#2F5233] hover:text-[#3D6B42] hover:underline transition-colors cursor-pointer"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••••"
+                      className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-11 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
+                      required
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/35 hover:text-[#1F2A1E]/70 focus:outline-none p-0.5 cursor-pointer transition-colors"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* 2FA Input Field */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[11px] font-bold text-[#1F2A1E]/70 uppercase tracking-wider">
+                      {isRecoveryMode ? 'Recovery Code' : '6-Digit TOTP Code'}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRecoveryMode(!isRecoveryMode);
+                        setTwoFactorCode('');
+                        setErrorMessage(null);
+                      }}
+                      className="text-xs font-semibold text-[#2F5233] hover:text-[#3D6B42] hover:underline transition-colors cursor-pointer"
+                    >
+                      {isRecoveryMode ? 'Use Authenticator Code' : 'Use Recovery Code'}
+                    </button>
+                  </div>
+                  <div className="relative">
+                    {isRecoveryMode ? (
+                      <KeyRound className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
+                    ) : (
+                      <ShieldCheck className="w-[18px] h-[18px] absolute left-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/30" />
+                    )}
+                    <input
+                      type="text"
+                      autoFocus
+                      maxLength={isRecoveryMode ? 20 : 6}
+                      value={twoFactorCode}
+                      onChange={(e) => setTwoFactorCode(e.target.value)}
+                      placeholder={isRecoveryMode ? 'XXXX-XXXX' : '123456'}
+                      className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-4 text-base font-mono tracking-widest text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
 
-            {/* Login Button */}
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIs2FaRequired(false);
+                      setTwoFactorCode('');
+                      setErrorMessage(null);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1F2A1E]/60 hover:text-[#1F2A1E] transition-colors cursor-pointer"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Back to credentials
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Submit Button */}
             <div className="pt-1">
               <button
                 type="submit"
@@ -213,10 +302,10 @@ export const Login: React.FC = () => {
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Signing in...</span>
+                    <span>Verifying...</span>
                   </>
                 ) : (
-                  <span>Login</span>
+                  <span>{is2FaRequired ? 'Verify & Sign In' : 'Login'}</span>
                 )}
               </button>
             </div>
