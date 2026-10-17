@@ -110,7 +110,13 @@ export const CustomerFooter: React.FC = () => {
             <ul className="space-y-2.5 text-xs text-[#FAF7F0]/75">
               <li className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[#C9A15A] flex-shrink-0" />
-                <span>+91 1800 200 4000 ({t('footer.toll_free', { defaultValue: 'Toll Free' })})</span>
+                <span>
+                  {t('footer.toll_free_contact', {
+                    phone: '+91 1800 200 4000',
+                    label: t('footer.toll_free', { defaultValue: 'Toll Free' }),
+                    defaultValue: '+91 1800 200 4000 (Toll Free)'
+                  })}
+                </span>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[#C9A15A] flex-shrink-0" />
@@ -127,7 +133,7 @@ export const CustomerFooter: React.FC = () => {
 
         {/* Bottom copyright */}
         <div className="pt-8 border-t border-[#FAF7F0]/10 flex flex-col sm:flex-row items-center justify-between text-xs text-[#FAF7F0]/50 gap-4">
-          <p>© {new Date().getFullYear()} SmartServe. {t('footer.rights_reserved', { defaultValue: 'All rights reserved.' })}</p>
+          <p>{t('footer.copyright', { year: new Date().getFullYear(), defaultValue: `© ${new Date().getFullYear()} SmartServe. All rights reserved.` })}</p>
           <div className="flex items-center gap-6">
             <span className="hover:text-[#FAF7F0] cursor-pointer">{t('footer.privacy_policy', { defaultValue: 'Privacy Policy' })}</span>
             <span className="hover:text-[#FAF7F0] cursor-pointer">{t('footer.terms_of_service', { defaultValue: 'Terms of Service' })}</span>

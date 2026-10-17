@@ -147,7 +147,7 @@ export const CustomerSidebar: React.FC<CustomerSidebarProps> = ({ onClose }) => 
           <button
             onClick={onClose}
             className="p-2 rounded-xl text-[#1F2A1E]/50 hover:bg-[#F2EDE1] hover:text-[#1F2A1E] transition-colors lg:hidden cursor-pointer"
-            aria-label="Close menu"
+            aria-label={t('nav.close_menu', { defaultValue: 'Close menu' })}
           >
             <X className="w-5 h-5" />
           </button>

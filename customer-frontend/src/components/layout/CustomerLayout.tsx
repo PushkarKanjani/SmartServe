@@ -99,7 +99,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
             <button
               onClick={() => setDrawerOpen(true)}
               className="lg:hidden p-2 rounded-xl text-[#1F2A1E]/70 hover:bg-[#F2EDE1] transition-colors cursor-pointer"
-              aria-label="Open navigation menu"
+              aria-label={t('nav.open_menu', { defaultValue: 'Open navigation menu' })}
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -189,7 +189,7 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
             <Link
               to="/bundle"
               className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-[#F2EDE1] text-[#2F5233] rounded-xl border border-[#E5DEC9] text-xs font-bold shadow-2xs transition-colors cursor-pointer"
-              title="View Multi-Service Bundle Cart"
+              title={t('bundle.view_cart_tooltip', { defaultValue: 'View Multi-Service Bundle Cart' })}
             >
               <div className="relative">
                 <Layers className="w-4 h-4 text-[#2F5233]" />

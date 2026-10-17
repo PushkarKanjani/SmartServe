@@ -224,6 +224,7 @@ export const CustomerNavbar: React.FC = () => {
             </Link>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? t('nav.close_menu', { defaultValue: 'Close menu' }) : t('nav.open_menu', { defaultValue: 'Open menu' })}
               className="p-2 text-[#1F2A1E] hover:bg-[#F2EDE1] rounded-xl cursor-pointer"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -246,7 +247,7 @@ export const CustomerNavbar: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search services..."
+              placeholder={t('nav.search_placeholder', { defaultValue: 'Search services...' })}
               className="w-full h-10 bg-[#F2EDE1] border border-[#E5DEC9] rounded-xl pl-10 pr-4 text-sm font-medium text-[#1F2A1E] focus:outline-none"
             />
           </form>

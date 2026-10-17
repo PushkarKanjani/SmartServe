@@ -14,7 +14,10 @@
     "marketplace": "मार्केटप्लेस",
     "main_menu": "मुख्य मेन्यू",
     "brand_name": "स्मार्टसर्व",
-    "portal_badge": "ग्राहक पोर्टल"
+    "portal_badge": "ग्राहक पोर्टल",
+    "search_placeholder": "सेवाएं खोजें...",
+    "open_menu": "मेनू खोलें",
+    "close_menu": "मेनू बंद करें"
   },
   "home": {
     "hero_title": "आपकी उंगलियों पर ऑन-डिमांड होम सर्विसेज",
@@ -252,7 +255,8 @@
     "bundle_off": "बंडल छूट",
     "payment_method_label": "भुगतान विधि",
     "warranty_included": "इस अनुरोध की सभी सेवाओं में हमारी 7-दिवसीय सेवा वारंटी शामिल है।",
-    "scheduling_progress": "बुकिंग निर्धारित की जा रही है..."
+    "scheduling_progress": "बुकिंग निर्धारित की जा रही है...",
+    "view_cart_tooltip": "मल्टी-सर्विस बंडल कार्ट देखें"
   },
   "warranty": {
     "title": "स्मार्टसर्व 7-दिवसीय डिजिटल वारंटी",
@@ -416,7 +420,8 @@
     "cancelled": "रद्द",
     "today": "आज",
     "selected_date": "चयनित तारीख",
-    "optional": "वैकल्पिक"
+    "optional": "वैकल्पिक",
+    "select_language": "भाषा चुनें"
   },
   "errors": {
     "generic": "कुछ गलत हो गया। कृपया पुन: प्रयास करें।",
@@ -446,7 +451,9 @@
     "rights_reserved": "सर्वाधिकार सुरक्षित।",
     "privacy_policy": "गोपनीयता नीति",
     "terms_of_service": "सेवा की शर्तें",
-    "refund_policy": "रिफंड नीति"
+    "refund_policy": "रिफंड नीति",
+    "toll_free_contact": "{{phone}} ({{label}})",
+    "copyright": "© {{year}} स्मार्टसर्व। सर्वाधिकार सुरक्षित।"
   },
   "provider": {
     "verified_partner": "सत्यापित विशेषज्ञ साथी",
@@ -498,7 +505,7 @@
     "continue_github": "GitHub के साथ जारी रखें",
     "no_account": "खाता नहीं है?",
     "create_account": "नया खाता बनाएं (5 चरण)",
-    "footer_tagline": "स्मार्टसर्व मार्केटप्लेस · सत्यापित गृह एवं शहरी सेवाएं",
+    "footer_tagline": "स्मार्टसर्व मार्केटप्लेस · सत्यापित घरेलू और शहरी सेवाएं",
     "register_onboarding": "ग्राहक पंजीकरण",
     "step_indicator": "चरण {{step}} / 5",
     "step_credentials": "लॉगिन विवरण",
@@ -532,6 +539,42 @@
     "services_count": "{{count}} सेवाएं",
     "verified_badge": "सत्यापित",
     "already_account": "पहले से खाता है? साइन इन करें",
-    "register_notice": "सूचना: खाता बनाने पर आपकी 3 प्राथमिकताएं सहेज ली जाएंगी। अभी कोई सेवा बुक नहीं हुई है।"
+    "register_notice": "सूचना: खाता बनाने पर आपकी 3 प्राथमिकताएं सहेज ली जाएंगी। अभी कोई सेवा बुक नहीं हुई है।",
+    "err_email_password_required": "कृपया ईमेल और पासवर्ड दोनों दर्ज करें।",
+    "err_recovery_code_required": "कृपया अपना रिकवरी कोड दर्ज करें।",
+    "err_totp_code_required": "कृपया अपना 6-अंकों का प्रमाणीकरण कोड दर्ज करें।",
+    "toast_welcome_back": "स्मार्टसर्व में आपका पुनः स्वागत है!",
+    "err_invalid_2fa": "अमान्य दो-चरणीय प्रमाणीकरण कोड।",
+    "err_invalid_credentials": "अमान्य ईमेल या पासवर्ड। कृपया पुनः प्रयास करें।",
+    "err_auth_failed": "प्रमाणीकरण विफल रहा। कृपया अपने विवरण की जाँच करें।",
+    "err_api_connect": "स्मार्टसर्व एपीआई से कनेक्ट करने में असमर्थ। कृपया बैकएंड सर्वर उपलब्धता की पुष्टि करें।",
+    "err_unexpected": "एक अप्रत्याशित त्रुटि उत्पन्न हुई। कृपया पुनः प्रयास करें।",
+    "err_oauth_missing_url": "{{provider}} लॉगिन प्रारंभ करने में असमर्थ। प्रमाणीकरण URL अनुपलब्ध है।",
+    "err_oauth_generic": "{{provider}} प्रमाणीकरण प्रारंभ करने में असमर्थ। कृपया पुनः प्रयास करें।",
+    "reset_sent": "आपके पंजीकृत ईमेल पर पासवर्ड रीसेट निर्देश भेज दिए गए हैं।",
+    "hide_password": "पासवर्ड छुपाएं",
+    "show_password": "पासवर्ड दिखाएं",
+    "demo_click_tooltip": "ग्राहक डेमो क्रेडेंशियल्स स्वतः भरने के लिए क्लिक करें",
+    "email_placeholder": "customer@example.com",
+    "err_max_3_preferences": "आप अधिकतम 3 शीर्ष श्रेणी प्राथमिकताओं का चयन कर सकते हैं।",
+    "err_invalid_email": "कृपया एक मान्य ईमेल पता दर्ज करें।",
+    "err_password_min_len": "पासवर्ड कम से कम 6 वर्णों का होना चाहिए।",
+    "err_password_mismatch": "पासवर्ड मेल नहीं खाते।",
+    "err_fullname_required": "कृपया अपना पूरा नाम दर्ज करें।",
+    "err_phone_invalid": "कृपया एक मान्य 10-अंकों का मोबाइल नंबर दर्ज करें।",
+    "err_exact_3_preferences": "आगे बढ़ने के लिए कृपया ठीक 3 शीर्ष सेवा श्रेणी प्राथमिकताएं चुनें।",
+    "toast_register_success": "पंजीकरण सफल! स्मार्टसर्व में आपका स्वागत है।",
+    "err_register_failed": "ग्राहक खाता बनाने में विफल। कृपया पुनः प्रयास करें।",
+    "email_placeholder_register": "name@example.com",
+    "password_placeholder_register": "कम से कम 6 वर्ण",
+    "confirm_password_placeholder": "पासवर्ड पुनः दर्ज करें",
+    "name_placeholder": "राहुल शर्मा",
+    "oauth_authenticating": "{{provider}} के साथ प्रमाणीकरण जारी है...",
+    "oauth_verifying": "सुरक्षित क्रेडेंशियल्स का सत्यापन और सत्र स्थापित किया जा रहा है।",
+    "oauth_success_title": "स्मार्टसर्व में आपका स्वागत है!",
+    "oauth_redirecting": "आपके डैशबोर्ड पर पुनर्निर्देशित किया जा रहा है...",
+    "oauth_failed_title": "{{provider}} प्रमाणीकरण विफल रहा",
+    "oauth_return_login": "ग्राहक लॉगिन पर वापस जाएं",
+    "oauth_toast_success": "{{provider}} के साथ सफलतापूर्वक साइन इन किया गया!"
   }
 }

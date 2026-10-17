@@ -29,12 +29,16 @@ export const CustomerLogin: React.FC = () => {
     setErrorMessage(null);
 
     if (!email || !password) {
-      setErrorMessage('Please enter both email and password.');
+      setErrorMessage(t('auth.err_email_password_required', { defaultValue: 'Please enter both email and password.' }));
       return;
     }
 
     if (is2FaRequired && !twoFactorCode.trim()) {
-      setErrorMessage(isRecoveryMode ? 'Please enter your recovery code.' : 'Please enter your 6-digit authenticator code.');
+      setErrorMessage(
+        isRecoveryMode
+          ? t('auth.err_recovery_code_required', { defaultValue: 'Please enter your recovery code.' })
+          : t('auth.err_totp_code_required', { defaultValue: 'Please enter your 6-digit authenticator code.' })
+      );
       return;
     }
 
@@ -46,7 +50,7 @@ export const CustomerLogin: React.FC = () => {
         ...(is2FaRequired && !isRecoveryMode ? { totp_code: twoFactorCode.trim() } : {}),
         ...(is2FaRequired && isRecoveryMode ? { recovery_code: twoFactorCode.trim() } : {}),
       });
-      showToast('Welcome back to SmartServe!', 'success');
+      showToast(t('auth.toast_welcome_back', { defaultValue: 'Welcome back to SmartServe!' }), 'success');
       navigate('/home', { replace: true });
     } catch (err: any) {
       if (err.response) {
@@ -62,17 +66,17 @@ export const CustomerLogin: React.FC = () => {
 
         if (err.response.status === 401) {
           if (is2FaRequired) {
-            setErrorMessage(detail || 'Invalid two-factor authentication code.');
+            setErrorMessage(detail || t('auth.err_invalid_2fa', { defaultValue: 'Invalid two-factor authentication code.' }));
           } else {
-            setErrorMessage('Invalid email or password. Please try again.');
+            setErrorMessage(t('auth.err_invalid_credentials', { defaultValue: 'Invalid email or password. Please try again.' }));
           }
         } else {
-          setErrorMessage(detail || 'Authentication failed. Please check your credentials.');
+          setErrorMessage(detail || t('auth.err_auth_failed', { defaultValue: 'Authentication failed. Please check your credentials.' }));
         }
       } else if (err.request) {
-        setErrorMessage('Unable to connect to SmartServe API. Please verify backend server availability.');
+        setErrorMessage(t('auth.err_api_connect', { defaultValue: 'Unable to connect to SmartServe API. Please verify backend server availability.' }));
       } else {
-        setErrorMessage('An unexpected error occurred. Please try again.');
+        setErrorMessage(t('auth.err_unexpected', { defaultValue: 'An unexpected error occurred. Please try again.' }));
       }
     } finally {
       setLoading(false);
@@ -87,7 +91,7 @@ export const CustomerLogin: React.FC = () => {
       if (res?.authorization_url) {
         window.location.href = res.authorization_url;
       } else {
-        setErrorMessage(`Unable to initialize ${provider} login. Missing authorization URL.`);
+        setErrorMessage(t('auth.err_oauth_missing_url', { provider, defaultValue: `Unable to initialize ${provider} login. Missing authorization URL.` }));
       }
     } catch (err: any) {
       if (err.response?.data?.detail) {
@@ -95,7 +99,7 @@ export const CustomerLogin: React.FC = () => {
       } else if (err.message) {
         setErrorMessage(err.message);
       } else {
-        setErrorMessage(`Unable to initialize ${provider} authentication. Please try again.`);
+        setErrorMessage(t('auth.err_oauth_generic', { provider, defaultValue: `Unable to initialize ${provider} authentication. Please try again.` }));
       }
     } finally {
       setSocialLoading(null);
@@ -125,7 +129,7 @@ export const CustomerLogin: React.FC = () => {
         {/* Top language switcher bar */}
         <div className="flex justify-end items-center gap-1.5 pb-2">
           <span className="text-[10px] font-bold text-[#1F2A1E]/50 uppercase tracking-wider mr-1">
-            {i18n.language === 'hi' ? 'भाषा' : i18n.language === 'gu' ? 'ભાષા' : 'Language'}:
+            {t('common.language', { defaultValue: 'Language' })}:
           </span>
           {(['en', 'hi', 'gu'] as const).map((lng) => {
             const active = (i18n.language || 'en').startsWith(lng);
@@ -215,7 +219,7 @@ export const CustomerLogin: React.FC = () => {
           {/* ── Forgot Password Notification ── */}
           {forgotSent && (
             <div className="mb-5 p-3.5 bg-[#F2EDE1] border border-[#C9A15A]/30 rounded-xl text-[#1F2A1E] text-xs sm:text-sm font-medium animate-in fade-in text-center">
-              Password reset instructions sent to your registered email.
+              {t('auth.reset_sent', { defaultValue: 'Password reset instructions sent to your registered email.' })}
             </div>
           )}
 
@@ -234,7 +238,7 @@ export const CustomerLogin: React.FC = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="customer@example.com"
+                      placeholder={t('auth.email_placeholder', { defaultValue: 'customer@example.com' })}
                       className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-4 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
                       required
                       disabled={loading}
@@ -271,7 +275,7 @@ export const CustomerLogin: React.FC = () => {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#1F2A1E]/35 hover:text-[#1F2A1E]/70 focus:outline-none p-0.5 cursor-pointer transition-colors"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? t('auth.hide_password', { defaultValue: 'Hide password' }) : t('auth.show_password', { defaultValue: 'Show password' })}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -361,7 +365,7 @@ export const CustomerLogin: React.FC = () => {
                 setErrorMessage(null);
               }}
               className="mt-4 p-3 bg-white hover:bg-[#FAF7F0] transition-colors rounded-xl border border-[#E5DEC9] text-xs cursor-pointer group"
-              title="Click to autofill customer demo credentials"
+              title={t('auth.demo_click_tooltip', { defaultValue: 'Click to autofill customer demo credentials' })}
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-bold text-[#1F2A1E]/70 uppercase tracking-wider text-[10px]">{t('auth.demo_login_title', { defaultValue: 'Customer Demo Login' })}</span>
@@ -390,7 +394,7 @@ export const CustomerLogin: React.FC = () => {
                     type="button"
                     onClick={() => handleSocialLogin('google')}
                     disabled={loading || !!socialLoading}
-                    aria-label="Continue with Google"
+                    aria-label={t('auth.continue_google', { defaultValue: 'Continue with Google' })}
                     data-testid="social-login-google"
                     className="w-full h-11 flex items-center justify-center gap-3 bg-white hover:bg-[#FAF7F0] active:bg-[#F2EDE1] text-[#1F2A1E] font-semibold text-sm rounded-xl border border-[#E5DEC9] shadow-xs hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                   >
@@ -424,7 +428,7 @@ export const CustomerLogin: React.FC = () => {
                     type="button"
                     onClick={() => handleSocialLogin('apple')}
                     disabled={loading || !!socialLoading}
-                    aria-label="Continue with Apple"
+                    aria-label={t('auth.continue_apple', { defaultValue: 'Continue with Apple' })}
                     data-testid="social-login-apple"
                     className="w-full h-11 flex items-center justify-center gap-3 bg-white hover:bg-[#FAF7F0] active:bg-[#F2EDE1] text-[#1F2A1E] font-semibold text-sm rounded-xl border border-[#E5DEC9] shadow-xs hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                   >
@@ -443,7 +447,7 @@ export const CustomerLogin: React.FC = () => {
                     type="button"
                     onClick={() => handleSocialLogin('github')}
                     disabled={loading || !!socialLoading}
-                    aria-label="Continue with GitHub"
+                    aria-label={t('auth.continue_github', { defaultValue: 'Continue with GitHub' })}
                     data-testid="social-login-github"
                     className="w-full h-11 flex items-center justify-center gap-3 bg-white hover:bg-[#FAF7F0] active:bg-[#F2EDE1] text-[#1F2A1E] font-semibold text-sm rounded-xl border border-[#E5DEC9] shadow-xs hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                   >

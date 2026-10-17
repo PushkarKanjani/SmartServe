@@ -14,8 +14,8 @@ const LANGUAGES: LanguageOption[] = [
   { code: 'gu', shortLabel: 'ગુ', fullLabel: 'ગુજરાતી' },
 ];
 
-export const LanguageSelector: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
-  const { i18n } = useTranslation();
+export const LanguageSelector: React.FC<{ compact?: boolean }> = ({ compact: _compact = false }) => {
+  const { i18n, t } = useTranslation();
   const currentLang = i18n.language || 'en';
 
   const handleLanguageChange = (code: string) => {
@@ -26,7 +26,11 @@ export const LanguageSelector: React.FC<{ compact?: boolean }> = ({ compact = fa
   };
 
   return (
-    <div className="flex items-center gap-1 bg-[#F2EDE1]/80 p-1 rounded-xl border border-[#E5DEC9]">
+    <div
+      className="flex items-center gap-1 bg-[#F2EDE1]/80 p-1 rounded-xl border border-[#E5DEC9]"
+      role="region"
+      aria-label={t('common.select_language', { defaultValue: 'Select language' })}
+    >
       <div className="px-1.5 text-[#1F2A1E]/50 flex items-center">
         <Globe className="w-3.5 h-3.5 text-[#2F5233]" />
       </div>
@@ -38,13 +42,15 @@ export const LanguageSelector: React.FC<{ compact?: boolean }> = ({ compact = fa
               key={lang.code}
               onClick={() => handleLanguageChange(lang.code)}
               title={lang.fullLabel}
+              aria-label={lang.fullLabel}
+              aria-pressed={isSelected}
               className={`px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-[#2F5233] text-white shadow-2xs'
                   : 'text-[#1F2A1E]/70 hover:text-[#1F2A1E] hover:bg-white/60'
               }`}
             >
-              {compact ? lang.shortLabel : lang.shortLabel}
+              {lang.shortLabel}
             </button>
           );
         })}

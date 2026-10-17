@@ -14,7 +14,10 @@
     "marketplace": "માર્કેટપ્લેસ",
     "main_menu": "મુખ્ય મેનુ",
     "brand_name": "સ્માર્ટસર્વ",
-    "portal_badge": "ગ્રાહક પોર્ટલ"
+    "portal_badge": "ગ્રાહક પોર્ટલ",
+    "search_placeholder": "સેવાઓ શોધો...",
+    "open_menu": "મેનુ ખોલો",
+    "close_menu": "મેનુ બંધ કરો"
   },
   "home": {
     "hero_title": "તમારી આંગળીના ટેરવે ઘરગથ્થુ સેવાઓ",
@@ -252,7 +255,8 @@
     "bundle_off": "બંડલ છૂટ",
     "payment_method_label": "ચુકવણી પદ્ધતિ",
     "warranty_included": "આ વિનંતીની તમામ સેવાઓમાં અમારી 7-દિવસની સેવા વૉરંટી શામેલ છે.",
-    "scheduling_progress": "બુકિંગ સુનિશ્ચિત થઈ રહ્યું છે..."
+    "scheduling_progress": "બુકિંગ સુનિશ્ચિત થઈ રહ્યું છે...",
+    "view_cart_tooltip": "મલ્ટી-સર્વિસ બંડલ કાર્ટ જુઓ"
   },
   "warranty": {
     "title": "સ્માર્ટસર્વ 7-દિવસીય ડિજિટલ વૉરંટી",
@@ -416,7 +420,8 @@
     "cancelled": "રદ થયેલ",
     "today": "આજે",
     "selected_date": "પસંદ કરેલ તારીખ",
-    "optional": "વૈકલ્પિક"
+    "optional": "વૈકલ્પિક",
+    "select_language": "ભાષા પસંદ કરો"
   },
   "errors": {
     "generic": "કંઈક ખોટું થયું. કૃપા કરીને ફરી પ્રયાસ કરો.",
@@ -446,7 +451,9 @@
     "rights_reserved": "સર્વાધિકાર સુરક્ષિત.",
     "privacy_policy": "ગોપનીયતા નીતિ",
     "terms_of_service": "સેવાની શરતો",
-    "refund_policy": "રિફંડ નીતિ"
+    "refund_policy": "રિફંડ નીતિ",
+    "toll_free_contact": "{{phone}} ({{label}})",
+    "copyright": "© {{year}} સ્માર્ટસર્વ. સર્વાધિકાર સુરક્ષિત."
   },
   "provider": {
     "verified_partner": "પ્રમાણિત નિષ્ણાત સાથી",
@@ -498,7 +505,7 @@
     "continue_github": "GitHub સાથે આગળ વધો",
     "no_account": "ખાતું નથી?",
     "create_account": "ખાતું બનાવો (5 પગલાં)",
-    "footer_tagline": "સ્માર્ટસર્વ માર્કેટપ્લેસ · ચકાસાયેલ ઘર અને શહેરી સેવાઓ",
+    "footer_tagline": "સ્માર્ટસર્વ માર્કેટપ્લેસ · પ્રમાણિત ઘર અને શહેરી સેવાઓ",
     "register_onboarding": "ગ્રાહક ઓનબોર્ડિંગ",
     "step_indicator": "પગલું {{step}} / 5",
     "step_credentials": "લૉગિન વિગતો",
@@ -532,6 +539,42 @@
     "services_count": "{{count}} સેવાઓ",
     "verified_badge": "ચકાસાયેલ",
     "already_account": "પહેલેથી ખાતું છે? સાઇન ઇન કરો",
-    "register_notice": "સૂચના: ખાતું બનાવવાથી તમારી 3 પસંદગીઓ સાચવવામાં આવશે. હજુ સુધી કોઈ સેવા બુક થઈ નથી."
+    "register_notice": "સૂચના: ખાતું બનાવવાથી તમારી 3 પસંદગીઓ સાચવવામાં આવશે. હજુ સુધી કોઈ સેવા બુક થઈ નથી.",
+    "err_email_password_required": "કૃપા કરીને ઇમેઇલ અને પાસવર્ડ બંને દાખલ કરો.",
+    "err_recovery_code_required": "કૃપા કરીને તમારો પુનઃપ્રાપ્તિ કોડ દાખલ કરો.",
+    "err_totp_code_required": "કૃપા કરીને તમારો 6-અંકનો પ્રમાણીકરણ કોડ દાખલ કરો.",
+    "toast_welcome_back": "સ્માર્ટસર્વમાં તમારું ફરી સ્વાગત છે!",
+    "err_invalid_2fa": "અમાન્ય દ્વિ-પરિબળ પ્રમાણીકરણ કોડ.",
+    "err_invalid_credentials": "અમાન્ય ઇમેઇલ અથવા પાસવર્ડ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "err_auth_failed": "પ્રમાણીકરણ નિષ્ફળ ગયું. કૃપા કરીને તમારી વિગતો તપાસો.",
+    "err_api_connect": "સ્માર્ટસર્વ એપીઆઈ સાથે કનેક્ટ કરવામાં અસમર્થ. કૃપા કરીને બેકએન્ડ સર્વર ઉપલબ્ધતા ચકાસો.",
+    "err_unexpected": "એક અનપેક્ષિત ભૂલ આવી. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "err_oauth_missing_url": "{{provider}} લૉગિન શરૂ કરવામાં અસમર્થ. ઓથોરાઇઝેશન URL ખૂટે છે.",
+    "err_oauth_generic": "{{provider}} પ્રમાણીકરણ શરૂ કરવામાં અસમર્થ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "reset_sent": "તમારા રજિસ્ટર્ડ ઇમેઇલ પર પાસવર્ડ રીસેટ સૂચનાઓ મોકલવામાં આવી છે.",
+    "hide_password": "પાસવર્ડ છુપાવો",
+    "show_password": "પાસવર્ડ બતાવો",
+    "demo_click_tooltip": "ગ્રાહક ડેમો ઓળખપત્રો આપમેળે ભરવા માટે ક્લિક કરો",
+    "email_placeholder": "customer@example.com",
+    "err_max_3_preferences": "તમે વધુમાં વધુ 3 શ્રેણી પસંદગીઓ પસંદ કરી શકો છો.",
+    "err_invalid_email": "કૃપા કરીને માન્ય ઇમેઇલ સરનામું દાખલ કરો.",
+    "err_password_min_len": "પાસવર્ડ ઓછામાં ઓછો 6 અક્ષરોનો હોવો જોઈએ.",
+    "err_password_mismatch": "પાસવર્ડ મેળ ખાતા નથી.",
+    "err_fullname_required": "કૃપા કરીને તમારું પૂરું નામ દાખલ કરો.",
+    "err_phone_invalid": "કૃપા કરીને માન્ય 10-અંકનો મોબાઇલ નંબર દાખલ કરો.",
+    "err_exact_3_preferences": "આગળ વધવા માટે કૃપા કરીને બરાબર 3 સેવા શ્રેણી પસંદગીઓ પસંદ કરો.",
+    "toast_register_success": "નોંધણી સફળ! સ્માર્ટસર્વમાં તમારું સ્વાગત છે.",
+    "err_register_failed": "ગ્રાહક ખાતું બનાવવામાં નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "email_placeholder_register": "name@example.com",
+    "password_placeholder_register": "ઓછામાં ઓછા 6 અક્ષરો",
+    "confirm_password_placeholder": "પાસવર્ડ ફરી દાખલ કરો",
+    "name_placeholder": "રાહુલ શર્મા",
+    "oauth_authenticating": "{{provider}} સાથે પ્રમાણીકરણ ચાલુ છે...",
+    "oauth_verifying": "સુરક્ષિત ઓળખપત્રોની ચકાસણી અને તમારું સત્ર સ્થાપિત થઈ રહ્યું છે.",
+    "oauth_success_title": "સ્માર્ટસર્વમાં તમારું સ્વાગત છે!",
+    "oauth_redirecting": "તમારા ડેશબોર્ડ પર રીડાયરેક્ટ કરી રહ્યા છીએ...",
+    "oauth_failed_title": "{{provider}} પ્રમાણીકરણ નિષ્ફળ ગયું",
+    "oauth_return_login": "ગ્રાહક લૉગિન પર પાછા ફરો",
+    "oauth_toast_success": "{{provider}} સાથે સફળતાપૂર્વક સાઇન ઇન કર્યું!"
   }
 }

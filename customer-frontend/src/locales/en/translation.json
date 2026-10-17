@@ -14,7 +14,10 @@
     "marketplace": "Marketplace",
     "main_menu": "Main Menu",
     "brand_name": "SmartServe",
-    "portal_badge": "Customer Portal"
+    "portal_badge": "Customer Portal",
+    "search_placeholder": "Search services...",
+    "open_menu": "Open menu",
+    "close_menu": "Close menu"
   },
   "home": {
     "hero_title": "On-Demand Home Services At Your Fingertips",
@@ -252,7 +255,8 @@
     "bundle_off": "Bundle Off",
     "payment_method_label": "Payment Method",
     "warranty_included": "All services in this request include our 7-Day Service Warranty.",
-    "scheduling_progress": "Scheduling Booking..."
+    "scheduling_progress": "Scheduling Booking...",
+    "view_cart_tooltip": "View Multi-Service Bundle Cart"
   },
   "warranty": {
     "title": "SmartServe 7-Day Digital Warranty",
@@ -416,7 +420,8 @@
     "cancelled": "Cancelled",
     "today": "Today",
     "selected_date": "Selected Date",
-    "optional": "Optional"
+    "optional": "Optional",
+    "select_language": "Select language"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",
@@ -446,7 +451,9 @@
     "rights_reserved": "All rights reserved.",
     "privacy_policy": "Privacy Policy",
     "terms_of_service": "Terms of Service",
-    "refund_policy": "Refund Policy"
+    "refund_policy": "Refund Policy",
+    "toll_free_contact": "{{phone}} ({{label}})",
+    "copyright": "© {{year}} SmartServe. All rights reserved."
   },
   "provider": {
     "verified_partner": "Verified Expert Partner",
@@ -532,6 +539,42 @@
     "services_count": "{{count}} Services",
     "verified_badge": "Verified",
     "already_account": "Already have an account? Sign in",
-    "register_notice": "Notice: Creating your account saves your 3 preferences. Zero service bookings have been created."
+    "register_notice": "Notice: Creating your account saves your 3 preferences. Zero service bookings have been created.",
+    "err_email_password_required": "Please enter both email and password.",
+    "err_recovery_code_required": "Please enter your recovery code.",
+    "err_totp_code_required": "Please enter your 6-digit authenticator code.",
+    "toast_welcome_back": "Welcome back to SmartServe!",
+    "err_invalid_2fa": "Invalid two-factor authentication code.",
+    "err_invalid_credentials": "Invalid email or password. Please try again.",
+    "err_auth_failed": "Authentication failed. Please check your credentials.",
+    "err_api_connect": "Unable to connect to SmartServe API. Please verify backend server availability.",
+    "err_unexpected": "An unexpected error occurred. Please try again.",
+    "err_oauth_missing_url": "Unable to initialize {{provider}} login. Missing authorization URL.",
+    "err_oauth_generic": "Unable to initialize {{provider}} authentication. Please try again.",
+    "reset_sent": "Password reset instructions sent to your registered email.",
+    "hide_password": "Hide password",
+    "show_password": "Show password",
+    "demo_click_tooltip": "Click to autofill customer demo credentials",
+    "email_placeholder": "customer@example.com",
+    "err_max_3_preferences": "You can select a maximum of 3 top category preferences.",
+    "err_invalid_email": "Please enter a valid email address.",
+    "err_password_min_len": "Password must be at least 6 characters long.",
+    "err_password_mismatch": "Passwords do not match.",
+    "err_fullname_required": "Please enter your full name.",
+    "err_phone_invalid": "Please enter a valid 10-digit mobile number.",
+    "err_exact_3_preferences": "Please select exactly 3 top service category preferences to continue.",
+    "toast_register_success": "Registration successful! Welcome to SmartServe.",
+    "err_register_failed": "Failed to create customer account. Please try again.",
+    "email_placeholder_register": "name@example.com",
+    "password_placeholder_register": "At least 6 characters",
+    "confirm_password_placeholder": "Repeat password",
+    "name_placeholder": "Rahul Sharma",
+    "oauth_authenticating": "Authenticating with {{provider}}...",
+    "oauth_verifying": "Verifying secure credentials and establishing your session.",
+    "oauth_success_title": "Welcome to SmartServe!",
+    "oauth_redirecting": "Redirecting to your dashboard...",
+    "oauth_failed_title": "{{provider}} Authentication Failed",
+    "oauth_return_login": "Return to Customer Login",
+    "oauth_toast_success": "Signed in successfully with {{provider}}!"
   }
 }

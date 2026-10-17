@@ -86,7 +86,7 @@ export const CustomerRegister: React.FC = () => {
       setSelectedCategoryIds((prev) => prev.filter((id) => id !== catId));
     } else {
       if (selectedCategoryIds.length >= 3) {
-        showToast('You can select a maximum of 3 top category preferences.', 'info');
+        showToast(t('auth.err_max_3_preferences', { defaultValue: 'You can select a maximum of 3 top category preferences.' }), 'info');
         return;
       }
       setSelectedCategoryIds((prev) => [...prev, catId]);
@@ -96,15 +96,15 @@ export const CustomerRegister: React.FC = () => {
   const handleNextStep1 = () => {
     setError(null);
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address.');
+      setError(t('auth.err_invalid_email', { defaultValue: 'Please enter a valid email address.' }));
       return;
     }
     if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+      setError(t('auth.err_password_min_len', { defaultValue: 'Password must be at least 6 characters long.' }));
       return;
     }
     if (password !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError(t('auth.err_password_mismatch', { defaultValue: 'Passwords do not match.' }));
       return;
     }
     setStep(2);
@@ -113,11 +113,11 @@ export const CustomerRegister: React.FC = () => {
   const handleNextStep2 = () => {
     setError(null);
     if (!fullName.trim()) {
-      setError('Please enter your full name.');
+      setError(t('auth.err_fullname_required', { defaultValue: 'Please enter your full name.' }));
       return;
     }
     if (!validatePhone(phone)) {
-      setError('Please enter a valid 10-digit mobile number.');
+      setError(t('auth.err_phone_invalid', { defaultValue: 'Please enter a valid 10-digit mobile number.' }));
       return;
     }
     setStep(3);
@@ -126,7 +126,7 @@ export const CustomerRegister: React.FC = () => {
   const handleNextStep3 = () => {
     setError(null);
     if (selectedCategoryIds.length !== 3) {
-      setError('Please select exactly 3 top service category preferences to continue.');
+      setError(t('auth.err_exact_3_preferences', { defaultValue: 'Please select exactly 3 top service category preferences to continue.' }));
       return;
     }
     setStep(4);
@@ -145,10 +145,10 @@ export const CustomerRegister: React.FC = () => {
       });
 
       await login({ email, password });
-      showToast('Registration successful! Welcome to SmartServe.', 'success');
+      showToast(t('auth.toast_register_success', { defaultValue: 'Registration successful! Welcome to SmartServe.' }), 'success');
       setStep(5);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create customer account. Please try again.');
+      setError(err.response?.data?.detail || t('auth.err_register_failed', { defaultValue: 'Failed to create customer account. Please try again.' }));
     } finally {
       setLoading(false);
     }
@@ -281,7 +281,7 @@ export const CustomerRegister: React.FC = () => {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="name@example.com"
+                      placeholder={t('auth.email_placeholder_register', { defaultValue: 'name@example.com' })}
                       className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-4 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
                     />
                   </div>
@@ -295,7 +295,7 @@ export const CustomerRegister: React.FC = () => {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="At least 6 characters"
+                      placeholder={t('auth.password_placeholder_register', { defaultValue: 'At least 6 characters' })}
                       className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-4 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
                     />
                   </div>
@@ -309,7 +309,7 @@ export const CustomerRegister: React.FC = () => {
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repeat password"
+                      placeholder={t('auth.confirm_password_placeholder', { defaultValue: 'Repeat password' })}
                       className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-4 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
                     />
                   </div>
@@ -348,7 +348,7 @@ export const CustomerRegister: React.FC = () => {
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Rahul Sharma"
+                      placeholder={t('auth.name_placeholder', { defaultValue: 'Rahul Sharma' })}
                       className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl pl-11 pr-4 text-sm font-medium text-[#1F2A1E] placeholder-[#1F2A1E]/30 focus:outline-none focus:ring-2 focus:ring-[#2F5233]/20 focus:border-[#2F5233] transition-all"
                     />
                   </div>
