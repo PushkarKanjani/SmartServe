@@ -324,7 +324,7 @@ export const SUBCATEGORY_TRANSLATIONS: Record<string, LangEntry> = {
   },
   "it support consultation": {
     "hi": "आईटी सपोर्ट व कंसल्टेशन",
-    "gu": "IT સપોર્ટ અને કન્સલ્ટેશન"
+    "gu": "આઇટી સપોર્ટ અને કન્સલ્ટેશન"
   },
   "junk removal disposal": {
     "hi": "कबाड़ व कचरा निस्तारण",
@@ -416,7 +416,7 @@ export const SUBCATEGORY_TRANSLATIONS: Record<string, LangEntry> = {
   },
   "networking wi fi setup": {
     "hi": "नेटवर्किंग व वाई-फाई सेटअप",
-    "gu": "નેટવર્કિંગ અને Wi-Fi સેટઅપ"
+    "gu": "નેટવર્કિંગ અને વાઇ-ફાઇ સેટઅપ"
   },
   "nutrition diet counselling": {
     "hi": "पोषण व डाइट काउंसलिंग",
@@ -492,7 +492,7 @@ export const SUBCATEGORY_TRANSLATIONS: Record<string, LangEntry> = {
   },
   "ro water purifier": {
     "hi": "आरओ व वॉटर प्यूरीफायर",
-    "gu": "RO અને વોટર પ્યુરિફાયર"
+    "gu": "આરઓ અને વોટર પ્યુરિફાયર"
   },
   "sensor monitoring": {
     "hi": "सेंसर व मॉनिटरिंग सिस्टम",
@@ -536,7 +536,7 @@ export const SUBCATEGORY_TRANSLATIONS: Record<string, LangEntry> = {
   },
   "staffing hr services": {
     "hi": "स्टाफिंग व एचआर सेवाएं",
-    "gu": "સ્ટાફિંગ અને HR સેવાઓ"
+    "gu": "સ્ટાફિંગ અને એચઆર સેવાઓ"
   },
   "television": {
     "hi": "टेलीविजन (टीवी) रिपेयर",
