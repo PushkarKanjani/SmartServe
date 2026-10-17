@@ -113,7 +113,7 @@ export const CustomerSupport: React.FC = () => {
             className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Open New Ticket</span>
+            <span>{t("support.open_new_ticket", { defaultValue: "+ Open New Ticket" })}</span>
           </button>
         </div>
       </div>
@@ -122,14 +122,14 @@ export const CustomerSupport: React.FC = () => {
       {error && (
         <div className="p-8 bg-white border border-red-200 rounded-3xl text-center space-y-3 shadow-sm">
           <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
-          <h3 className="text-base font-bold text-slate-900">Support Center Connection Error</h3>
+          <h3 className="text-base font-bold text-slate-900">{t("support.connection_error", { defaultValue: "Support Center Connection Error" })}</h3>
           <p className="text-xs text-slate-600 max-w-md mx-auto">{error}</p>
           <button
             onClick={fetchTickets}
             className="px-4 py-2 bg-[#2563EB] text-white text-xs font-bold rounded-xl inline-flex items-center gap-2"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Retry Connection</span>
+            <span>{t("support.retry_connection", { defaultValue: "Retry Connection" })}</span>
           </button>
         </div>
       )}
@@ -138,16 +138,16 @@ export const CustomerSupport: React.FC = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 space-y-3">
           <Loader2 className="w-10 h-10 animate-spin text-[#2563EB]" />
-          <p className="text-sm font-semibold text-slate-600">Loading support tickets from database...</p>
+          <p className="text-sm font-semibold text-slate-600">{t("support.loading_tickets", { defaultValue: "Loading support tickets from database..." })}</p>
         </div>
       ) : tickets.length > 0 ? (
         <div className="space-y-4">
-          {tickets.map((t) => {
-            const stLower = t.status.toLowerCase();
+          {tickets.map((ticketItem) => {
+            const stLower = ticketItem.status.toLowerCase();
             return (
               <div
-                key={t.id}
-                onClick={() => navigate(`/support/${t.id}`)}
+                key={ticketItem.id}
+                onClick={() => navigate(`/support/${ticketItem.id}`)}
                 className="group bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-blue-200 transition-all cursor-pointer flex items-center justify-between gap-4"
               >
                 <div className="space-y-2 min-w-0">
@@ -159,21 +159,21 @@ export const CustomerSupport: React.FC = () => {
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         : 'bg-amber-50 text-amber-700 border-amber-200'
                     }`}>
-                      {t.status}
+                      {ticketItem.status}
                     </span>
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{t.category}</span>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{ticketItem.category}</span>
                   </div>
 
                   <h3 className="font-extrabold text-slate-900 text-base truncate group-hover:text-[#2563EB] transition-colors">
-                    {t.subject}
+                    {ticketItem.subject}
                   </h3>
 
                   <div className="flex items-center gap-3 text-xs text-slate-400 font-medium">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Opened {formatDateINR(t.created_at)}</span>
+                      <span>{t('support.opened_on', { date: formatDateINR(ticketItem.created_at), defaultValue: `Opened ${formatDateINR(ticketItem.created_at)}` })}</span>
                     </span>
-                    <span>• {t.messages ? t.messages.length : 1} Messages</span>
+                    <span>• {t('support.messages_count', { count: ticketItem.messages ? ticketItem.messages.length : 1, defaultValue: `${ticketItem.messages ? ticketItem.messages.length : 1} Messages` })}</span>
                   </div>
                 </div>
 
@@ -186,15 +186,15 @@ export const CustomerSupport: React.FC = () => {
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-4">
           <HelpCircle className="w-12 h-12 text-slate-400 mx-auto" />
           <div className="space-y-1">
-            <h3 className="text-base font-bold text-slate-800">No Support Tickets Opened</h3>
-            <p className="text-xs text-slate-500">Need help with a service or billing? Open a ticket to connect with support.</p>
+            <h3 className="text-base font-bold text-slate-800">{t("support.no_tickets_opened", { defaultValue: "No Support Tickets Opened" })}</h3>
+            <p className="text-xs text-slate-500">{t("support.no_tickets_help", { defaultValue: "Need help with a service or billing? Open a ticket to connect with support." })}</p>
           </div>
           <button
             onClick={() => setShowModal(true)}
             className="px-5 py-2.5 bg-[#2563EB] text-white font-bold text-xs rounded-xl inline-flex items-center gap-2 shadow-xs"
           >
             <Plus className="w-4 h-4" />
-            <span>Open New Support Ticket</span>
+            <span>{t("support.open_new_ticket", { defaultValue: "Open New Support Ticket" })}</span>
           </button>
         </div>
       )}
@@ -204,18 +204,18 @@ export const CustomerSupport: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-slate-200 animate-in zoom-in-95">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <h3 className="text-xl font-extrabold text-slate-900">Open Customer Support Ticket</h3>
+              <h3 className="text-xl font-extrabold text-slate-900">{t("support.modal_title", { defaultValue: "Open New Support Ticket" })}</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 font-bold text-sm">✕</button>
             </div>
 
             <form onSubmit={handleCreateTicket} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Subject</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">{t("support.subject", { defaultValue: "Subject" })}</label>
                 <input
                   type="text"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="e.g. Need assistance with AC Service booking"
+                  placeholder={t("support.subject_placeholder", { defaultValue: "e.g. Need assistance with AC Service booking" })}
                   className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                   required
                 />
@@ -223,40 +223,40 @@ export const CustomerSupport: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Category</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">{t("support.category", { defaultValue: "Category" })}</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                   >
-                    <option value="Booking Assistance">Booking Assistance</option>
-                    <option value="Payment & Refund">Payment & Refund</option>
-                    <option value="Technician Feedback">Technician Feedback</option>
-                    <option value="General Query">General Query</option>
+                    <option value="Booking Assistance">{t("support.category_booking", { defaultValue: "Booking Assistance" })}</option>
+                    <option value="Payment & Refund">{t("support.category_payment", { defaultValue: "Payment & Refund" })}</option>
+                    <option value="Technician Feedback">{t("support.category_technician", { defaultValue: "Technician Feedback" })}</option>
+                    <option value="General Query">{t("support.category_general", { defaultValue: "General Query" })}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Priority</label>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">{t("support.priority", { defaultValue: "Priority" })}</label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
                     className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                   >
-                    <option value="Normal">Normal</option>
-                    <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
+                    <option value="Normal">{t("support.priority_normal", { defaultValue: "Normal" })}</option>
+                    <option value="High">{t("support.priority_high", { defaultValue: "High" })}</option>
+                    <option value="Urgent">{t("support.priority_urgent", { defaultValue: "Urgent" })}</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Issue Description</label>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">{t("support.issue_desc_label", { defaultValue: "Issue Description" })}</label>
                 <textarea
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe your issue in detail..."
+                  placeholder={t("support.desc_placeholder", { defaultValue: "Describe your issue in detail..." })}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                   required
                 />
@@ -268,7 +268,7 @@ export const CustomerSupport: React.FC = () => {
                   onClick={() => setShowModal(false)}
                   className="w-1/2 py-3.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl text-sm transition-all"
                 >
-                  Cancel
+                  {t("support.cancel", { defaultValue: "Cancel" })}
                 </button>
                 <button
                   type="submit"
@@ -276,7 +276,7 @@ export const CustomerSupport: React.FC = () => {
                   className="w-1/2 py-3.5 bg-[#2563EB] hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-sm transition-all disabled:opacity-70 flex items-center justify-center gap-2"
                 >
                   {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  <span>Submit Ticket</span>
+                  <span>{submitting ? t("support.submitting", { defaultValue: "Submitting..." }) : t("support.submit", { defaultValue: "Submit Ticket" })}</span>
                 </button>
               </div>
             </form>

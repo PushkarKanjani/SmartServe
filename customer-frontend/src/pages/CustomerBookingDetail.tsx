@@ -374,7 +374,7 @@ export const CustomerBookingDetail: React.FC = () => {
       {wsStatus !== 'connected' && (
         <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold w-fit animate-pulse">
           <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-          <span>Reconnecting to live location…</span>
+          <span>{t('booking.reconnecting_loc', { defaultValue: 'Reconnecting to live location…' })}</span>
         </div>
       )}
 
@@ -421,7 +421,7 @@ export const CustomerBookingDetail: React.FC = () => {
             </div>
             <div>
               <h4 className="font-bold text-amber-950 text-sm">{t("common.emergency_fast_track", { defaultValue: "Emergency Fast-Track Service" })}</h4>
-              <p className="text-xs text-amber-800">Priority safety dispatch auto-assigned per SmartServe safety protocols.</p>
+              <p className="text-xs text-amber-800">{t("common.emergency_desc", { defaultValue: "Priority safety dispatch auto-assigned per SmartServe safety protocols." })}</p>
             </div>
           </div>
           <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 bg-amber-500 text-white rounded-lg shadow-2xs">
@@ -441,10 +441,10 @@ export const CustomerBookingDetail: React.FC = () => {
               {stLower === 'rejected' ? t('common.service_declined', { defaultValue: 'Service Request Declined by Partner' }) : t('common.booking_cancelled', { defaultValue: 'Booking Cancelled' })}
             </h4>
             <p className="text-xs text-rose-800 font-semibold">
-              Reason: {booking.cancellation_reason || (booking as any).rejection_reason || 'Provider unavailable'}
+              {t('booking.cancellation_reason', { defaultValue: 'Reason' })}: {booking.cancellation_reason || (booking as any).rejection_reason || t('common.provider_unavailable', { defaultValue: 'Provider unavailable' })}
             </p>
             <p className="text-[11px] text-rose-600 font-medium pt-1">
-              You can reschedule with another time slot or choose another service from our catalog.
+              {t('booking.reschedule_hint', { defaultValue: 'You can reschedule with another time slot or choose another service from our catalog.' })}
             </p>
           </div>
         </div>
@@ -459,13 +459,13 @@ export const CustomerBookingDetail: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-extrabold text-teal-950 text-base">Your Technician Has Arrived!</h4>
+                <h4 className="font-extrabold text-teal-950 text-base">{t('booking.arrived_banner_title', { defaultValue: 'Your Technician Has Arrived!' })}</h4>
                 <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-teal-200 text-teal-900 border border-teal-300">
-                  Ready at Doorstep
+                  {t('booking.arrived_badge', { defaultValue: 'Ready at Doorstep' })}
                 </span>
               </div>
               <p className="text-xs text-teal-800 mt-0.5">
-                Please verify technician credentials and provide your 4-digit Service Start OTP to initiate the job.
+                {t('booking.arrived_desc', { defaultValue: 'Please verify technician credentials and provide your 4-digit Service Start OTP to initiate the job.' })}
               </p>
             </div>
           </div>
@@ -481,17 +481,17 @@ export const CustomerBookingDetail: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h4 className="font-extrabold text-amber-950 text-base">Service Start OTP</h4>
+                <h4 className="font-extrabold text-amber-950 text-base">{t('booking.otp_title', { defaultValue: 'Service Start OTP' })}</h4>
                 <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full border ${
                   stLower === 'arrived'
                     ? 'bg-emerald-100 text-emerald-800 border-emerald-300 animate-pulse'
                     : 'bg-amber-100 text-amber-800 border-amber-300'
                 }`}>
-                  {stLower === 'arrived' ? 'Share With Technician Now' : 'Share Upon Arrival'}
+                  {stLower === 'arrived' ? t('booking.share_now', { defaultValue: 'Share With Technician Now' }) : t('booking.share_on_arrival', { defaultValue: 'Share Upon Arrival' })}
                 </span>
               </div>
               <p className="text-xs text-amber-800 mt-1 max-w-lg">
-                Share this 4-digit one-time code with your service technician when they arrive at your location to authorize and start the service.
+                {t('booking.otp_hint', { defaultValue: 'Share this 4-digit one-time code with your service technician when they arrive at your location to authorize and start the service.' })}
               </p>
             </div>
           </div>
@@ -500,7 +500,7 @@ export const CustomerBookingDetail: React.FC = () => {
               {booking.otp_code}
             </span>
             <span className="text-[10px] font-bold text-amber-700 tracking-wider uppercase mt-1 block">
-              Single-Use Start Code
+              {t('booking.single_use_code', { defaultValue: 'Single-Use Start Code' })}
             </span>
           </div>
         </div>
@@ -514,13 +514,13 @@ export const CustomerBookingDetail: React.FC = () => {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h4 className="font-extrabold text-purple-950 text-base">Service In Progress</h4>
+              <h4 className="font-extrabold text-purple-950 text-base">{t('booking.service_in_progress', { defaultValue: 'Service In Progress' })}</h4>
               <span className="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-300">
-                OTP Verified
+                {t('booking.otp_verified', { defaultValue: 'OTP Verified' })}
               </span>
             </div>
             <p className="text-xs text-purple-800 mt-0.5">
-              Technician is currently performing your service. Start OTP was successfully verified.
+              {t('booking.in_progress_desc', { defaultValue: 'Technician is currently performing your service. Start OTP was successfully verified.' })}
             </p>
           </div>
         </div>
@@ -599,39 +599,39 @@ export const CustomerBookingDetail: React.FC = () => {
 
       {/* Details Grid */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-md p-6 sm:p-8 space-y-6">
-        <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">Appointment Information</h3>
+        <h3 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">{t('booking.appointment_info', { defaultValue: 'Appointment Information' })}</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
           {/* Schedule */}
           <div className="space-y-2 p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <Clock className="w-4 h-4 text-blue-600" />
-              <span>Scheduled Appointment</span>
+              <span>{t('booking.scheduled_appointment', { defaultValue: 'Scheduled Appointment' })}</span>
             </h4>
             <p className="font-bold text-slate-900 text-base">{booking.scheduled_date}</p>
-            <p className="text-xs text-slate-600">Time Slot: <strong>{booking.scheduled_time}</strong></p>
+            <p className="text-xs text-slate-600">{t('booking.time_slot', { defaultValue: 'Time Slot' })}: <strong>{booking.scheduled_time}</strong></p>
           </div>
 
           {/* Provider */}
           <div className="space-y-2 p-5 rounded-2xl bg-slate-50 border border-slate-200/80">
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-emerald-600" />
-              <span>Assigned Service Expert</span>
+              <span>{t('booking.assigned_expert', { defaultValue: 'Assigned Service Expert' })}</span>
             </h4>
             <p className="font-bold text-slate-900 text-base">
-              {providerProfile?.full_name || booking.provider_name || 'Dispatching Verified Professional...'}
+              {providerProfile?.full_name || booking.provider_name || t('booking.provider_assigned', { defaultValue: 'Dispatching Verified Professional...' })}
             </p>
-            <p className="text-xs text-slate-600">SmartServe Background Checked & Insured</p>
+            <p className="text-xs text-slate-600">{t('booking.expert_verified_note', { defaultValue: 'SmartServe Background Checked & Insured' })}</p>
           </div>
 
           {/* Address */}
           <div className="space-y-2 p-5 rounded-2xl bg-slate-50 border border-slate-200/80 md:col-span-2">
             <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <MapPin className="w-4 h-4 text-rose-600" />
-              <span>Service Location Address</span>
+              <span>{t('booking.service_location', { defaultValue: 'Service Location Address' })}</span>
             </h4>
             <p className="font-medium text-slate-900 leading-relaxed">
-              {booking.address_line1 || booking.address || 'Address provided at booking'}
+              {booking.address_line1 || booking.address || t('booking.your_address', { defaultValue: 'Address provided at booking' })}
             </p>
           </div>
 
@@ -640,13 +640,13 @@ export const CustomerBookingDetail: React.FC = () => {
             <div className="space-y-2 p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 md:col-span-2">
               <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider flex items-center gap-2">
                 <FileText className="w-4 h-4 text-amber-700" />
-                <span>Special Instructions & Notes</span>
+                <span>{t('booking.special_notes_title', { defaultValue: 'Special Instructions & Notes' })}</span>
               </h4>
               <p className="text-xs text-[#1F2A1E] font-medium leading-relaxed whitespace-pre-wrap">
                 {booking.customer_notes || booking.notes}
               </p>
               <p className="text-[10px] text-[#1F2A1E]/50">
-                Shared exclusively with your assigned service expert for this appointment.
+                {t('booking.notes_disclaimer', { defaultValue: 'Shared exclusively with your assigned service expert for this appointment.' })}
               </p>
             </div>
           )}
@@ -659,7 +659,7 @@ export const CustomerBookingDetail: React.FC = () => {
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl text-xs flex items-center gap-2 transition-colors"
           >
             <HelpCircle className="w-4 h-4" />
-            <span>Need Help with this Booking?</span>
+            <span>{t('booking.need_help', { defaultValue: 'Need Help with this Booking?' })}</span>
           </button>
 
           {canCancel && (
@@ -669,7 +669,7 @@ export const CustomerBookingDetail: React.FC = () => {
               className="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50"
             >
               {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-4 h-4" />}
-              <span>Cancel Booking</span>
+              <span>{t('booking.cancel_booking', { defaultValue: 'Cancel Booking' })}</span>
             </button>
           )}
         </div>
@@ -687,8 +687,8 @@ export const CustomerBookingDetail: React.FC = () => {
                 <MessageCircle className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Direct Chat with Partner</h3>
-                <p className="text-xs text-slate-500">{providerProfile?.full_name || booking.provider_name || 'Your assigned service expert'}</p>
+                <h3 className="text-sm font-bold text-slate-900">{t('booking.direct_chat', { defaultValue: 'Direct Chat with Partner' })}</h3>
+                <p className="text-xs text-slate-500">{providerProfile?.full_name || booking.provider_name || t('booking.partner_subtitle', { defaultValue: 'Your assigned service expert' })}</p>
               </div>
             </div>
             <div className={`w-8 h-8 rounded-xl bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center transition-all ${showChat ? 'rotate-180' : ''}`}>
@@ -790,27 +790,27 @@ export const CustomerBookingDetail: React.FC = () => {
                 <AlertCircle className="w-6 h-6" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-extrabold text-slate-900">Cancel Service Booking?</h3>
+                <h3 className="text-lg font-extrabold text-slate-900">{t('booking.cancel_modal_title', { defaultValue: 'Cancel Service Booking?' })}</h3>
                 <p className="text-xs text-slate-500">
-                  Ref: <span className="font-mono font-bold text-slate-700">{booking.booking_reference}</span> • {booking.service_name}
+                  Ref: <span className="font-mono font-bold text-slate-700">{booking.booking_reference}</span> • {getLocalizedServiceName(booking.service_name)}
                 </p>
               </div>
             </div>
 
             <div className="space-y-3">
               <label className="text-xs font-bold text-slate-700 block">
-                Please select a reason for cancellation:
+                {t('booking.cancel_reason_prompt', { defaultValue: 'Please select a reason for cancellation:' })}
               </label>
               <select
                 value={selectedReason}
                 onChange={(e) => setSelectedReason(e.target.value)}
                 className="w-full text-xs font-medium bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
               >
-                <option value="Change of plans / schedule conflict">Change of plans / schedule conflict</option>
-                <option value="Booked by mistake">Booked by mistake</option>
-                <option value="Found an alternative provider">Found an alternative provider</option>
-                <option value="Price or timeline concern">Price or timeline concern</option>
-                <option value="Other reasons">Other reasons</option>
+                <option value="Change of plans / schedule conflict">{t('booking.reason_schedule', { defaultValue: 'Change of plans / schedule conflict' })}</option>
+                <option value="Booked by mistake">{t('booking.reason_mistake', { defaultValue: 'Booked by mistake' })}</option>
+                <option value="Found an alternative provider">{t('booking.reason_alt', { defaultValue: 'Found an alternative provider' })}</option>
+                <option value="Price or timeline concern">{t('booking.reason_price', { defaultValue: 'Price or timeline concern' })}</option>
+                <option value="Other reasons">{t('booking.reason_other', { defaultValue: 'Other reasons' })}</option>
               </select>
             </div>
 
@@ -821,7 +821,7 @@ export const CustomerBookingDetail: React.FC = () => {
                 disabled={cancelling}
                 className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
               >
-                Keep Booking
+                {t('booking.keep_booking', { defaultValue: 'Keep Booking' })}
               </button>
 
               <button
@@ -831,7 +831,7 @@ export const CustomerBookingDetail: React.FC = () => {
                 className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
               >
                 {cancelling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                <span>Yes, Cancel Booking</span>
+                <span>{t('booking.confirm_cancel', { defaultValue: 'Yes, Cancel Booking' })}</span>
               </button>
             </div>
           </div>

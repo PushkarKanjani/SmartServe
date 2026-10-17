@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getTicketDetail, addTicketMessage, SupportTicketDetail } from '../api/support';
 import { formatDateINR } from '../utils/formatters';
 import { useToast } from '../hooks/useToast';
@@ -10,6 +11,7 @@ export const CustomerSupportDetail: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const [ticket, setTicket] = useState<SupportTicketDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -84,7 +86,7 @@ export const CustomerSupportDetail: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3">
         <Loader2 className="w-10 h-10 animate-spin text-[#2563EB]" />
-        <p className="text-sm font-semibold text-slate-600">Loading conversation thread from database...</p>
+        <p className="text-sm font-semibold text-slate-600">{t('support.loading_conversation', { defaultValue: 'Loading conversation thread from database...' })}</p>
       </div>
     );
   }
@@ -93,14 +95,14 @@ export const CustomerSupportDetail: React.FC = () => {
     return (
       <div className="max-w-md mx-auto my-12 p-8 bg-white border border-slate-200 rounded-3xl text-center space-y-4 shadow-sm">
         <AlertCircle className="w-10 h-10 text-rose-500 mx-auto" />
-        <h3 className="text-lg font-bold text-slate-900">Ticket Not Found</h3>
+        <h3 className="text-lg font-bold text-slate-900">{t('support.ticket_not_found', { defaultValue: 'Ticket Not Found' })}</h3>
         <p className="text-xs text-slate-600">{error || 'The requested support ticket does not exist in the database.'}</p>
         <button
           onClick={() => navigate('/support')}
           className="px-5 py-2.5 bg-[#2563EB] text-white font-bold text-xs rounded-xl inline-flex items-center gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Support Center</span>
+          <span>{t('support.back_to_center', { defaultValue: 'Back to Support Center' })}</span>
         </button>
       </div>
     );
@@ -118,7 +120,7 @@ export const CustomerSupportDetail: React.FC = () => {
           className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-[#2563EB] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Support Tickets</span>
+          <span>{t('support.back_to_tickets', { defaultValue: 'Back to Support Tickets' })}</span>
         </button>
 
         <button
@@ -126,7 +128,7 @@ export const CustomerSupportDetail: React.FC = () => {
           className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 shadow-2xs transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-          <span>Refresh Replies</span>
+          <span>{t('support.refresh_replies', { defaultValue: 'Refresh Replies' })}</span>
         </button>
       </div>
 
@@ -150,7 +152,7 @@ export const CustomerSupportDetail: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{ticket.subject}</h1>
           <p className="text-xs text-slate-400 font-medium flex items-center gap-1.5 pt-1">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>Opened on {formatDateINR(ticket.created_at)}</span>
+            <span>{t('support.opened_on', { date: formatDateINR(ticket.created_at), defaultValue: `Opened on ${formatDateINR(ticket.created_at)}` })}</span>
           </p>
         </div>
 
@@ -160,14 +162,14 @@ export const CustomerSupportDetail: React.FC = () => {
           {/* Initial Ticket Description */}
           {ticket.description && (
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Initial Request Description</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">{t('support.initial_desc', { defaultValue: 'Initial Request Description' })}</span>
               <p className="text-sm text-slate-800 leading-relaxed font-medium">{ticket.description}</p>
             </div>
           )}
 
           {/* Conversation Messages */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Conversation History</h3>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('support.conversation_history', { defaultValue: 'Conversation History' })}</h3>
 
             {ticket.messages && ticket.messages.length > 0 ? (
               ticket.messages.map((msg, idx) => {
@@ -189,7 +191,7 @@ export const CustomerSupportDetail: React.FC = () => {
                       {isCustomer ? (
                         <>
                           <User className="w-3.5 h-3.5 text-slate-400" />
-                          <span>You (Customer)</span>
+                          <span>{t('support.you_customer', { defaultValue: 'You (Customer)' })}</span>
                         </>
                       ) : isProvider ? (
                         <>
@@ -199,7 +201,7 @@ export const CustomerSupportDetail: React.FC = () => {
                       ) : (
                         <>
                           <ShieldCheck className="w-3.5 h-3.5 text-[#2563EB]" />
-                          <span>SmartServe Support Operations <span className="opacity-70 text-[10px] uppercase font-normal">({isAdmin ? 'Admin' : 'Operations'})</span></span>
+                          <span>{t('support.support_ops', { defaultValue: 'SmartServe Support Operations' })} <span className="opacity-70 text-[10px] uppercase font-normal">({isAdmin ? 'Admin' : 'Operations'})</span></span>
                         </>
                       )}
                       <span className="text-[10px] text-slate-400 font-normal">
@@ -222,20 +224,20 @@ export const CustomerSupportDetail: React.FC = () => {
                 );
               })
             ) : (
-              <p className="text-xs text-slate-400 italic py-2">No response messages logged yet.</p>
+              <p className="text-xs text-slate-400 italic py-2">{t('support.no_responses_yet', { defaultValue: 'No response messages logged yet.' })}</p>
             )}
           </div>
 
           {/* Reply Input Form */}
           {stLower !== 'closed' && (
             <form onSubmit={handleSendReply} className="pt-4 border-t border-slate-100 space-y-3">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Post Reply</label>
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">{t('support.post_reply', { defaultValue: 'Post Reply' })}</label>
               <div className="flex items-center gap-3">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type your response to support..."
+                  placeholder={t('support.reply_placeholder', { defaultValue: 'Type your response to support...' })}
                   className="flex-1 h-13 bg-slate-50 border border-slate-200 rounded-xl px-4 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#2563EB]"
                   required
                 />
@@ -245,7 +247,7 @@ export const CustomerSupportDetail: React.FC = () => {
                   className="h-13 px-6 bg-[#2563EB] hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-xs transition-all disabled:opacity-50 flex items-center gap-2 flex-shrink-0"
                 >
                   {replying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  <span>Send Reply</span>
+                  <span>{t('support.send_reply', { defaultValue: 'Send Reply' })}</span>
                 </button>
               </div>
             </form>

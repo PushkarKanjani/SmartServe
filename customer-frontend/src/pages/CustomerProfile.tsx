@@ -30,7 +30,7 @@ export const CustomerProfile: React.FC = () => {
         phone: phone,
       });
       await refreshUser();
-      showToast('Profile updated successfully!', 'success');
+      showToast(t('profile.profile_updated', { defaultValue: 'Profile updated successfully!' }), 'success');
     } catch (err: any) {
       showToast(err.response?.data?.detail || 'Failed to update profile.', 'error');
     } finally {
@@ -42,7 +42,7 @@ export const CustomerProfile: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3 font-sans">
         <Loader2 className="w-8 h-8 animate-spin text-[#2563EB]" />
-        <p className="text-sm font-semibold text-slate-600">Loading authenticated profile...</p>
+        <p className="text-sm font-semibold text-slate-600">{t('profile.loading', { defaultValue: 'Loading authenticated profile...' })}</p>
       </div>
     );
   }
