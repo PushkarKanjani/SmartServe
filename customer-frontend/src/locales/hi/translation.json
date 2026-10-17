@@ -39,7 +39,11 @@
     "view_all_services": "सभी सेवाएं देखें",
     "see_full_catalog": "पूरा कैटलॉग देखें",
     "fixed_rate": "निश्चित दर",
-    "view_details": "विवरण देखें"
+    "view_details": "विवरण देखें",
+    "carousel_prev_slide": "पिछली स्लाइड",
+    "carousel_next_slide": "अगली स्लाइड",
+    "carousel_title": "स्मार्टसर्व प्रचार कैरोसेल",
+    "carousel_dots": "कैरोसेल पेजिनेशन बिंदु"
   },
   "categories": {
     "all": "सभी सेवाएं",
@@ -77,7 +81,19 @@
     "fetching_services": "डेटाबेस से सत्यापित सेवाएं लोड की जा रही हैं...",
     "no_services_found": "कोई सेवा नहीं मिली",
     "no_services_desc": "आपके चुने हुए फिल्टर या खोज से कोई सेवा मेल नहीं खाती।",
-    "clear_filters": "फिल्टर हटाएं और श्रेणियां देखें"
+    "clear_filters": "फिल्टर हटाएं और श्रेणियां देखें",
+    "err_api_catalog": "स्मार्टसर्व एपीआई से कनेक्ट करने में असमर्थ। कृपया नेटवर्क कनेक्टिविटी और बैकएंड सर्वर उपलब्धता की जांच करें।",
+    "err_unexpected": "कैटलॉग लोड करते समय एक अप्रत्याशित त्रुटि उत्पन्न हुई।",
+    "primary_categories_count": "{{count}} मुख्य श्रेणियां",
+    "cat_meta_summary": "{{sub_count}} उप-श्रेणियां • {{srv_count}} सेवाएं",
+    "active_services_count": "{{count}} सक्रिय सेवाएं",
+    "back_to_categories": "श्रेणियों पर वापस जाएं",
+    "view_all_category_services": "सभी {{category}} सेवाएं देखें",
+    "services_available_count": "{{count}} सेवाएं उपलब्ध",
+    "back_to_target": "{{target}} पर वापस जाएं",
+    "grid_view": "ग्रिड व्यू",
+    "list_view": "लिस्ट व्यू",
+    "all_count": "सभी ({{count}})"
   },
   "service_detail": {
     "total_price": "कुल सेवा मूल्य",
@@ -128,7 +144,17 @@
     "key_step": "प्रमुख चरण",
     "service_unavailable_btn": "सेवा अनुपलब्ध",
     "emergency_dispatch_booking": "आपातकालीन त्वरित बुकिंग",
-    "schedule_service_booking": "सेवा बुकिंग शेड्यूल करें"
+    "schedule_service_booking": "सेवा बुकिंग शेड्यूल करें",
+    "loading_record": "लाइव कैटलॉग सेवा रिकॉर्ड प्राप्त किया जा रहा है...",
+    "not_available_title": "सेवा उपलब्ध नहीं है",
+    "not_available_desc": "अनुरोधित सेवा मौजूद नहीं है या व्यवस्थापक कैटलॉग में निष्क्रिय कर दी गई है।",
+    "return_to_catalog": "कैटलॉग पर वापस जाएं",
+    "toast_service_inactive": "यह सेवा वर्तमान में निष्क्रिय है और इसे बुक नहीं किया जा सकता है।",
+    "toast_select_datetime": "कृपया एक मान्य आगामी तिथि और समय स्लॉट चुनें।",
+    "toast_past_date": "अतीत की तारीख में बुकिंग निर्धारित नहीं की जा सकती। कृपया आगामी तिथि चुनें।",
+    "toast_slot_unavailable": "चयनित समय स्लॉट अब उपलब्ध नहीं है। कृपया दूसरा स्लॉट चुनें।",
+    "err_load_failed": "बैकएंड से सेवा विवरण लोड करने में विफल।",
+    "toast_sign_in_required": "अपनी बुकिंग पूरी करने के लिए कृपया साइन इन करें।"
   },
   "booking": {
     "book_now": "अभी बुक करें",
@@ -220,7 +246,12 @@
     "reason_label": "कारण",
     "bookings_subtitle": "अपनी बुकिंग की रीयल-टाइम स्थिति और तकनीशियन आवंटन ट्रैक करें।",
     "fetching_bookings": "डेटाबेस से आपकी बुकिंग लोड हो रही है...",
-    "assigned_soon": "जल्द आवंटित होगा"
+    "assigned_soon": "जल्द आवंटित होगा",
+    "date_at_time": "{{date}} को {{time}} बजे",
+    "toast_confirmed": "बुकिंग {{ref}} की पुष्टि हो गई है!",
+    "err_create_failed": "बुकिंग बनाने में विफल। कृपया पुनः प्रयास करें।",
+    "emergency_notes": "आपातकालीन फास्ट-ट्रैक प्रेषण का अनुरोध किया गया",
+    "standard_notes": "ग्राहक पोर्टल के माध्यम से मानक बुकिंग का अनुरोध किया गया"
   },
   "bundle": {
     "cart_title": "बंडल कार्ट",
@@ -256,7 +287,9 @@
     "payment_method_label": "भुगतान विधि",
     "warranty_included": "इस अनुरोध की सभी सेवाओं में हमारी 7-दिवसीय सेवा वारंटी शामिल है।",
     "scheduling_progress": "बुकिंग निर्धारित की जा रही है...",
-    "view_cart_tooltip": "मल्टी-सर्विस बंडल कार्ट देखें"
+    "view_cart_tooltip": "मल्टी-सर्विस बंडल कार्ट देखें",
+    "remove_from_bundle": "बंडल से हटाएं",
+    "add_to_bundle_tooltip": "मल्टी-सर्विस बंडल में जोड़ें"
   },
   "warranty": {
     "title": "स्मार्टसर्व 7-दिवसीय डिजिटल वारंटी",
@@ -421,7 +454,9 @@
     "today": "आज",
     "selected_date": "चयनित तारीख",
     "optional": "वैकल्पिक",
-    "select_language": "भाषा चुनें"
+    "select_language": "भाषा चुनें",
+    "view_all_count": "सभी देखें ({{count}})",
+    "services_count": "{{count}} सेवाएं"
   },
   "errors": {
     "generic": "कुछ गलत हो गया। कृपया पुन: प्रयास करें।",

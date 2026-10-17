@@ -39,7 +39,11 @@
     "view_all_services": "View All Services",
     "see_full_catalog": "See Full Catalog",
     "fixed_rate": "Fixed Rate",
-    "view_details": "View Details"
+    "view_details": "View Details",
+    "carousel_prev_slide": "Previous slide",
+    "carousel_next_slide": "Next slide",
+    "carousel_title": "SmartServe Promotional Carousel",
+    "carousel_dots": "Carousel pagination dots"
   },
   "categories": {
     "all": "All Services",
@@ -77,7 +81,19 @@
     "fetching_services": "Fetching verified services from database...",
     "no_services_found": "No Services Found",
     "no_services_desc": "No services match your active filters or search terms.",
-    "clear_filters": "Clear Filters & View Categories"
+    "clear_filters": "Clear Filters & View Categories",
+    "err_api_catalog": "Unable to connect to SmartServe API. Please verify network connectivity and backend server availability.",
+    "err_unexpected": "An unexpected error occurred while loading the catalog.",
+    "primary_categories_count": "{{count}} Primary Categories",
+    "cat_meta_summary": "{{sub_count}} Subcategories • {{srv_count}} Services",
+    "active_services_count": "{{count}} Active Services",
+    "back_to_categories": "Back to Categories",
+    "view_all_category_services": "View All {{category}} Services",
+    "services_available_count": "{{count}} Services Available",
+    "back_to_target": "Back to {{target}}",
+    "grid_view": "Grid View",
+    "list_view": "List View",
+    "all_count": "All ({{count}})"
   },
   "service_detail": {
     "total_price": "Total Service Price",
@@ -128,7 +144,17 @@
     "key_step": "Key Step",
     "service_unavailable_btn": "Service Unavailable",
     "emergency_dispatch_booking": "Emergency Dispatch Booking",
-    "schedule_service_booking": "Schedule Service Booking"
+    "schedule_service_booking": "Schedule Service Booking",
+    "loading_record": "Retrieving live catalog service record...",
+    "not_available_title": "Service Not Available",
+    "not_available_desc": "The requested service does not exist or has been made inactive in the Admin Catalog.",
+    "return_to_catalog": "Return to Catalog",
+    "toast_service_inactive": "This service is currently inactive and cannot be booked.",
+    "toast_select_datetime": "Please select a valid upcoming date and time slot.",
+    "toast_past_date": "Cannot schedule a booking in the past. Please select an upcoming date.",
+    "toast_slot_unavailable": "The selected time slot is no longer available. Please select another slot.",
+    "err_load_failed": "Failed to load service details from backend.",
+    "toast_sign_in_required": "Please sign in to complete your booking."
   },
   "booking": {
     "book_now": "Book Now",
@@ -220,7 +246,12 @@
     "reason_label": "Reason",
     "bookings_subtitle": "Track real-time status and technician assignments for your bookings.",
     "fetching_bookings": "Fetching your bookings from database...",
-    "assigned_soon": "Assigned Soon"
+    "assigned_soon": "Assigned Soon",
+    "date_at_time": "{{date}} at {{time}}",
+    "toast_confirmed": "Booking {{ref}} confirmed!",
+    "err_create_failed": "Failed to create booking. Please try again.",
+    "emergency_notes": "Emergency fast-track dispatch requested",
+    "standard_notes": "Standard booking requested via Customer Web"
   },
   "bundle": {
     "cart_title": "Bundle Cart",
@@ -256,7 +287,9 @@
     "payment_method_label": "Payment Method",
     "warranty_included": "All services in this request include our 7-Day Service Warranty.",
     "scheduling_progress": "Scheduling Booking...",
-    "view_cart_tooltip": "View Multi-Service Bundle Cart"
+    "view_cart_tooltip": "View Multi-Service Bundle Cart",
+    "remove_from_bundle": "Remove from Bundle",
+    "add_to_bundle_tooltip": "Add to Multi-Service Bundle"
   },
   "warranty": {
     "title": "SmartServe 7-Day Digital Warranty",
@@ -421,7 +454,9 @@
     "today": "Today",
     "selected_date": "Selected Date",
     "optional": "Optional",
-    "select_language": "Select language"
+    "select_language": "Select language",
+    "view_all_count": "View All ({{count}})",
+    "services_count": "{{count}} Services"
   },
   "errors": {
     "generic": "Something went wrong. Please try again.",

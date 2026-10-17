@@ -244,7 +244,7 @@ const getSlideTranslation = (slideId: string, lang: string) => {
 };
 
 export const HomePromoCarousel: React.FC = () => {
-  const { i18n } = useTranslation();
+  const { i18n, t } = useTranslation();
   const lang = (i18n.language || 'en').slice(0, 2);
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -313,7 +313,7 @@ export const HomePromoCarousel: React.FC = () => {
     <div
       role="region"
       aria-roledescription="carousel"
-      aria-label="SmartServe Promotional Carousel"
+      aria-label={t('home.carousel_title', { defaultValue: 'SmartServe Promotional Carousel' })}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onMouseEnter={() => setIsPaused(true)}
@@ -482,7 +482,7 @@ export const HomePromoCarousel: React.FC = () => {
       <button
         type="button"
         onClick={goToPrev}
-        aria-label="Previous slide"
+        aria-label={t('home.carousel_prev_slide', { defaultValue: 'Previous slide' })}
         className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/25 hover:bg-black/45 text-white border border-white/20 shadow-xs backdrop-blur-xs items-center justify-center transition-all opacity-75 hover:opacity-100 cursor-pointer"
       >
         <ChevronLeft className="w-4 h-4 text-white" />
@@ -491,7 +491,7 @@ export const HomePromoCarousel: React.FC = () => {
       <button
         type="button"
         onClick={goToNext}
-        aria-label="Next slide"
+        aria-label={t('home.carousel_next_slide', { defaultValue: 'Next slide' })}
         className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/25 hover:bg-black/45 text-white border border-white/20 shadow-xs backdrop-blur-xs items-center justify-center transition-all opacity-75 hover:opacity-100 cursor-pointer"
       >
         <ChevronRight className="w-4 h-4 text-white" />
@@ -500,7 +500,7 @@ export const HomePromoCarousel: React.FC = () => {
       {/* 3. PAGINATION INDICATORS: Small, perfectly circular dots • • • ● • • on ONE horizontal line */}
       <div 
         role="tablist"
-        aria-label="Carousel pagination dots"
+        aria-label={t('home.carousel_dots', { defaultValue: 'Carousel pagination dots' })}
         style={{
           position: 'absolute',
           bottom: '12px',

@@ -81,7 +81,7 @@ export const CustomerServiceDetail: React.FC = () => {
             .finally(() => setProvidersLoading(false));
         }
       } catch (err: any) {
-        setError(err.response?.data?.detail || 'Failed to load service details from backend.');
+        setError(err.response?.data?.detail || t('service_detail.err_load_failed', { defaultValue: 'Failed to load service details from backend.' }));
       } finally {
         setLoading(false);
       }
@@ -269,7 +269,7 @@ export const CustomerServiceDetail: React.FC = () => {
   const handleConfirmBooking = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
-      showToast('Please sign in to complete your booking.', 'info');
+      showToast(t('service_detail.toast_sign_in_required', { defaultValue: 'Please sign in to complete your booking.' }), 'info');
       navigate('/login');
       return;
     }
@@ -277,23 +277,23 @@ export const CustomerServiceDetail: React.FC = () => {
     if (!service) return;
 
     if (!service.is_active) {
-      showToast('This service is currently inactive and cannot be booked.', 'error');
+      showToast(t('service_detail.toast_service_inactive', { defaultValue: 'This service is currently inactive and cannot be booked.' }), 'error');
       return;
     }
 
     if (!bookingDate || !bookingTime) {
-      showToast('Please select a valid upcoming date and time slot.', 'error');
+      showToast(t('service_detail.toast_select_datetime', { defaultValue: 'Please select a valid upcoming date and time slot.' }), 'error');
       return;
     }
 
     if (bookingDate < todayStr) {
-      showToast('Cannot schedule a booking in the past. Please select an upcoming date.', 'error');
+      showToast(t('service_detail.toast_past_date', { defaultValue: 'Cannot schedule a booking in the past. Please select an upcoming date.' }), 'error');
       return;
     }
 
     // Re-check slot availability at submit time
     if (!availableTimeOptions.includes(bookingTime)) {
-      showToast('The selected time slot is no longer available. Please select another slot.', 'error');
+      showToast(t('service_detail.toast_slot_unavailable', { defaultValue: 'The selected time slot is no longer available. Please select another slot.' }), 'error');
       return;
     }
 
@@ -308,15 +308,15 @@ export const CustomerServiceDetail: React.FC = () => {
         address_line1: `${address}, ${city} - ${pincode}`,
         city,
         pincode,
-        notes: notes || (isEmergency ? 'Emergency fast-track dispatch requested' : 'Standard booking requested via Customer Web'),
+        notes: notes || (isEmergency ? t('booking.emergency_notes', { defaultValue: 'Emergency fast-track dispatch requested' }) : t('booking.standard_notes', { defaultValue: 'Standard booking requested via Customer Web' })),
         provider_id: isProviderSelectable && selectedProviderId ? selectedProviderId : undefined,
       });
 
-      showToast(`Booking ${newBooking.booking_reference} confirmed!`, 'success');
+      showToast(t('booking.toast_confirmed', { ref: newBooking.booking_reference, defaultValue: `Booking ${newBooking.booking_reference} confirmed!` }), 'success');
       setShowBookingModal(false);
       navigate(`/bookings/${newBooking.id}`);
     } catch (err: any) {
-      showToast(err.response?.data?.detail || 'Failed to create booking. Please try again.', 'error');
+      showToast(err.response?.data?.detail || t('booking.err_create_failed', { defaultValue: 'Failed to create booking. Please try again.' }), 'error');
     } finally {
       setBookingLoading(false);
     }
@@ -327,7 +327,7 @@ export const CustomerServiceDetail: React.FC = () => {
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#2F5233]" />
         <p className="text-sm font-semibold text-[#1F2A1E]/70 font-sans">
-          Retrieving live catalog service record...
+          {t('service_detail.loading_record', { defaultValue: 'Retrieving live catalog service record...' })}
         </p>
       </div>
     );
@@ -340,9 +340,9 @@ export const CustomerServiceDetail: React.FC = () => {
           <AlertCircle className="w-7 h-7" />
         </div>
         <div className="space-y-2">
-          <h3 className="text-2xl font-bold font-serif-display text-[#1F2A1E]">Service Not Available</h3>
+          <h3 className="text-2xl font-bold font-serif-display text-[#1F2A1E]">{t('service_detail.not_available_title', { defaultValue: 'Service Not Available' })}</h3>
           <p className="text-sm text-[#1F2A1E]/70 max-w-md mx-auto">
-            {error || 'The requested service does not exist or has been made inactive in the Admin Catalog.'}
+            {error || t('service_detail.not_available_desc', { defaultValue: 'The requested service does not exist or has been made inactive in the Admin Catalog.' })}
           </p>
         </div>
         <button
@@ -350,7 +350,7 @@ export const CustomerServiceDetail: React.FC = () => {
           className="px-6 py-3 bg-[#2F5233] hover:bg-[#3D6B42] text-[#FAF7F0] font-bold text-xs uppercase tracking-wider rounded-full inline-flex items-center gap-2 shadow-sm transition-all"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Return to Catalog</span>
+          <span>{t('service_detail.return_to_catalog', { defaultValue: 'Return to Catalog' })}</span>
         </button>
       </div>
     );

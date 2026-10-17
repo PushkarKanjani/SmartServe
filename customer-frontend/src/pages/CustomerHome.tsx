@@ -101,7 +101,7 @@ export const CustomerHome: React.FC = () => {
               <span>{t('booking.active_bookings', { defaultValue: 'Your Active Bookings' })}</span>
             </h3>
             <button onClick={() => navigate('/bookings')} className="text-xs font-bold text-[#2F5233] hover:text-[#3D6B42] hover:underline cursor-pointer">
-              {t('common.view_all', { defaultValue: 'View All' })} ({activeBookings.length})
+              {t('common.view_all_count', { count: activeBookings.length, defaultValue: `View All (${activeBookings.length})` })}
             </button>
           </div>
 
@@ -122,7 +122,13 @@ export const CustomerHome: React.FC = () => {
                   <h4 className="font-bold text-[#1F2A1E] text-base">{getLocalizedServiceName(b.service_name)}</h4>
                   <p className="text-xs text-[#1F2A1E]/60 flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-[#C9A15A]" />
-                    <span>{b.scheduled_date} at {b.scheduled_time}</span>
+                    <span>
+                      {t('booking.date_at_time', {
+                        date: b.scheduled_date,
+                        time: b.scheduled_time,
+                        defaultValue: `${b.scheduled_date} at ${b.scheduled_time}`
+                      })}
+                    </span>
                   </p>
                 </div>
 
@@ -182,7 +188,7 @@ export const CustomerHome: React.FC = () => {
                       {getLocalizedCategory(cat.display_name || cat.name)}
                     </h3>
                     <span className="text-[10px] text-[#C9A15A] font-semibold block">
-                      {cat.service_count ? `${cat.service_count} ${t('nav.catalog', { defaultValue: 'Services' })}` : t('common.verified', { defaultValue: 'Verified Professionals' })}
+                      {cat.service_count ? t('common.services_count', { count: cat.service_count, defaultValue: `${cat.service_count} Services` }) : t('common.verified', { defaultValue: 'Verified Professionals' })}
                     </span>
                   </div>
                 </div>

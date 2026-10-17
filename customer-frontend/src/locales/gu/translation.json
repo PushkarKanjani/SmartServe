@@ -39,7 +39,11 @@
     "view_all_services": "તમામ સેવાઓ જુઓ",
     "see_full_catalog": "સંપૂર્ણ કેટલોગ જુઓ",
     "fixed_rate": "નિયત દર",
-    "view_details": "વિગતો જુઓ"
+    "view_details": "વિગતો જુઓ",
+    "carousel_prev_slide": "પાછલી સ્લાઇડ",
+    "carousel_next_slide": "આગલી સ્લાઇડ",
+    "carousel_title": "સ્માર્ટસર્વ પ્રમોશનલ કેરોયુઝલ",
+    "carousel_dots": "કેરોયુઝલ પેજિનેશન બિંદુઓ"
   },
   "categories": {
     "all": "તમામ સેવાઓ",
@@ -77,7 +81,19 @@
     "fetching_services": "ડેટાબેઝમાંથી ચકાસાયેલ સેવાઓ લોડ થઈ રહી છે...",
     "no_services_found": "કોઈ સેવા મળી નથી",
     "no_services_desc": "તમારા પસંદ કરેલા ફિલ્ટર અથવા શોધ સાથે કોઈ સેવા મેળ ખાતી નથી.",
-    "clear_filters": "ફિલ્ટર સાફ કરો અને શ્રેણીઓ જુઓ"
+    "clear_filters": "ફિલ્ટર સાફ કરો અને શ્રેણીઓ જુઓ",
+    "err_api_catalog": "સ્માર્ટસર્વ એપીઆઈ સાથે કનેક્ટ કરવામાં અસમર્થ. કૃપા કરીને નેટવર્ક કનેક્ટિવિટી અને બેકએન્ડ સર્વર ઉપલબ્ધતા ચકાસો.",
+    "err_unexpected": "સૂચિ લોડ કરતી વખતે એક અનપેક્ષિત ભૂલ આવી.",
+    "primary_categories_count": "{{count}} મુખ્ય શ્રેણીઓ",
+    "cat_meta_summary": "{{sub_count}} પેટા-શ્રેણીઓ • {{srv_count}} સેવાઓ",
+    "active_services_count": "{{count}} સક્રિય સેવાઓ",
+    "back_to_categories": "શ્રેણીઓ પર પાછા ફરો",
+    "view_all_category_services": "તમામ {{category}} સેવાઓ જુઓ",
+    "services_available_count": "{{count}} સેવાઓ ઉપલબ્ધ",
+    "back_to_target": "{{target}} પર પાછા ફરો",
+    "grid_view": "ગ્રીડ વ્યૂ",
+    "list_view": "લિસ્ટ વ્યૂ",
+    "all_count": "બધા ({{count}})"
   },
   "service_detail": {
     "total_price": "કુલ સેવા કિંમત",
@@ -128,7 +144,17 @@
     "key_step": "મુખ્ય પગલું",
     "service_unavailable_btn": "સેવા અનુપલબ્ધ",
     "emergency_dispatch_booking": "ઇમરજન્સી ઝડપી બુકિંગ",
-    "schedule_service_booking": "સેવા બુકિંગ શેડ્યૂલ કરો"
+    "schedule_service_booking": "સેવા બુકિંગ શેડ્યૂલ કરો",
+    "loading_record": "લાઇવ કેટલોગ સેવા રેકોર્ડ મેળવી રહ્યું છે...",
+    "not_available_title": "સેવા ઉપલબ્ધ નથી",
+    "not_available_desc": "વિનંતી કરેલી સેવા અસ્તિત્વમાં નથી અથવા એડમિન સૂચિમાં નિષ્ક્રિય કરવામાં આવી છે.",
+    "return_to_catalog": "સૂચિ પર પાછા ફરો",
+    "toast_service_inactive": "આ સેવા હાલમાં નિષ્ક્રિય છે અને બુક કરી શકાતી નથી.",
+    "toast_select_datetime": "કૃપા કરીને માન્ય આગામી તારીખ અને સમય સ્લોટ પસંદ કરો.",
+    "toast_past_date": "ભૂતકાળમાં બુકિંગ સુનિશ્ચિત કરી શકાતું નથી. કૃપા કરીને આગામી તારીખ પસંદ કરો.",
+    "toast_slot_unavailable": "પસંદ કરેલ સમય સ્લોટ હવે ઉપલબ્ધ નથી. કૃપા કરીને બીજો સ્લોટ પસંદ કરો.",
+    "err_load_failed": "બેકએન્ડમાંથી સેવા વિગતો લોડ કરવામાં નિષ્ફળ.",
+    "toast_sign_in_required": "તમારું બુકિંગ પૂર્ણ કરવા માટે કૃપા કરીને સાઇન ઇન કરો."
   },
   "booking": {
     "book_now": "હમણાં બુક કરો",
@@ -220,7 +246,12 @@
     "reason_label": "કારણ",
     "bookings_subtitle": "તમારી બુકિંગની રીઅલ-ટાઇમ સ્થિતિ અને ટેકનિશિયન સોંપણી ટ્રેક કરો.",
     "fetching_bookings": "ડેટાબેઝમાંથી તમારી બુકિંગ લોડ થઈ રહી છે...",
-    "assigned_soon": "ટૂંક સમયમાં સોંપવામાં આવશે"
+    "assigned_soon": "ટૂંક સમયમાં સોંપવામાં આવશે",
+    "date_at_time": "{{date}} ના રોજ {{time}} વાગ્યે",
+    "toast_confirmed": "બુકિંગ {{ref}} કન્ફર્મ થયું!",
+    "err_create_failed": "બુકિંગ બનાવવામાં નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "emergency_notes": "ઇમરજન્સી ફાસ્ટ-ટ્રેક ડિસ્પેચની વિનંતી કરવામાં આવી",
+    "standard_notes": "ગ્રાહક પોર્ટલ દ્વારા માનક બુકિંગની વિનંતી કરવામાં આવી"
   },
   "bundle": {
     "cart_title": "બંડલ કાર્ટ",
@@ -256,7 +287,9 @@
     "payment_method_label": "ચુકવણી પદ્ધતિ",
     "warranty_included": "આ વિનંતીની તમામ સેવાઓમાં અમારી 7-દિવસની સેવા વૉરંટી શામેલ છે.",
     "scheduling_progress": "બુકિંગ સુનિશ્ચિત થઈ રહ્યું છે...",
-    "view_cart_tooltip": "મલ્ટી-સર્વિસ બંડલ કાર્ટ જુઓ"
+    "view_cart_tooltip": "મલ્ટી-સર્વિસ બંડલ કાર્ટ જુઓ",
+    "remove_from_bundle": "બંડલમાંથી દૂર કરો",
+    "add_to_bundle_tooltip": "મલ્ટી-સર્વિસ બંડલમાં ઉમેરો"
   },
   "warranty": {
     "title": "સ્માર્ટસર્વ 7-દિવસીય ડિજિટલ વૉરંટી",
@@ -421,7 +454,9 @@
     "today": "આજે",
     "selected_date": "પસંદ કરેલ તારીખ",
     "optional": "વૈકલ્પિક",
-    "select_language": "ભાષા પસંદ કરો"
+    "select_language": "ભાષા પસંદ કરો",
+    "view_all_count": "બધા જુઓ ({{count}})",
+    "services_count": "{{count}} સેવાઓ"
   },
   "errors": {
     "generic": "કંઈક ખોટું થયું. કૃપા કરીને ફરી પ્રયાસ કરો.",

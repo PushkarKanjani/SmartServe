@@ -91,9 +91,9 @@ export const CustomerCatalog: React.FC = () => {
       if (err.response) {
         setError(err.response.data?.detail || `API Error (${err.response.status}): Failed to load backend catalog.`);
       } else if (err.request) {
-        setError('Unable to connect to SmartServe API. Please verify network connectivity and backend server availability.');
+        setError(t('catalog_page.err_api_catalog', { defaultValue: 'Unable to connect to SmartServe API. Please verify network connectivity and backend server availability.' }));
       } else {
-        setError(err.message || 'An unexpected error occurred while loading the catalog.');
+        setError(err.message || t('catalog_page.err_unexpected', { defaultValue: 'An unexpected error occurred while loading the catalog.' }));
       }
     } finally {
       setLoading(false);
@@ -306,7 +306,7 @@ export const CustomerCatalog: React.FC = () => {
                 : 'bg-[#F2EDE1] hover:bg-[#E5DEC9] text-[#1F2A1E]'
             }`}
           >
-            <span>{t('catalog_page.view_all_count', { defaultValue: 'View All' })} ({allServices.length})</span>
+            <span>{t('catalog_page.view_all_count', { count: allServices.length, defaultValue: `View All (${allServices.length})` })}</span>
           </button>
         </div>
       </div>
@@ -322,7 +322,7 @@ export const CustomerCatalog: React.FC = () => {
                 {t('catalog_page.service_categories', { defaultValue: 'Service Categories' })}
               </h1>
               <span className="text-xs font-bold text-[#2F5233] bg-[#2F5233]/10 px-3 py-1 rounded-full border border-[#2F5233]/20">
-                {categories.length} {t('catalog_page.primary_categories', { defaultValue: 'Primary Categories' })}
+                {t('catalog_page.primary_categories_count', { count: categories.length, defaultValue: `${categories.length} Primary Categories` })}
               </span>
             </div>
             <p className="text-sm text-[#1F2A1E]/60 font-medium mt-1">
@@ -359,7 +359,11 @@ export const CustomerCatalog: React.FC = () => {
                           {getLocalizedCategory(cat.name)}
                         </h3>
                         <p className="text-xs text-[#FAF7F0]/80 font-medium mt-0.5">
-                          {cat.subcategories_count || (cat.subcategories?.length || 0)} {t('catalog_page.subcategories', { defaultValue: 'Subcategories' })} • {cat.service_count} {t('nav.catalog', { defaultValue: 'Services' })}
+                          {t('catalog_page.cat_meta_summary', {
+                            sub_count: cat.subcategories_count || (cat.subcategories?.length || 0),
+                            srv_count: cat.service_count,
+                            defaultValue: `${cat.subcategories_count || (cat.subcategories?.length || 0)} Subcategories • ${cat.service_count} Services`
+                          })}
                         </p>
                       </div>
 
@@ -373,7 +377,7 @@ export const CustomerCatalog: React.FC = () => {
                   <div className="p-4 sm:p-5 flex items-center justify-between text-xs">
                     <span className="inline-flex items-center gap-1.5 text-emerald-800 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{cat.active_count || cat.service_count} {t('catalog_page.active_services', { defaultValue: 'Active Services' })}</span>
+                      <span>{t('catalog_page.active_services_count', { count: cat.active_count || cat.service_count, defaultValue: `${cat.active_count || cat.service_count} Active Services` })}</span>
                     </span>
 
                     <span className="font-bold text-[#2F5233] group-hover:underline flex items-center gap-1">
@@ -401,14 +405,18 @@ export const CustomerCatalog: React.FC = () => {
                   className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1F2A1E]/60 hover:text-[#1F2A1E] transition-colors cursor-pointer"
                 >
                   <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>{t('catalog_page.back_to', { defaultValue: 'Back to' })} {t('catalog_page.categories', { defaultValue: 'Categories' })}</span>
+                  <span>{t('catalog_page.back_to_categories', { defaultValue: 'Back to Categories' })}</span>
                 </button>
               </div>
               <h1 className="font-serif text-2xl sm:text-3xl font-normal text-[#1F2A1E] tracking-tight mt-2">
                 {getLocalizedCategory(selectedCategory)}
               </h1>
               <p className="text-sm text-[#1F2A1E]/60 font-medium mt-1">
-                {currentSubcategories.length} {t('catalog_page.subcategories', { defaultValue: 'Subcategories' })} • {displayedServices.length} {t('nav.catalog', { defaultValue: 'Services' })}
+                {t('catalog_page.cat_meta_summary', {
+                  sub_count: currentSubcategories.length,
+                  srv_count: displayedServices.length,
+                  defaultValue: `${currentSubcategories.length} Subcategories • ${displayedServices.length} Services`
+                })}
               </p>
             </div>
 
@@ -416,7 +424,7 @@ export const CustomerCatalog: React.FC = () => {
               onClick={() => handleSelectSubcategory('')}
               className="px-4 py-2.5 bg-[#2F5233] hover:bg-[#3D6B42] text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-2 flex-shrink-0 cursor-pointer"
             >
-              <span>{t('catalog_page.view_all_count', { defaultValue: 'View All' })} {getLocalizedCategory(selectedCategory)} {t('nav.catalog', { defaultValue: 'Services' })}</span>
+              <span>{t('catalog_page.view_all_category_services', { category: getLocalizedCategory(selectedCategory), defaultValue: `View All ${getLocalizedCategory(selectedCategory)} Services` })}</span>
               <ChevronRight className="w-4 h-4 text-[#C9A15A]" />
             </button>
           </div>
@@ -450,7 +458,7 @@ export const CustomerCatalog: React.FC = () => {
                           {getLocalizedSubcategory(sub.name)}
                         </h3>
                         <p className="text-xs text-[#FAF7F0]/80 font-medium mt-0.5">
-                          {sub.service_count} {t('catalog_page.services_available', { defaultValue: 'Services Available' })}
+                          {t('catalog_page.services_available_count', { count: sub.service_count, defaultValue: `${sub.service_count} Services Available` })}
                         </p>
                       </div>
 
@@ -464,7 +472,7 @@ export const CustomerCatalog: React.FC = () => {
                   <div className="p-4 sm:p-5 flex items-center justify-between text-xs">
                     <span className="inline-flex items-center gap-1.5 text-emerald-800 font-bold bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{sub.active_count} {t('catalog_page.active_services', { defaultValue: 'Active' })}</span>
+                      <span>{t('catalog_page.active_services_count', { count: sub.active_count, defaultValue: `${sub.active_count} Active` })}</span>
                     </span>
 
                     <span className="font-bold text-[#2F5233] group-hover:underline flex items-center gap-1">
@@ -494,7 +502,7 @@ export const CustomerCatalog: React.FC = () => {
                     className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1F2A1E]/60 hover:text-[#1F2A1E] transition-colors cursor-pointer"
                   >
                     <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>{t('catalog_page.back_to', { defaultValue: 'Back to' })} {selectedCategory ? getLocalizedCategory(selectedCategory) : t('catalog_page.categories', { defaultValue: 'Categories' })}</span>
+                    <span>{t('catalog_page.back_to_target', { target: selectedCategory ? getLocalizedCategory(selectedCategory) : t('catalog_page.categories', { defaultValue: 'Categories' }), defaultValue: `Back to ${selectedCategory ? getLocalizedCategory(selectedCategory) : 'Categories'}` })}</span>
                   </button>
                 </div>
                 <h1 className="font-serif text-2xl sm:text-3xl font-normal text-[#1F2A1E] tracking-tight mt-2">
@@ -522,14 +530,14 @@ export const CustomerCatalog: React.FC = () => {
                   <button
                     onClick={() => setViewMode('grid')}
                     className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'grid' ? 'bg-[#2F5233] text-white shadow-xs' : 'text-[#1F2A1E]/60 hover:text-[#1F2A1E]'}`}
-                    title="Grid View"
+                    title={t('catalog_page.grid_view', { defaultValue: 'Grid View' })}
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode('list')}
                     className={`p-1.5 rounded-lg transition-colors cursor-pointer ${viewMode === 'list' ? 'bg-[#2F5233] text-white shadow-xs' : 'text-[#1F2A1E]/60 hover:text-[#1F2A1E]'}`}
-                    title="List View"
+                    title={t('catalog_page.list_view', { defaultValue: 'List View' })}
                   >
                     <List className="w-4 h-4" />
                   </button>
@@ -552,7 +560,7 @@ export const CustomerCatalog: React.FC = () => {
                       : 'bg-[#F2EDE1] hover:bg-[#E5DEC9] text-[#1F2A1E]'
                   }`}
                 >
-                  {t('catalog_page.all', { defaultValue: 'All' })} ({currentCategoryObj ? currentCategoryObj.service_count : allServices.length})
+                  {t('catalog_page.all_count', { count: currentCategoryObj ? currentCategoryObj.service_count : allServices.length, defaultValue: `All (${currentCategoryObj ? currentCategoryObj.service_count : allServices.length})` })}
                 </button>
                 {currentSubcategories.map((sub) => {
                   const isSubActive = selectedSubcategory.toLowerCase() === sub.name.toLowerCase();
@@ -771,7 +779,7 @@ export const CustomerCatalog: React.FC = () => {
                               ? 'bg-[#C9A15A]/15 text-[#C9A15A] border-[#C9A15A]'
                               : 'bg-[#F2EDE1] text-[#2F5233] border-[#E5DEC9] hover:bg-[#E5DEC9]'
                           }`}
-                          title={bundleItemIds.includes(svc.id) ? 'Remove from Bundle' : 'Add to Multi-Service Bundle'}
+                          title={bundleItemIds.includes(svc.id) ? t('bundle.remove_from_bundle', { defaultValue: 'Remove from Bundle' }) : t('bundle.add_to_bundle_tooltip', { defaultValue: 'Add to Multi-Service Bundle' })}
                         >
                           <Layers className="w-3.5 h-3.5" />
                           <span>{bundleItemIds.includes(svc.id) ? t('booking.in_bundle', { defaultValue: 'In Bundle' }) : t('booking.add_to_bundle', { defaultValue: '+ Bundle' })}</span>
