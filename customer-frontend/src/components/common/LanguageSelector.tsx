@@ -20,6 +20,9 @@ export const LanguageSelector: React.FC<{ compact?: boolean }> = ({ compact = fa
 
   const handleLanguageChange = (code: string) => {
     i18n.changeLanguage(code);
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = code;
+    }
   };
 
   return (

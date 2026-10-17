@@ -28,4 +28,15 @@ i18n
     },
   });
 
+if (typeof document !== 'undefined') {
+  const initialLng = (i18n.language || 'en').slice(0, 2);
+  document.documentElement.lang = initialLng;
+}
+
+i18n.on('languageChanged', (lng) => {
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = (lng || 'en').slice(0, 2);
+  }
+});
+
 export default i18n;
