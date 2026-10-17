@@ -9,7 +9,7 @@ import {
 } from '../api/catalog';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage, formatCategoryDisplayName, DEFAULT_SERVICE_IMAGE } from '../utils/serviceImages';
-import { getLocalizedCategory, getLocalizedSubcategory } from '../utils/localizedNames';
+import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName } from '../utils/localizedNames';
 import { addBundleItem, removeBundleItem, getBundleItems } from '../utils/bundleCart';
 import { 
   Search, 
@@ -664,7 +664,7 @@ export const CustomerCatalog: React.FC = () => {
 
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold">
                           <Clock className="w-3 h-3 text-[#FAF7F0]/80" />
-                          <span>{svc.duration_minutes || 45} Mins</span>
+                          <span>{svc.duration_minutes || 45} {t('common.mins', { defaultValue: 'Mins' })}</span>
                         </span>
                       </div>
 
@@ -683,7 +683,7 @@ export const CustomerCatalog: React.FC = () => {
                           <span>{getLocalizedCategory(svc.category)}</span>
                         </div>
                         <h3 className="font-bold text-[#1F2A1E] text-base group-hover:text-[#2F5233] transition-colors line-clamp-1 mt-0.5">
-                          {svc.name}
+                          {getLocalizedServiceName(svc.name)}
                         </h3>
                         {svc.description && (
                           <p className="text-xs text-[#1F2A1E]/65 font-normal line-clamp-2 mt-1 leading-relaxed">
@@ -777,7 +777,7 @@ export const CustomerCatalog: React.FC = () => {
                           </span>
                         </div>
                         <h3 className="font-bold text-[#1F2A1E] text-base group-hover:text-[#2F5233] transition-colors">
-                          {svc.name}
+                          {getLocalizedServiceName(svc.name)}
                         </h3>
                         {svc.description && (
                           <p className="text-xs text-[#1F2A1E]/65 font-normal line-clamp-1 max-w-xl">
@@ -793,7 +793,7 @@ export const CustomerCatalog: React.FC = () => {
                           {formatCurrencyINR(svc.base_price)}
                         </span>
                         <span className="text-xs font-semibold text-[#1F2A1E]/60">
-                          {svc.duration_minutes || 45} Mins
+                          {svc.duration_minutes || 45} {t('common.mins', { defaultValue: 'Mins' })}
                         </span>
                       </div>
 

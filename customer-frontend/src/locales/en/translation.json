@@ -160,6 +160,7 @@
   },
   "common": {
     "language": "Language",
+    "mins": "Mins",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",

@@ -3,10 +3,10 @@ import { useLocation, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { CustomerSidebar } from './CustomerSidebar';
 import { CustomerFooter } from './CustomerFooter';
-import { BackendPulse } from '../common/BackendPulse';
 import { AISupportAssistant } from '../common/AISupportAssistant';
 import { LanguageSelector } from '../common/LanguageSelector';
 import { getBundleItems } from '../../utils/bundleCart';
+import { getLocalizedCategory, getLocalizedSubcategory } from '../../utils/localizedNames';
 import { Menu, Layers } from 'lucide-react';
 
 interface CustomerLayoutProps {
@@ -132,28 +132,58 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
             </Link>
 
             {/* Desktop Headline / Breadcrumb */}
-            <div className="hidden lg:flex items-center gap-2 text-xs font-semibold text-[#1F2A1E]/60">
-              <span className="text-[#2F5233] font-bold font-serif">SmartServe</span>
+            <div className="hidden lg:flex items-center gap-1.5 text-xs font-semibold text-[#1F2A1E]/60 flex-wrap">
+              <Link to="/home" className="text-[#2F5233] font-bold font-serif hover:opacity-80 transition-opacity">
+                SmartServe
+              </Link>
               <span>/</span>
-              <span className="text-[#1F2A1E] font-medium">
-                {location.pathname === '/catalog'
-                  ? t('nav.catalog', { defaultValue: 'Services' })
-                  : location.pathname.startsWith('/catalog/service')
-                  ? t('nav.catalog', { defaultValue: 'Services' })
-                  : location.pathname === '/bundle'
-                  ? t('nav.bundle', { defaultValue: 'Service Bundle' })
-                  : location.pathname.startsWith('/bookings')
-                  ? t('nav.bookings', { defaultValue: 'My Bookings' })
-                  : location.pathname === '/profile'
-                  ? t('nav.profile', { defaultValue: 'Profile' })
-                  : location.pathname === '/support'
-                  ? t('nav.support', { defaultValue: 'Support' })
-                  : t('nav.home', { defaultValue: 'Home' })}
-              </span>
+              {location.pathname === '/catalog' ? (
+                <>
+                  <Link
+                    to="/catalog"
+                    className={`hover:text-[#2F5233] transition-colors ${!new URLSearchParams(location.search).get('category') ? 'text-[#1F2A1E] font-bold' : ''}`}
+                  >
+                    {t('nav.catalog', { defaultValue: 'Services' })}
+                  </Link>
+                  {new URLSearchParams(location.search).get('category') && (
+                    <>
+                      <span>/</span>
+                      <Link
+                        to={`/catalog?category=${encodeURIComponent(new URLSearchParams(location.search).get('category')!)}`}
+                        className={`hover:text-[#2F5233] transition-colors ${!new URLSearchParams(location.search).get('subcategory') ? 'text-[#1F2A1E] font-bold' : ''}`}
+                      >
+                        {getLocalizedCategory(new URLSearchParams(location.search).get('category')!)}
+                      </Link>
+                    </>
+                  )}
+                  {new URLSearchParams(location.search).get('subcategory') && (
+                    <>
+                      <span>/</span>
+                      <span className="text-[#1F2A1E] font-bold">
+                        {getLocalizedSubcategory(new URLSearchParams(location.search).get('subcategory')!)}
+                      </span>
+                    </>
+                  )}
+                </>
+              ) : (
+                <span className="text-[#1F2A1E] font-medium">
+                  {location.pathname.startsWith('/catalog/service')
+                    ? t('nav.catalog', { defaultValue: 'Services' })
+                    : location.pathname === '/bundle'
+                    ? t('nav.bundle', { defaultValue: 'Service Bundle' })
+                    : location.pathname.startsWith('/bookings')
+                    ? t('nav.bookings', { defaultValue: 'My Bookings' })
+                    : location.pathname === '/profile'
+                    ? t('nav.profile', { defaultValue: 'Profile' })
+                    : location.pathname === '/support'
+                    ? t('nav.support', { defaultValue: 'Support' })
+                    : t('nav.home', { defaultValue: 'Home' })}
+                </span>
+              )}
             </div>
           </div>
 
-          {/* Right Header Controls: Bundle Cart + Language Switcher + Live Network */}
+          {/* Right Header Controls: Bundle Cart + Language Switcher (Single network badge kept on sidebar only) */}
           <div className="flex items-center gap-3">
             {/* Service Bundle Cart Quick Link */}
             <Link
@@ -174,11 +204,6 @@ export const CustomerLayout: React.FC<CustomerLayoutProps> = ({ children }) => {
 
             {/* Language Selector */}
             <LanguageSelector />
-
-            {/* Live Network Pulse */}
-            <div className="hidden sm:block">
-              <BackendPulse />
-            </div>
           </div>
         </header>
 
