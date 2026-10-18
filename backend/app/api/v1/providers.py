@@ -374,8 +374,30 @@ def get_my_assigned_bookings(
     bookings = query.order_by(Booking.created_at.desc()).all()
     results = []
     for b in bookings:
-        clean_bp = [p for p in (b.before_photos or []) if not (isinstance(p, str) and p.startswith("data:image") and len(p) > 500)]
-        clean_ap = [p for p in (b.after_photos or []) if not (isinstance(p, str) and p.startswith("data:image") and len(p) > 500)]
+        clean_bp = []
+        for p in (b.before_photos or []):
+            if isinstance(p, str):
+                if p.startswith("/static/"):
+                    clean_bp.append(f"https://smartserve-api-de3f.onrender.com{p}")
+                elif p.startswith("data:image"):
+                    if len(p) <= 120000:
+                        clean_bp.append(p)
+                    else:
+                        clean_bp.append("https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80")
+                else:
+                    clean_bp.append(p)
+        clean_ap = []
+        for p in (b.after_photos or []):
+            if isinstance(p, str):
+                if p.startswith("/static/"):
+                    clean_ap.append(f"https://smartserve-api-de3f.onrender.com{p}")
+                elif p.startswith("data:image"):
+                    if len(p) <= 120000:
+                        clean_ap.append(p)
+                    else:
+                        clean_ap.append("https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80")
+                else:
+                    clean_ap.append(p)
         results.append(
             ProviderBookingResponse(
                 id=b.id,
@@ -983,25 +1005,27 @@ async def upload_before_service_photo(
             content = await file.read()
             with open(filepath, "wb") as f:
                 f.write(content)
-            url = f"/static/uploads/{filename}"
+            url = f"https://smartserve-api-de3f.onrender.com/static/uploads/{filename}"
 
     if not url:
         raise HTTPException(status_code=400, detail="No photo file or photo_url provided")
 
     if url and url.startswith("data:image"):
-        try:
-            import base64
-            os.makedirs("customer_uploads", exist_ok=True)
-            header, encoded = url.split(",", 1) if "," in url else ("", url)
-            ext = "png" if "png" in header else "jpg"
-            filename = f"before_{uuid.uuid4().hex[:8]}.{ext}"
-            filepath = os.path.join("customer_uploads", filename)
-            with open(filepath, "wb") as f:
-                f.write(base64.b64decode(encoded))
-            url = f"/static/uploads/{filename}"
-        except Exception:
-            if len(url) > 1000:
-                url = "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80"
+        if len(url) <= 120000:
+            pass
+        else:
+            try:
+                import base64
+                os.makedirs("customer_uploads", exist_ok=True)
+                header, encoded = url.split(",", 1) if "," in url else ("", url)
+                ext = "png" if "png" in header else "jpg"
+                filename = f"before_{uuid.uuid4().hex[:8]}.{ext}"
+                filepath = os.path.join("customer_uploads", filename)
+                with open(filepath, "wb") as f:
+                    f.write(base64.b64decode(encoded))
+                url = f"https://smartserve-api-de3f.onrender.com/static/uploads/{filename}"
+            except Exception:
+                url = "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80"
 
     current_photos = list(booking.before_photos or [])
     if url not in current_photos:
@@ -1064,25 +1088,27 @@ async def upload_after_service_photo(
             content = await file.read()
             with open(filepath, "wb") as f:
                 f.write(content)
-            url = f"/static/uploads/{filename}"
+            url = f"https://smartserve-api-de3f.onrender.com/static/uploads/{filename}"
 
     if not url:
         raise HTTPException(status_code=400, detail="No photo file or photo_url provided")
 
     if url and url.startswith("data:image"):
-        try:
-            import base64
-            os.makedirs("customer_uploads", exist_ok=True)
-            header, encoded = url.split(",", 1) if "," in url else ("", url)
-            ext = "png" if "png" in header else "jpg"
-            filename = f"after_{uuid.uuid4().hex[:8]}.{ext}"
-            filepath = os.path.join("customer_uploads", filename)
-            with open(filepath, "wb") as f:
-                f.write(base64.b64decode(encoded))
-            url = f"/static/uploads/{filename}"
-        except Exception:
-            if len(url) > 1000:
-                url = "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=400&q=80"
+        if len(url) <= 120000:
+            pass
+        else:
+            try:
+                import base64
+                os.makedirs("customer_uploads", exist_ok=True)
+                header, encoded = url.split(",", 1) if "," in url else ("", url)
+                ext = "png" if "png" in header else "jpg"
+                filename = f"after_{uuid.uuid4().hex[:8]}.{ext}"
+                filepath = os.path.join("customer_uploads", filename)
+                with open(filepath, "wb") as f:
+                    f.write(base64.b64decode(encoded))
+                url = f"https://smartserve-api-de3f.onrender.com/static/uploads/{filename}"
+            except Exception:
+                url = "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=600&q=80"
 
     current_photos = list(booking.after_photos or [])
     if url not in current_photos:

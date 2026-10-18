@@ -858,8 +858,13 @@ def _sanitize_photos(photos):
     cleaned = []
     for p in photos:
         if isinstance(p, str):
-            if p.startswith("data:image") and len(p) > 500:
-                cleaned.append("https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80")
+            if p.startswith("/static/"):
+                cleaned.append(f"https://smartserve-api-de3f.onrender.com{p}")
+            elif p.startswith("data:image"):
+                if len(p) <= 120000:
+                    cleaned.append(p)
+                else:
+                    cleaned.append("https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80")
             else:
                 cleaned.append(p)
     return cleaned

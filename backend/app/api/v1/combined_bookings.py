@@ -156,8 +156,14 @@ def create_combined_booking(
 
     db.add(combined_booking)
 
-    # Create line items
+    # Create line items and actionable service bookings for pipeline & customer tracking
+    from app.models.customer import Booking
+    from app.models.provider import Provider
+    import random
+
     items_out = []
+    bundle_ref = f"CB-{str(combined_booking.id)[:8].upper()}"
+
     for svc in services_to_book:
         assigned_prov = None
         if payload.provider_ids and str(svc.id) in payload.provider_ids:
@@ -165,6 +171,17 @@ def create_combined_booking(
                 assigned_prov = uuid.UUID(payload.provider_ids[str(svc.id)])
             except ValueError:
                 pass
+
+        if not assigned_prov:
+            prov_match = (
+                db.query(Provider)
+                .filter(Provider.category.ilike(f"%{svc.category}%"))
+                .first()
+            )
+            if not prov_match:
+                prov_match = db.query(Provider).first()
+            if prov_match:
+                assigned_prov = prov_match.user_id
 
         item = CombinedBookingItem(
             id=uuid.uuid4(),
@@ -188,6 +205,37 @@ def create_combined_booking(
                 scheduled_time=parsed_sched_time,
             )
         )
+
+        # Create live Booking record so this service appears in Customer Bookings and Provider Pipeline!
+        discounted_unit = round(float(svc.base_price) * (1.0 - discount_rate), 2)
+        booking_otp = f"{random.randint(1000, 9999)}"
+        b_entry = Booking(
+            id=uuid.uuid4(),
+            customer_id=current_customer.id,
+            provider_id=assigned_prov,
+            service_id=svc.id,
+            status="Requested",
+            payment_status="Pending",
+            scheduled_time=parsed_sched_time,
+            address=payload.address_line1.strip(),
+            total_price=Decimal(str(discounted_unit)),
+            otp_code=booking_otp,
+            customer_notes=f"[{bundle_ref} • {int(discount_rate * 100)}% Bundle Discount] {payload.customer_notes or ''}".strip(),
+            timeline=[
+                {
+                    "event": "Booking Created via Multi-Service Bundle",
+                    "bundle_reference": bundle_ref,
+                    "bundle_id": str(combined_booking.id),
+                    "discount_rate": f"{int(discount_rate * 100)}%",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "actor": current_customer.full_name,
+                    "role": "customer",
+                }
+            ],
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        db.add(b_entry)
 
     # Update customer stats
     current_customer.total_bookings = (current_customer.total_bookings or 0) + 1

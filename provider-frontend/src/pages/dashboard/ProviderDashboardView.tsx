@@ -86,6 +86,16 @@ const STATUS_STYLES: Record<string, string> = {
   Rejected: 'bg-rose-50 text-rose-700 border-rose-200',
 };
 
+const resolvePhotoUrl = (url?: string | null) => {
+  if (!url) return 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80';
+  if (url.startsWith('data:image')) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const apiBase = (import.meta.env.VITE_API_URL || 'https://smartserve-api-de3f.onrender.com')
+    .replace(/\/+$/, '')
+    .replace(/\/api\/v1\/?$/, '');
+  return `${apiBase}/${url.replace(/^\/+/, '')}`;
+};
+
 export const ProviderDashboardView: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -944,6 +954,11 @@ export const ProviderDashboardView: React.FC = () => {
                               Emergency Dispatch
                             </span>
                           )}
+                          {(booking.customer_notes?.includes('CB-') || booking.customer_notes?.includes('Bundle')) && (
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-800 border border-purple-200 flex items-center gap-1">
+                              <span>✨</span> Multi-Service Bundle
+                            </span>
+                          )}
                         </div>
                         <span className="text-sm font-extrabold text-[#1F2A1E] font-serif">
                           ₹{parseFloat(booking.total_price || 0).toLocaleString('en-IN')}
@@ -1051,19 +1066,30 @@ export const ProviderDashboardView: React.FC = () => {
                             </span>
                             {booking.before_photos && booking.before_photos.length > 0 ? (
                               <div className="flex items-center gap-2 flex-wrap">
-                                {booking.before_photos.map((url: string, idx: number) => (
-                                  <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={() => setPreviewPhotoUrl(url)}
-                                    className="relative w-12 h-12 rounded-xl overflow-hidden border border-amber-200 group cursor-pointer shadow-2xs hover:scale-105 transition-transform"
-                                  >
-                                    <img src={url} alt={`Before ${idx + 1}`} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                                      <Eye className="w-3.5 h-3.5" />
-                                    </div>
-                                  </button>
-                                ))}
+                                {booking.before_photos.map((url: string, idx: number) => {
+                                  const fullUrl = resolvePhotoUrl(url);
+                                  return (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => setPreviewPhotoUrl(fullUrl)}
+                                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-amber-200 group cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                                    >
+                                      <img
+                                        src={fullUrl}
+                                        alt={`Before ${idx + 1}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          e.currentTarget.onerror = null;
+                                          e.currentTarget.src = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80';
+                                        }}
+                                      />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                        <Eye className="w-3.5 h-3.5" />
+                                      </div>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             ) : (
                               <p className="text-[10px] text-slate-400 italic">No before photos added</p>
@@ -1078,19 +1104,30 @@ export const ProviderDashboardView: React.FC = () => {
                             </span>
                             {booking.after_photos && booking.after_photos.length > 0 ? (
                               <div className="flex items-center gap-2 flex-wrap">
-                                {booking.after_photos.map((url: string, idx: number) => (
-                                  <button
-                                    key={idx}
-                                    type="button"
-                                    onClick={() => setPreviewPhotoUrl(url)}
-                                    className="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-200 group cursor-pointer shadow-2xs hover:scale-105 transition-transform"
-                                  >
-                                    <img src={url} alt={`After ${idx + 1}`} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
-                                      <Eye className="w-3.5 h-3.5" />
-                                    </div>
-                                  </button>
-                                ))}
+                                {booking.after_photos.map((url: string, idx: number) => {
+                                  const fullUrl = resolvePhotoUrl(url);
+                                  return (
+                                    <button
+                                      key={idx}
+                                      type="button"
+                                      onClick={() => setPreviewPhotoUrl(fullUrl)}
+                                      className="relative w-12 h-12 rounded-xl overflow-hidden border border-emerald-200 group cursor-pointer shadow-2xs hover:scale-105 transition-transform"
+                                    >
+                                      <img
+                                        src={fullUrl}
+                                        alt={`After ${idx + 1}`}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          e.currentTarget.onerror = null;
+                                          e.currentTarget.src = 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=400&q=80';
+                                        }}
+                                      />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white">
+                                        <Eye className="w-3.5 h-3.5" />
+                                      </div>
+                                    </button>
+                                  );
+                                })}
                               </div>
                             ) : (
                               <p className="text-[10px] text-slate-400 italic">No after photos added</p>
@@ -1509,9 +1546,13 @@ export const ProviderDashboardView: React.FC = () => {
               <X className="w-5 h-5" />
             </button>
             <img
-              src={previewPhotoUrl}
+              src={resolvePhotoUrl(previewPhotoUrl)}
               alt="Service Verification Proof"
               className="max-w-full max-h-[80vh] object-contain rounded-2xl"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=800&q=80';
+              }}
             />
           </div>
         </div>

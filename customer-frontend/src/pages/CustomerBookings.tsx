@@ -117,12 +117,15 @@ export const CustomerBookings: React.FC = () => {
 
   const filteredBookings = bookings.filter((b) => {
     if (statusFilter === 'all') return true;
+    if (statusFilter === 'bundles') return Boolean(b.customer_notes?.includes('CB-') || b.customer_notes?.includes('Bundle'));
     const st = (b.status || '').toLowerCase().replace(/_/g, ' ').trim();
     if (statusFilter === 'active') return ['requested', 'assigned', 'accepted', 'on the way', 'arrived', 'started'].includes(st);
     if (statusFilter === 'completed') return ['completed', 'paid'].includes(st);
     if (statusFilter === 'cancelled') return ['cancelled', 'rejected'].includes(st);
     return true;
   });
+
+  const bundleCount = bookings.filter((b) => b.customer_notes?.includes('CB-') || b.customer_notes?.includes('Bundle')).length;
 
   return (
     <div className="space-y-8 font-sans max-w-5xl mx-auto">
@@ -156,10 +159,11 @@ export const CustomerBookings: React.FC = () => {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3 flex-wrap">
         {[
           { key: 'all', label: t('common.all_count', { count: bookings.length, defaultValue: `All (${bookings.length})` }) },
           { key: 'active', label: t('common.active', { defaultValue: 'Active & In-Progress' }) },
+          { key: 'bundles', label: `✨ Bundles (${bundleCount})` },
           { key: 'completed', label: t('common.completed', { defaultValue: 'Completed' }) },
           { key: 'cancelled', label: t('common.cancelled', { defaultValue: 'Cancelled' }) },
         ].map((tab) => (
@@ -220,7 +224,7 @@ export const CustomerBookings: React.FC = () => {
                   </div>
 
                   <div className="min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-xs font-bold text-slate-500">{b.booking_reference}</span>
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
                         stLower === 'completed' || stLower === 'paid'
@@ -231,6 +235,11 @@ export const CustomerBookings: React.FC = () => {
                       }`}>
                         {getLocalizedStatus(b.status)}
                       </span>
+                      {(b.customer_notes?.includes('CB-') || b.customer_notes?.includes('Bundle')) && (
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                          <span>✨</span> Multi-Service Bundle
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="font-extrabold text-slate-900 text-base truncate group-hover:text-[#2563EB] transition-colors">
