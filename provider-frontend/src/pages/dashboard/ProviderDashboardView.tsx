@@ -121,31 +121,59 @@ export const ProviderDashboardView: React.FC = () => {
   const [lastGpsSync, setLastGpsSync] = useState<string | null>(null);
   const [isBroadcastingGps, setIsBroadcastingGps] = useState<boolean>(false);
 
+  const compressImage = (file: File, maxWidth = 1200, quality = 0.75): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(event.target?.result as string);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => resolve(event.target?.result as string);
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handlePhotoUpload = async (bookingId: string, type: 'before' | 'after', file: File) => {
     setPhotoUploadingBookingId(bookingId);
     setActionError(null);
     try {
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          const base64Data = reader.result as string;
-          await apiClient.post(`/providers/me/bookings/${bookingId}/photos/${type}`, {
-            photo_url: base64Data,
-          });
-          await fetchAll();
-        } catch (err: any) {
-          console.error(`Failed to upload ${type} photo`, err);
-          setActionError(err.response?.data?.detail || `Failed to upload ${type} photo.`);
-        } finally {
-          setPhotoUploadingBookingId(null);
-        }
-      };
-      reader.readAsDataURL(file);
-    } catch (err) {
-      console.error(err);
+      const base64Data = await compressImage(file);
+      if (!base64Data) {
+        setActionError('Could not process photo file.');
+        setPhotoUploadingBookingId(null);
+        return;
+      }
+      await apiClient.post(`/providers/me/bookings/${bookingId}/photos/${type}`, {
+        photo_url: base64Data,
+      });
+      await fetchAll();
+    } catch (err: any) {
+      console.error(`Failed to upload ${type} photo`, err);
+      setActionError(err.response?.data?.detail || `Failed to upload ${type} photo. Please verify connection and retry.`);
+    } finally {
       setPhotoUploadingBookingId(null);
     }
   };
+
 
   const fetchAll = async () => {
     try {

@@ -1294,7 +1294,13 @@ def raise_warranty_claim(
         raise HTTPException(status_code=400, detail="Warranty claim period has expired (7-day validity exceeded)")
 
     if warranty.claim_status in ["Pending", "Resolved"]:
-        raise HTTPException(status_code=400, detail=f"A warranty claim has already been filed (Status: {warranty.claim_status})")
+        return {
+            "success": True,
+            "message": f"Warranty claim is already registered (Status: {warranty.claim_status}). Our support team is reviewing it.",
+            "claim_status": warranty.claim_status,
+            "claim_submitted_at": warranty.claim_submitted_at.isoformat() if hasattr(warranty.claim_submitted_at, "isoformat") else str(warranty.claim_submitted_at),
+        }
+
 
     sub_time = datetime.now(timezone.utc) if (exp_at and exp_at.tzinfo is not None) else datetime.utcnow()
     warranty.claim_status = "Pending"

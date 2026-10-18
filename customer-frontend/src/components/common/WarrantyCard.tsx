@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, AlertTriangle, CheckCircle, Clock, X, Loader2 } from 'lucide-react';
 import { apiClient } from '../../api/client';
@@ -39,6 +39,12 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
     warranty?.claim_status && warranty.claim_status !== 'None' ? warranty.claim_status : null
   );
 
+  useEffect(() => {
+    if (warranty?.claim_status && warranty.claim_status !== 'None') {
+      setLocalClaimStatus(warranty.claim_status);
+    }
+  }, [warranty?.claim_status]);
+
   const expiresDate = warranty?.expires_at ? new Date(warranty.expires_at) : null;
   const isExpired = expiresDate ? expiresDate.getTime() < Date.now() : false;
   const daysRemaining = warranty?.days_remaining ?? (expiresDate ? Math.max(0, Math.ceil((expiresDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 7);
@@ -52,21 +58,30 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
 
     setSubmitting(true);
     try {
-      await apiClient.post(`/customer/bookings/${bookingId}/warranty/claim`, {
+      const res = await apiClient.post(`/customer/bookings/${bookingId}/warranty/claim`, {
         description: description.trim(),
       });
-      showToast(t('warranty.claim_success', { defaultValue: 'Warranty claim submitted successfully! Our team will inspect and assist.' }), 'success');
+      showToast(res.data?.message || t('warranty.claim_success', { defaultValue: 'Warranty claim submitted successfully! Our team will inspect and assist.' }), 'success');
       setLocalClaimStatus('Pending');
       setShowClaimModal(false);
       setDescription('');
       if (onClaimRaised) onClaimRaised();
     } catch (err: any) {
-      const msg = err.response?.data?.detail || t('warranty.toast_submit_failed', { defaultValue: 'Failed to submit warranty claim.' });
-      showToast(msg, 'error');
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string' && (detail.includes('already been filed') || detail.includes('already registered'))) {
+        setLocalClaimStatus('Pending');
+        setShowClaimModal(false);
+        showToast(detail, 'info');
+        if (onClaimRaised) onClaimRaised();
+      } else {
+        const msg = detail || t('warranty.toast_submit_failed', { defaultValue: 'Failed to submit warranty claim.' });
+        showToast(msg, 'error');
+      }
     } finally {
       setSubmitting(false);
     }
   };
+
 
   return (
     <div className="bg-gradient-to-br from-[#FAF7F0] to-[#F2EDE1] border-2 border-[#C9A15A]/40 rounded-2xl p-5 shadow-xs relative overflow-hidden">

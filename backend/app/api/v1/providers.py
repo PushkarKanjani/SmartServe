@@ -976,6 +976,20 @@ async def upload_before_service_photo(
     if not url:
         raise HTTPException(status_code=400, detail="No photo file or photo_url provided")
 
+    if url and url.startswith("data:image"):
+        try:
+            import base64
+            os.makedirs("customer_uploads", exist_ok=True)
+            header, encoded = url.split(",", 1) if "," in url else ("", url)
+            ext = "png" if "png" in header else "jpg"
+            filename = f"before_{uuid.uuid4().hex[:8]}.{ext}"
+            filepath = os.path.join("customer_uploads", filename)
+            with open(filepath, "wb") as f:
+                f.write(base64.b64decode(encoded))
+            url = f"/static/uploads/{filename}"
+        except Exception:
+            pass
+
     current_photos = list(booking.before_photos or [])
     current_photos.append(url)
     booking.before_photos = current_photos
@@ -1040,6 +1054,20 @@ async def upload_after_service_photo(
 
     if not url:
         raise HTTPException(status_code=400, detail="No photo file or photo_url provided")
+
+    if url and url.startswith("data:image"):
+        try:
+            import base64
+            os.makedirs("customer_uploads", exist_ok=True)
+            header, encoded = url.split(",", 1) if "," in url else ("", url)
+            ext = "png" if "png" in header else "jpg"
+            filename = f"after_{uuid.uuid4().hex[:8]}.{ext}"
+            filepath = os.path.join("customer_uploads", filename)
+            with open(filepath, "wb") as f:
+                f.write(base64.b64decode(encoded))
+            url = f"/static/uploads/{filename}"
+        except Exception:
+            pass
 
     current_photos = list(booking.after_photos or [])
     current_photos.append(url)

@@ -37,10 +37,21 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor: handle 401 unauthenticated
+// Response interceptor: handle automatic retry on network/cold-start errors & 401 unauthenticated
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const config = error.config as any;
+    if (config && (!error.response || [502, 503, 504].includes(error.response?.status))) {
+      config.__retryCount = config.__retryCount || 0;
+      if (config.__retryCount < 3) {
+        config.__retryCount += 1;
+        const delay = Math.min(1000 * Math.pow(2, config.__retryCount - 1), 3000);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return apiClient(config);
+      }
+    }
+
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('smartserve_customer_token');
       localStorage.removeItem('smartserve_customer_user');
@@ -51,3 +62,4 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+

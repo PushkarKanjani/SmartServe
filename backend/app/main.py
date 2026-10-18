@@ -44,6 +44,18 @@ if settings.ENVIRONMENT != "production":
 
 import asyncio
 
+async def keep_render_alive():
+    """Background keep-alive loop to prevent Render free instance from sleeping."""
+    await asyncio.sleep(45)
+    while True:
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                await client.get("https://smartserve-api-de3f.onrender.com/health")
+        except Exception:
+            pass
+        await asyncio.sleep(480) # Ping every 8 minutes
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Spawn Kafka producer & consumer non-blockingly as background tasks.
@@ -51,8 +63,14 @@ async def lifespan(app: FastAPI):
     # the /health endpoint without waiting for broker connections on cold boot.
     producer_task = asyncio.create_task(kafka_producer.start())
     consumer_task = asyncio.create_task(kafka_consumer.start())
+    keepalive_task = asyncio.create_task(keep_render_alive())
     yield
     # Shutdown: Cleanly cancel pending connection attempts and stop services
+    try:
+        if not keepalive_task.done():
+            keepalive_task.cancel()
+    except Exception:
+        pass
     try:
         if not producer_task.done():
             producer_task.cancel()
@@ -71,6 +89,7 @@ async def lifespan(app: FastAPI):
         await kafka_producer.stop()
     except Exception:
         pass
+
 
 
 app = FastAPI(
@@ -227,11 +246,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # 4. Global Unhandled Exception Handler (Information Disclosure Prevention)
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"[UnhandledException] {request.method} {request.url.path}: {exc}\n{traceback.format_exc()}")
+    err_msg = f"[UnhandledException] {request.method} {request.url.path}: {exc}\n{traceback.format_exc()}"
+    print(err_msg, flush=True)
+    logger.error(err_msg)
     return JSONResponse(
         status_code=500,
         content={"detail": "An internal server error occurred. Our engineering operations team has been notified."}
     )
+
 
 
 # 5. CORS Configuration (Restricted in production, flexible in development)
