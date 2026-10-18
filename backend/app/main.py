@@ -46,15 +46,19 @@ import asyncio
 
 async def keep_render_alive():
     """Background keep-alive loop to prevent Render free instance from sleeping."""
-    await asyncio.sleep(45)
+    await asyncio.sleep(60)
     while True:
         try:
-            import httpx
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                await client.get("https://smartserve-api-de3f.onrender.com/health")
+            import urllib.request
+            req = urllib.request.Request(
+                "https://smartserve-api-de3f.onrender.com/health",
+                headers={"User-Agent": "SmartServe-KeepAlive/1.0"}
+            )
+            await asyncio.to_thread(urllib.request.urlopen, req, timeout=8)
         except Exception:
             pass
         await asyncio.sleep(480) # Ping every 8 minutes
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

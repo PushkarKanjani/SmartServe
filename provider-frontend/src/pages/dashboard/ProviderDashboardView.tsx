@@ -123,34 +123,59 @@ export const ProviderDashboardView: React.FC = () => {
 
   const compressImage = (file: File, maxWidth = 1200, quality = 0.75): Promise<string> => {
     return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        const fallbackReader = new FileReader();
+        fallbackReader.onload = () => resolve((fallbackReader.result as string) || '');
+        fallbackReader.onerror = () => resolve('');
+        fallbackReader.readAsDataURL(file);
+      }, 2500);
+
       const reader = new FileReader();
       reader.onload = (event) => {
+        const rawData = event.target?.result as string;
+        if (!rawData) {
+          clearTimeout(timer);
+          resolve('');
+          return;
+        }
         const img = new Image();
         img.onload = () => {
-          const canvas = document.createElement('canvas');
-          let width = img.width;
-          let height = img.height;
-          if (width > maxWidth) {
-            height = Math.round((height * maxWidth) / width);
-            width = maxWidth;
+          clearTimeout(timer);
+          try {
+            const canvas = document.createElement('canvas');
+            let width = img.width || 800;
+            let height = img.height || 600;
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve(rawData);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          } catch {
+            resolve(rawData);
           }
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            resolve(event.target?.result as string);
-            return;
-          }
-          ctx.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', quality));
         };
-        img.onerror = () => resolve(event.target?.result as string);
-        img.src = event.target?.result as string;
+        img.onerror = () => {
+          clearTimeout(timer);
+          resolve(rawData);
+        };
+        img.src = rawData;
       };
-      reader.onerror = () => resolve('');
+      reader.onerror = () => {
+        clearTimeout(timer);
+        resolve('');
+      };
       reader.readAsDataURL(file);
     });
   };
+
 
   const handlePhotoUpload = async (bookingId: string, type: 'before' | 'after', file: File) => {
     setPhotoUploadingBookingId(bookingId);
@@ -972,6 +997,7 @@ export const ProviderDashboardView: React.FC = () => {
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) handlePhotoUpload(booking.id, 'before', file);
+                                  e.target.value = '';
                                 }}
                               />
                             </label>
@@ -987,6 +1013,7 @@ export const ProviderDashboardView: React.FC = () => {
                                 onChange={(e) => {
                                   const file = e.target.files?.[0];
                                   if (file) handlePhotoUpload(booking.id, 'after', file);
+                                  e.target.value = '';
                                 }}
                               />
                             </label>

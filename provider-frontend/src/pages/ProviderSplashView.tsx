@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SplashScreen } from '../components/common/SplashScreen';
 import { useAuth } from '../context/AuthContext';
@@ -20,7 +20,14 @@ export const ProviderSplashView: React.FC = () => {
     }
   };
 
-  return <SplashScreen onFinish={handleFinish} durationMs={8000} />;
+  useEffect(() => {
+    if (sessionStorage.getItem('smartserve_splash_done')) {
+      handleFinish();
+    }
+  }, [token, isVerified]);
+
+  return <SplashScreen onFinish={handleFinish} durationMs={1500} />;
 };
 
 export default ProviderSplashView;
+
