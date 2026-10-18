@@ -60,20 +60,20 @@ export const BookingListView: React.FC = () => {
     setTimeout(() => setToastMessage(null), 5000);
   };
 
-  const fetchBookingsData = async () => {
-    setLoading(true);
+  const fetchBookingsData = async (isInitial = false) => {
+    if (isInitial) setLoading(true);
     try {
       const data = await getBookingsList();
       setBookings(data);
     } catch (err: any) {
       console.error('Failed to load bookings directory.', err);
     } finally {
-      setLoading(false);
+      if (isInitial) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBookingsData();
+    fetchBookingsData(true);
     getAuthenticatedAdmin().then((s) => setAdminSession(s)).catch(() => {});
 
     // Pre-fetch option lists for Emergency Dispatch Modal
@@ -139,8 +139,8 @@ export const BookingListView: React.FC = () => {
 
     // Fallback polling interval to guarantee real-time sync even if WebSocket is disconnected
     const fallbackPoll = setInterval(() => {
-      fetchBookingsData();
-    }, 3000);
+      fetchBookingsData(false);
+    }, 5000);
 
     return () => {
       unsubscribeWs();
