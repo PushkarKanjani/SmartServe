@@ -5,8 +5,15 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 
-import requests
-from jose import jwt
+try:
+    import requests
+except ImportError:
+    requests = None
+
+try:
+    from jose import jwt
+except ImportError:
+    import jwt
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
