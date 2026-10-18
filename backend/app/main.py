@@ -257,24 +257,18 @@ app.include_router(ws_router, prefix=settings.API_V1_PREFIX)
 @app.get("/health", tags=["System"])
 @app.get("/api/v1/health", tags=["System"])
 def health_check():
-<<<<<<< HEAD
+    """Sanitized health check endpoint: reports status without disclosing database credentials."""
     db_desc = (
         engine.url.render_as_string(hide_password=True)
         if hasattr(engine.url, "render_as_string")
         else str(engine.url)
     )
-=======
-    """Sanitized health check endpoint: reports status without disclosing database credentials."""
->>>>>>> origin/feat/security-audit-remediation
     return {
         "status": "healthy",
         "service": settings.APP_NAME,
         "environment": settings.ENVIRONMENT,
-<<<<<<< HEAD
         "database_engine": db_desc,
-=======
         "database": "connected" if engine else "disconnected",
->>>>>>> origin/feat/security-audit-remediation
     }
 
 
