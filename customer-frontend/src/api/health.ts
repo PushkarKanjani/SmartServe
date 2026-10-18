@@ -48,7 +48,7 @@ export const checkBackendHealth = async (): Promise<HealthCheckResult> => {
 
   // 1. Check Root Health Endpoint: GET http://localhost:8000/health
   try {
-    const rootRes = await axios.get(`${backendBase}/health`, { timeout: 3000 });
+    const rootRes = await axios.get(`${backendBase}/health`, { timeout: 12000 });
     if (rootRes.status === 200) {
       systemOnline = true;
       statusCode = 200;
@@ -75,7 +75,7 @@ export const checkBackendHealth = async (): Promise<HealthCheckResult> => {
 
   // 2. Check Customer API Endpoint: GET /customer/catalog/categories
   try {
-    const apiRes = await apiClient.get('/customer/catalog/categories', { timeout: 3000 });
+    const apiRes = await apiClient.get('/customer/catalog/categories', { timeout: 12000 });
     if (apiRes.status === 200) {
       apiReachable = true;
       if (!systemOnline) {

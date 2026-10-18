@@ -279,6 +279,13 @@ app.include_router(ws_router)
 app.include_router(ws_router, prefix=settings.API_V1_PREFIX)
 
 
+# Mount Static Files for Uploads
+import os
+from fastapi.staticfiles import StaticFiles
+os.makedirs("customer_uploads", exist_ok=True)
+app.mount("/static/uploads", StaticFiles(directory="customer_uploads"), name="static_uploads")
+
+
 # System Endpoints (Sanitized to prevent connection-string credential leaks)
 @app.get("/health", tags=["System"])
 @app.get("/api/v1/health", tags=["System"])

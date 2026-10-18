@@ -121,7 +121,7 @@ export const ProviderDashboardView: React.FC = () => {
   const [lastGpsSync, setLastGpsSync] = useState<string | null>(null);
   const [isBroadcastingGps, setIsBroadcastingGps] = useState<boolean>(false);
 
-  const compressImage = (file: File, maxWidth = 1200, quality = 0.75): Promise<string> => {
+  const compressImage = (file: File, maxWidth = 800, quality = 0.65): Promise<string> => {
     return new Promise((resolve) => {
       const timer = setTimeout(() => {
         const fallbackReader = new FileReader();
@@ -181,16 +181,31 @@ export const ProviderDashboardView: React.FC = () => {
     setPhotoUploadingBookingId(bookingId);
     setActionError(null);
     try {
-      const base64Data = await compressImage(file);
+      const base64Data = await compressImage(file, 800, 0.65);
       if (!base64Data) {
         setActionError('Could not process photo file.');
         setPhotoUploadingBookingId(null);
         return;
       }
-      await apiClient.post(`/providers/me/bookings/${bookingId}/photos/${type}`, {
+      const res = await apiClient.post(`/providers/me/bookings/${bookingId}/photos/${type}`, {
         photo_url: base64Data,
       });
-      await fetchAll();
+      const uploadedUrl = res.data?.photo_url || base64Data;
+      // Immediately reflect uploaded photo in local state
+      setBookings((prev) =>
+        prev.map((b) => {
+          if (b.id !== bookingId) return b;
+          if (type === 'before') {
+            const list = b.before_photos || [];
+            return { ...b, before_photos: [...list, uploadedUrl] };
+          } else {
+            const list = b.after_photos || [];
+            return { ...b, after_photos: [...list, uploadedUrl] };
+          }
+        })
+      );
+      // Background reload without blocking the photo completion UI
+      fetchAll().catch(() => {});
     } catch (err: any) {
       console.error(`Failed to upload ${type} photo`, err);
       setActionError(err.response?.data?.detail || `Failed to upload ${type} photo. Please verify connection and retry.`);

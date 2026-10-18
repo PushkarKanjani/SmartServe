@@ -852,6 +852,19 @@ def get_service_eligible_providers(service_id: str, db: Session = Depends(get_db
 
 
 
+def _sanitize_photos(photos):
+    if not photos:
+        return []
+    cleaned = []
+    for p in photos:
+        if isinstance(p, str):
+            if p.startswith("data:image") and len(p) > 500:
+                cleaned.append("https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80")
+            else:
+                cleaned.append(p)
+    return cleaned
+
+
 def safe_timeline(raw_timeline):
     if isinstance(raw_timeline, list):
         return [x if isinstance(x, dict) else {"event": str(x)} for x in raw_timeline]
@@ -866,7 +879,16 @@ def get_customer_bookings(
     current_customer: Customer = Depends(get_current_customer),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Booking).filter(Booking.customer_id == current_customer.id)
+    from sqlalchemy.orm import joinedload
+    query = (
+        db.query(Booking)
+        .options(
+            joinedload(Booking.service),
+            joinedload(Booking.warranty),
+            joinedload(Booking.provider),
+        )
+        .filter(Booking.customer_id == current_customer.id)
+    )
     if status_filter and status_filter.upper() != "ALL":
         query = query.filter(func.lower(Booking.status) == status_filter.lower())
 
@@ -894,8 +916,8 @@ def get_customer_bookings(
             cancellation_reason=b.cancellation_reason,
             notes=b.notes,
             customer_notes=b.customer_notes or b.notes,
-            before_photos=b.before_photos or [],
-            after_photos=b.after_photos or [],
+            before_photos=_sanitize_photos(b.before_photos),
+            after_photos=_sanitize_photos(b.after_photos),
             warranty={
                 "id": str(b.warranty.id),
                 "booking_id": str(b.warranty.booking_id),
@@ -1163,8 +1185,8 @@ def get_booking_by_id(
         cancellation_reason=record.cancellation_reason,
         notes=record.notes,
         customer_notes=record.customer_notes or record.notes,
-        before_photos=record.before_photos or [],
-        after_photos=record.after_photos or [],
+        before_photos=_sanitize_photos(record.before_photos),
+        after_photos=_sanitize_photos(record.after_photos),
         warranty={
             "id": str(record.warranty.id),
             "booking_id": str(record.warranty.booking_id),

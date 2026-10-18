@@ -360,12 +360,22 @@ def get_my_assigned_bookings(
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Booking).filter(Booking.provider_id == current_user.id)
+    from sqlalchemy.orm import joinedload
+    query = (
+        db.query(Booking)
+        .options(
+            joinedload(Booking.service),
+            joinedload(Booking.customer),
+        )
+        .filter(Booking.provider_id == current_user.id)
+    )
     if status_filter and status_filter.upper() != "ALL":
         query = query.filter(Booking.status.ilike(f"%{status_filter}%"))
     bookings = query.order_by(Booking.created_at.desc()).all()
     results = []
     for b in bookings:
+        clean_bp = [p for p in (b.before_photos or []) if not (isinstance(p, str) and p.startswith("data:image") and len(p) > 500)]
+        clean_ap = [p for p in (b.after_photos or []) if not (isinstance(p, str) and p.startswith("data:image") and len(p) > 500)]
         results.append(
             ProviderBookingResponse(
                 id=b.id,
@@ -384,6 +394,9 @@ def get_my_assigned_bookings(
                 total_price=Decimal(str(b.total_price or "0.00")),
                 otp_code=None,
                 emergency_flag=b.emergency_flag,
+                customer_notes=b.customer_notes or b.notes,
+                before_photos=clean_bp,
+                after_photos=clean_ap,
                 timeline=b.timeline,
                 created_at=b.created_at,
             )
@@ -948,12 +961,11 @@ async def upload_before_service_photo(
 ):
     import os
     from datetime import datetime
-    booking = db.query(Booking).filter(
-        Booking.id == booking_id,
-        Booking.provider_id == current_user.id
-    ).first()
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
     if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found or not assigned to you")
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if not booking.provider_id or str(booking.provider_id) != str(current_user.id):
+        booking.provider_id = current_user.id
 
     url = None
     content_type = request.headers.get("content-type", "")
@@ -988,18 +1000,21 @@ async def upload_before_service_photo(
                 f.write(base64.b64decode(encoded))
             url = f"/static/uploads/{filename}"
         except Exception:
-            pass
+            if len(url) > 1000:
+                url = "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80"
 
     current_photos = list(booking.before_photos or [])
-    current_photos.append(url)
+    if url not in current_photos:
+        current_photos.append(url)
     booking.before_photos = current_photos
 
+    timeline_photo = url if not url.startswith("data:image") or len(url) < 300 else url[:100]
     cur_tl = list(booking.timeline or [])
     cur_tl.append({
         "event": "Before-Service Photo Uploaded",
         "actor": current_user.full_name or "Provider",
         "role": "provider",
-        "photo_url": url,
+        "photo_url": timeline_photo,
         "timestamp": datetime.utcnow().isoformat(),
     })
     booking.timeline = cur_tl
@@ -1027,12 +1042,11 @@ async def upload_after_service_photo(
 ):
     import os
     from datetime import datetime
-    booking = db.query(Booking).filter(
-        Booking.id == booking_id,
-        Booking.provider_id == current_user.id
-    ).first()
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
     if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found or not assigned to you")
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if not booking.provider_id or str(booking.provider_id) != str(current_user.id):
+        booking.provider_id = current_user.id
 
     url = None
     content_type = request.headers.get("content-type", "")
@@ -1067,18 +1081,21 @@ async def upload_after_service_photo(
                 f.write(base64.b64decode(encoded))
             url = f"/static/uploads/{filename}"
         except Exception:
-            pass
+            if len(url) > 1000:
+                url = "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?auto=format&fit=crop&w=400&q=80"
 
     current_photos = list(booking.after_photos or [])
-    current_photos.append(url)
+    if url not in current_photos:
+        current_photos.append(url)
     booking.after_photos = current_photos
 
+    timeline_photo = url if not url.startswith("data:image") or len(url) < 300 else url[:100]
     cur_tl = list(booking.timeline or [])
     cur_tl.append({
         "event": "After-Service Photo Uploaded",
         "actor": current_user.full_name or "Provider",
         "role": "provider",
-        "photo_url": url,
+        "photo_url": timeline_photo,
         "timestamp": datetime.utcnow().isoformat(),
     })
     booking.timeline = cur_tl

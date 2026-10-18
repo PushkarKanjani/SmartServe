@@ -9,10 +9,10 @@ export const BackendPulse: React.FC = () => {
   const runHealthCheck = async () => {
     setChecking(true);
     try {
-      // Base API ping
-      const res = await apiClient.get('/auth/me').catch((err) => {
-        // If 401, backend is online!
-        if (err.response && err.response.status === 401) {
+      // Base API health ping
+      const res = await apiClient.get('/health', { timeout: 10000 }).catch((err) => {
+        // Any response (200, 401, 403, 404) means server is actively online
+        if (err.response && err.response.status < 500) {
           return { status: 200 };
         }
         throw err;
