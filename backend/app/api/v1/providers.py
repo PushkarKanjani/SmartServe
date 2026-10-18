@@ -1,7 +1,7 @@
 import uuid
 from typing import List, Optional
 from decimal import Decimal
-from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.dependencies import AuthUser, require_provider
@@ -942,7 +942,7 @@ def update_booking_status(
 )
 async def upload_before_service_photo(
     booking_id: uuid.UUID,
-    file: UploadFile = File(...),
+    request: Request,
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
@@ -955,13 +955,26 @@ async def upload_before_service_photo(
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found or not assigned to you")
 
-    os.makedirs("customer_uploads", exist_ok=True)
-    filename = f"before_{uuid.uuid4().hex[:8]}_{file.filename}"
-    filepath = os.path.join("customer_uploads", filename)
-    content = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
-    url = f"/static/uploads/{filename}"
+    url = None
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        body = await request.json()
+        url = body.get("photo_url")
+    else:
+        form = await request.form()
+        file = form.get("file")
+        if file and hasattr(file, "read"):
+            os.makedirs("customer_uploads", exist_ok=True)
+            fname = getattr(file, "filename", "photo.jpg")
+            filename = f"before_{uuid.uuid4().hex[:8]}_{fname}"
+            filepath = os.path.join("customer_uploads", filename)
+            content = await file.read()
+            with open(filepath, "wb") as f:
+                f.write(content)
+            url = f"/static/uploads/{filename}"
+
+    if not url:
+        raise HTTPException(status_code=400, detail="No photo file or photo_url provided")
 
     current_photos = list(booking.before_photos or [])
     current_photos.append(url)
@@ -994,7 +1007,7 @@ async def upload_before_service_photo(
 )
 async def upload_after_service_photo(
     booking_id: uuid.UUID,
-    file: UploadFile = File(...),
+    request: Request,
     current_user: AuthUser = Depends(require_provider),
     db: Session = Depends(get_db),
 ):
@@ -1007,13 +1020,26 @@ async def upload_after_service_photo(
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found or not assigned to you")
 
-    os.makedirs("customer_uploads", exist_ok=True)
-    filename = f"after_{uuid.uuid4().hex[:8]}_{file.filename}"
-    filepath = os.path.join("customer_uploads", filename)
-    content = await file.read()
-    with open(filepath, "wb") as f:
-        f.write(content)
-    url = f"/static/uploads/{filename}"
+    url = None
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        body = await request.json()
+        url = body.get("photo_url")
+    else:
+        form = await request.form()
+        file = form.get("file")
+        if file and hasattr(file, "read"):
+            os.makedirs("customer_uploads", exist_ok=True)
+            fname = getattr(file, "filename", "photo.jpg")
+            filename = f"after_{uuid.uuid4().hex[:8]}_{fname}"
+            filepath = os.path.join("customer_uploads", filename)
+            content = await file.read()
+            with open(filepath, "wb") as f:
+                f.write(content)
+            url = f"/static/uploads/{filename}"
+
+    if not url:
+        raise HTTPException(status_code=400, detail="No photo file or photo_url provided")
 
     current_photos = list(booking.after_photos or [])
     current_photos.append(url)

@@ -1202,7 +1202,27 @@ def get_booking_warranty(
 
     warranty = db.query(BookingWarranty).filter(BookingWarranty.booking_id == booking.id).first()
     if not warranty:
-        raise HTTPException(status_code=404, detail="No warranty card found for this booking")
+        if str(booking.status).lower() in ["completed", "paid"]:
+            from app.models.catalog import Service
+            service_obj = db.query(Service).filter(Service.id == booking.service_id).first()
+            s_name = service_obj.name if service_obj else "Completed Service"
+            base_time = booking.updated_at or datetime.utcnow()
+            warranty = BookingWarranty(
+                id=uuid.uuid4(),
+                booking_id=booking.id,
+                customer_id=booking.customer_id,
+                provider_id=booking.provider_id,
+                service_name=s_name,
+                issued_at=base_time,
+                expires_at=base_time + timedelta(days=7),
+                is_active=True,
+                claim_status="None",
+            )
+            db.add(warranty)
+            db.commit()
+            db.refresh(warranty)
+        else:
+            raise HTTPException(status_code=404, detail="No warranty card found for this booking")
 
     days_rem = max(0, (warranty.expires_at.date() - datetime.utcnow().date()).days)
     return WarrantyCardResponse(
@@ -1243,7 +1263,27 @@ def raise_warranty_claim(
 
     warranty = db.query(BookingWarranty).filter(BookingWarranty.booking_id == booking.id).first()
     if not warranty:
-        raise HTTPException(status_code=404, detail="No warranty card found for this booking")
+        if str(booking.status).lower() in ["completed", "paid"]:
+            from app.models.catalog import Service
+            service_obj = db.query(Service).filter(Service.id == booking.service_id).first()
+            s_name = service_obj.name if service_obj else "Completed Service"
+            base_time = booking.updated_at or datetime.utcnow()
+            warranty = BookingWarranty(
+                id=uuid.uuid4(),
+                booking_id=booking.id,
+                customer_id=booking.customer_id,
+                provider_id=booking.provider_id,
+                service_name=s_name,
+                issued_at=base_time,
+                expires_at=base_time + timedelta(days=7),
+                is_active=True,
+                claim_status="None",
+            )
+            db.add(warranty)
+            db.commit()
+            db.refresh(warranty)
+        else:
+            raise HTTPException(status_code=404, detail="No warranty card found for this booking")
 
     if not warranty.is_active:
         raise HTTPException(status_code=400, detail="This warranty card is inactive or has been revoked")
