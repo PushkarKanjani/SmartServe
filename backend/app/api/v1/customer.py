@@ -1288,22 +1288,25 @@ def raise_warranty_claim(
     if not warranty.is_active:
         raise HTTPException(status_code=400, detail="This warranty card is inactive or has been revoked")
 
-    if datetime.utcnow() > warranty.expires_at:
+    exp_at = warranty.expires_at
+    now_cmp = datetime.now(timezone.utc) if (exp_at and exp_at.tzinfo is not None) else datetime.utcnow()
+    if exp_at and now_cmp > exp_at:
         raise HTTPException(status_code=400, detail="Warranty claim period has expired (7-day validity exceeded)")
 
     if warranty.claim_status in ["Pending", "Resolved"]:
         raise HTTPException(status_code=400, detail=f"A warranty claim has already been filed (Status: {warranty.claim_status})")
 
+    sub_time = datetime.now(timezone.utc) if (exp_at and exp_at.tzinfo is not None) else datetime.utcnow()
     warranty.claim_status = "Pending"
     warranty.claim_description = payload.description.strip()
-    warranty.claim_submitted_at = datetime.utcnow()
+    warranty.claim_submitted_at = sub_time
 
     # Append to booking timeline
     cur_tl = list(booking.timeline or [])
     cur_tl.append({
         "event": "Warranty Claim Raised",
         "claim_description": warranty.claim_description,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": sub_time.isoformat(),
         "actor": current_customer.full_name,
         "role": "customer",
     })
@@ -1318,8 +1321,9 @@ def raise_warranty_claim(
         "success": True,
         "message": "Warranty claim raised successfully. Our support team will inspect and resolve within 24 hours.",
         "claim_status": warranty.claim_status,
-        "claim_submitted_at": warranty.claim_submitted_at.isoformat(),
+        "claim_submitted_at": warranty.claim_submitted_at.isoformat() if hasattr(warranty.claim_submitted_at, "isoformat") else str(warranty.claim_submitted_at),
     }
+
 
 
 # 16b. GET /customer/bookings/{id}/location
