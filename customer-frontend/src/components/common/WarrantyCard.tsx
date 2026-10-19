@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ShieldCheck, AlertTriangle, CheckCircle, Clock, X, Loader2 } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, CheckCircle, Clock, X, Loader2, XCircle, AlertCircle } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { useToast } from '../../hooks/useToast';
 import { getLocalizedServiceName } from '../../utils/localizedNames';
@@ -14,6 +14,9 @@ export interface WarrantyData {
   is_active: boolean;
   claim_status: string; // None, Pending, Resolved, Rejected
   claim_description?: string;
+  claim_submitted_at?: string;
+  claim_resolved_at?: string;
+  claim_notes?: string;
   days_remaining?: number;
 }
 
@@ -103,6 +106,8 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
                   ? 'bg-amber-100 text-amber-800 border border-amber-300'
                   : localClaimStatus === 'Resolved'
                   ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                  : localClaimStatus === 'Rejected'
+                  ? 'bg-rose-100 text-rose-800 border border-rose-300'
                   : isExpired
                   ? 'bg-stone-200 text-stone-700'
                   : 'bg-[#2F5233]/15 text-[#2F5233] border border-[#2F5233]/30'
@@ -111,6 +116,8 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
                   ? t('warranty.claim_pending', { defaultValue: 'Claim Pending' })
                   : localClaimStatus === 'Resolved'
                   ? t('warranty.claim_resolved', { defaultValue: 'Claim Resolved' })
+                  : localClaimStatus === 'Rejected'
+                  ? t('warranty.claim_rejected', { defaultValue: 'Claim Rejected' })
                   : isExpired
                   ? t('warranty.expired', { defaultValue: 'Expired' })
                   : t('warranty.badge', { defaultValue: 'Active Warranty' })}
@@ -129,6 +136,50 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
                 <span>
                   {t('warranty.expires_summary', { date: expiresDate.toLocaleDateString(), days: daysRemaining, defaultValue: `Valid until: ${expiresDate.toLocaleDateString()} (${daysRemaining} days left)` })}
                 </span>
+              </div>
+            )}
+
+            {/* Claim Rejection Notice & Admin Notes */}
+            {localClaimStatus === 'Rejected' && (
+              <div className="mt-3 p-3 bg-rose-50/90 border border-rose-200 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
+                  <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                  <span>{t('warranty.rejection_reason_label', { defaultValue: 'Admin Decision / Rejection Note' })}:</span>
+                </div>
+                <p className="text-xs text-rose-700 pl-5 leading-relaxed font-semibold">
+                  {warranty?.claim_notes || t('warranty.claim_rejected_default_note', { defaultValue: 'Claim marked as Rejected by Admin' })}
+                </p>
+                {warranty?.claim_description && (
+                  <p className="text-[11px] text-[#1F2A1E]/70 pl-5 pt-0.5">
+                    <strong>{t('warranty.customer_claim', { defaultValue: 'Customer Issue' })}:</strong> "{warranty.claim_description}"
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Claim Resolved Notice */}
+            {localClaimStatus === 'Resolved' && (
+              <div className="mt-3 p-3 bg-emerald-50/90 border border-emerald-200 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>{t('warranty.resolution_note_label', { defaultValue: 'Resolution Note' })}:</span>
+                </div>
+                <p className="text-xs text-emerald-700 pl-5 leading-relaxed font-semibold">
+                  {warranty?.claim_notes || t('warranty.claim_resolved_default_note', { defaultValue: 'Warranty claim resolved and approved for free rework inspection.' })}
+                </p>
+              </div>
+            )}
+
+            {/* Claim Under Review Notice */}
+            {localClaimStatus === 'Pending' && warranty?.claim_description && (
+              <div className="mt-3 p-3 bg-amber-50/90 border border-amber-200 rounded-xl space-y-1">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>{t('warranty.claim_under_review', { defaultValue: 'Claim Under Review' })}:</span>
+                </div>
+                <p className="text-xs text-amber-700 pl-5 leading-relaxed font-semibold">
+                  "{warranty.claim_description}"
+                </p>
               </div>
             )}
           </div>
@@ -157,6 +208,13 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
             <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
               <CheckCircle className="w-4 h-4" />
               <span>{t("warranty.claim_resolved", { defaultValue: "Claim Resolved" })}</span>
+            </div>
+          )}
+
+          {localClaimStatus === 'Rejected' && (
+            <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 px-3 py-2 rounded-xl border border-rose-200">
+              <XCircle className="w-4 h-4 text-rose-600" />
+              <span>{t("warranty.claim_rejected", { defaultValue: "Claim Rejected" })}</span>
             </div>
           )}
         </div>

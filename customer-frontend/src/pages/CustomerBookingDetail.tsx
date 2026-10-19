@@ -450,6 +450,25 @@ export const CustomerBookingDetail: React.FC = () => {
         </div>
       )}
 
+      {/* Rejection / Status Reason Banner for active/completed jobs (e.g. Warranty Claim Rejected) */}
+      {stLower !== 'rejected' && stLower !== 'cancelled' && (booking.cancellation_reason || (booking as any).rejection_reason) && (
+        <div className="p-5 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-4 animate-in fade-in">
+          <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <AlertCircle className="w-5 h-5 text-rose-600" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="font-bold text-rose-950 text-sm">
+              {booking.warranty?.claim_status === 'Rejected' || String(booking.cancellation_reason).toLowerCase().includes('claim')
+                ? t('warranty.claim_rejected_title', { defaultValue: 'Warranty Claim Notice' })
+                : t('booking.reason_label', { defaultValue: 'Notice' })}
+            </h4>
+            <p className="text-xs text-rose-800 font-semibold">
+              <strong>{t('booking.reason_label', { defaultValue: 'Reason' })}:</strong> {booking.cancellation_reason || (booking as any).rejection_reason}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Provider Arrived Special Notification Banner */}
       {stLower === 'arrived' && (
         <div className="p-5 rounded-3xl bg-teal-500/10 border-2 border-teal-500/40 flex items-center justify-between gap-4 shadow-sm animate-in fade-in">

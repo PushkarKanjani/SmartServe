@@ -24,6 +24,9 @@ export interface WarrantyInfo {
   is_active: boolean;
   claim_status: string;
   claim_description?: string;
+  claim_submitted_at?: string;
+  claim_resolved_at?: string;
+  claim_notes?: string;
   days_remaining?: number;
 }
 
