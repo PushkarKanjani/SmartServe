@@ -70,6 +70,23 @@ def format_warranty(w):
         "claim_notes": w.claim_notes,
     }
 
+def clean_admin_photos(photos):
+    if not photos:
+        return []
+    res = []
+    for p in photos:
+        if isinstance(p, str):
+            if p.startswith("/static/"):
+                res.append(f"https://smartserve-api-de3f.onrender.com{p}")
+            elif p.startswith("data:image"):
+                if len(p) <= 120000:
+                    res.append(p)
+                else:
+                    res.append("https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=600&q=80")
+            else:
+                res.append(p)
+    return res
+
 @router.get("/", response_model=List[BookingDetailResponse])
 def list_admin_bookings(
     status_filter: Optional[str] = None,
@@ -80,8 +97,21 @@ def list_admin_bookings(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
-    """Retrieve filterable bookings list for admin operations."""
-    bookings = booking_repository.get_bookings(db, skip=skip, limit=limit, status=status_filter)
+    """Retrieve filterable bookings list for admin operations with fast eager loading."""
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import desc
+    query = (
+        db.query(Booking)
+        .options(
+            joinedload(Booking.customer),
+            joinedload(Booking.provider),
+            joinedload(Booking.service),
+            joinedload(Booking.warranty),
+        )
+    )
+    if status_filter:
+        query = query.filter(Booking.status == status_filter)
+    bookings = query.order_by(desc(Booking.created_at)).offset(skip).limit(limit).all()
     
     res = []
     for b in bookings:
@@ -124,8 +154,8 @@ def list_admin_bookings(
                     emergency_flag=b.emergency_flag,
                     cancellation_reason=b.cancellation_reason,
                     customer_notes=b.customer_notes,
-                    before_photos=b.before_photos or [],
-                    after_photos=b.after_photos or [],
+                    before_photos=clean_admin_photos(b.before_photos),
+                    after_photos=clean_admin_photos(b.after_photos),
                     warranty=format_warranty(b.warranty),
                     created_at=b.created_at.isoformat() if b.created_at else ""
                 )
@@ -139,13 +169,24 @@ def get_admin_booking_detail(
     db: Session = Depends(get_db),
     admin: User = Depends(require_admin)
 ):
-    """Retrieve detailed operational booking info by ID."""
+    """Retrieve detailed operational booking info by ID with eager loading."""
     try:
         b_uuid = uuid.UUID(booking_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid booking ID format")
 
-    b = booking_repository.get_booking_by_id(db, b_uuid)
+    from sqlalchemy.orm import joinedload
+    b = (
+        db.query(Booking)
+        .options(
+            joinedload(Booking.customer),
+            joinedload(Booking.provider),
+            joinedload(Booking.service),
+            joinedload(Booking.warranty),
+        )
+        .filter(Booking.id == b_uuid)
+        .first()
+    )
     if not b:
         raise HTTPException(status_code=404, detail="Booking not found")
 
@@ -176,8 +217,8 @@ def get_admin_booking_detail(
         emergency_flag=b.emergency_flag,
         cancellation_reason=b.cancellation_reason,
         customer_notes=b.customer_notes,
-        before_photos=b.before_photos or [],
-        after_photos=b.after_photos or [],
+        before_photos=clean_admin_photos(b.before_photos),
+        after_photos=clean_admin_photos(b.after_photos),
         warranty=format_warranty(b.warranty),
         created_at=b.created_at.isoformat() if b.created_at else ""
     )
