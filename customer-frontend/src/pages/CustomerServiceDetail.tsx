@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
-import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription, getLocalizedStepDescription, getLocalizedWarrantyText, getLocalizedFAQQuestion, getLocalizedFAQAnswer } from '../utils/localizedNames';
+import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription, getLocalizedStepDescription, getLocalizedWarrantyText, getLocalizedFAQQuestion, getLocalizedFAQAnswer, getLocalizedSurgeText, getLocalizedDiscountText } from '../utils/localizedNames';
 import { 
   Clock, 
   Star, 
@@ -516,7 +516,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {t('service_detail.overview', { defaultValue: 'Service Overview' })}
               </h3>
               <p className="text-sm text-[#1F2A1E]/80 leading-relaxed font-sans">
-                {getLocalizedDescription(service.description)}
+                {getLocalizedDescription(service.description, service.name)}
               </p>
               {service.keywords && service.keywords.length > 0 && (
                 <div className="pt-2 flex items-center gap-1.5 flex-wrap border-t border-[#E5DEC9]/60">
@@ -834,7 +834,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {service.tips.map((tip, idx) => (
                   <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C9A15A]/30">
                     <span className="w-5 h-5 rounded-full bg-[#C9A15A]/20 text-[#C9A15A] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                      â˜…
+                      ★
                     </span>
                     <span className="font-medium">{getLocalizedFeature(tip)}</span>
                   </div>
@@ -873,7 +873,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="space-y-2">
                       {service.donts.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-rose-950 bg-[#FDFCF7] p-3 rounded-xl border border-rose-200">
-                          <span className="text-rose-600 font-bold flex-shrink-0">âœ•</span>
+                          <span className="text-rose-600 font-bold flex-shrink-0">✕</span>
                           <span>{getLocalizedFeature(item)}</span>
                         </div>
                       ))}
@@ -969,7 +969,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{t('service_detail.surge_protection_cap', { defaultValue: 'Surge Protection Cap' })}</span>
                   <span className="font-bold text-[#C9A15A] bg-[#FAF7F0] px-2 py-0.5 rounded-md border border-[#C9A15A]/30">
-                    Max +{Math.round(service.max_demand_increase * 100)}%
+                    {getLocalizedSurgeText(service.max_demand_increase)}
                   </span>
                 </div>
               )}
@@ -977,7 +977,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{t('service_detail.max_discount', { defaultValue: 'Max Promotional Discount' })}</span>
                   <span className="font-bold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-md border border-[#10B981]/20">
-                    Up to {Math.round(service.max_discount * 100)}%
+                    {getLocalizedDiscountText(service.max_discount)}
                   </span>
                 </div>
               )}
@@ -1065,7 +1065,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 onClick={() => setShowBookingModal(false)}
                 className="text-[#1F2A1E]/50 hover:text-[#1F2A1E] p-1.5 rounded-full hover:bg-black/5 text-sm font-bold transition-colors"
               >
-                âœ•
+                ✕
               </button>
             </div>
 

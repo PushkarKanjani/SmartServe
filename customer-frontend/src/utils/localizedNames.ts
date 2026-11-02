@@ -637,14 +637,68 @@ export function getLocalizedSupportCategory(cat?: string | null): string {
   return cat;
 }
 
-// 5. Intelligent Service Description Localizer
-export function getLocalizedDescription(description?: string | null): string {
-  if (!description) return '';
+/**
+ * Localize Surge Protection Cap Percentage
+ */
+export function getLocalizedSurgeText(val?: number): string {
+  if (val === undefined || val === null) return '';
+  const pct = val > 1 ? Math.round(val) : Math.round(val * 100);
   const lang = (i18n.language || 'en').slice(0, 2);
-  if (lang === 'en') return description;
+  if (lang === 'gu') return `મહત્તમ +${pct}%`;
+  if (lang === 'hi') return `अधिकतम +${pct}%`;
+  return `Max +${pct}%`;
+}
 
-  const lower = description.toLowerCase();
+/**
+ * Localize Promotional Discount Percentage
+ */
+export function getLocalizedDiscountText(val?: number): string {
+  if (val === undefined || val === null) return '';
+  const pct = val > 1 ? Math.round(val) : Math.round(val * 100);
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'gu') return `${pct}% સુધી`;
+  if (lang === 'hi') return `${pct}% तक`;
+  return `Up to ${pct}%`;
+}
 
+// 5. Intelligent Service Description Localizer
+export function getLocalizedDescription(description?: string | null, serviceName?: string | null): string {
+  if (!description && !serviceName) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return description || '';
+
+  const lower = (description || '').toLowerCase();
+
+  if (lower.includes('dining table') || lower.includes('dining area')) {
+    return lang === 'hi'
+      ? 'डाइनिंग टेबल की डीप क्लीनिंग, कुर्सियों की पोंछाई, फर्श के दाग हटाना और झूमर की सफाई।'
+      : 'ડાઇનિંગ ટેબલની ડીપ ક્લીનિંગ, ખુરશીઓની સફાઈ, ફ્લોરના ડાઘ દૂર કરવા અને ઝુમ્મરની સફાઈ.';
+  }
+  if (lower.includes('gold-foil') || lower.includes('24k gold')) {
+    return lang === 'hi'
+      ? 'विशेष आयोजनों के लिए त्वचा को तुरंत चमकदार निखार, कसाव और रेशमी चिकनाई देने वाला शानदार गोल्ड-फॉइल मसाज फेशियल।'
+      : 'ખાસ પ્રસંગો માટે ત્વચાને તાત્કાલિક તેજસ્વી ચમક, મજબૂતાઈ અને રેશમી મુલાયમતા આપતો વૈભવી ગોલ્ડ-ફોઇલ મસાજ ફેશિયલ.';
+  }
+  if (lower.includes('tightening peptide') || lower.includes('collagen facial')) {
+    return lang === 'hi'
+      ? 'झुर्रियों को कम करने और चेहरे की बनावट को निखारने के लिए आइस ग्लोब्स से मसाज किया जाने वाला टाइटनिंग पेप्टाइड और कोलेजन फेशियल।'
+      : 'કરચલીઓ ઘટાડવા અને ચહેરાના આકારને સુધારવા માટે આઇસ ગ્લોબ્સ વડે મસાજ કરાતો ટાઇટનિંગ પેપ્ટાઇડ અને કોલેજન ફેશિયલ.';
+  }
+  if (lower.includes('charcoal vacuum cleanup') || lower.includes('blackheads')) {
+    return lang === 'hi'
+      ? 'जिद्दी ब्लैकहेड्स, अतिरिक्त सीबम और सक्रिय मुहांसों को लक्षित करने वाला एक्टिवेटेड बैम्बू चारकोल वैक्यूम क्लीनअप।'
+      : 'હઠીલા બ્લેકહેડ્સ, વધારાનું સીબમ અને સક્રિય ખીલને દૂર કરવા માટે એક્ટિવેટેડ વાંસ ચારકોલ વેક્યુમ ક્લીનઅપ.';
+  }
+  if (lower.includes('diamond-tip exfoliation')) {
+    return lang === 'hi'
+      ? 'युवा त्वचा की बनावट के लिए मुंहासों के निशान, महीन रेखाओं और हाइपर-पिग्मेंटेशन को कम करने वाला सटीक डायमंड-टिप एक्सफोलिएशन।'
+      : 'યુવાન ત્વચા માટે ખીલના ડાઘ, ઝીણી રેખાઓ અને પિગ્મેન્ટેશન ઘટાડવા માટે સચોટ ડાયમંડ-ટિપ એક્સફોલિએશન.';
+  }
+  if (lower.includes('organic fruit extract')) {
+    return lang === 'hi'
+      ? 'त्वचा को गहराई से हाइड्रेट करने, एक्सफोलिएट करने और प्राकृतिक चमक बहाल करने के लिए डिज़ाइन किया गया पौष्टिक जैविक फल अर्क फेशियल।'
+      : 'ત્વચાને ઊંડાણપૂર્વક હાઇડ્રેટ કરવા અને કુદરતી ચમક પુનઃસ્થાપિત કરવા માટે તૈયાર કરાયેલ પૌષ્ટિક ઓર્ગેનિક ફ્રૂટ એક્સટ્રેક્ટ ફેશિયલ.';
+  }
   if (lower.includes('rapid facial brightening treatment')) {
     return lang === 'hi'
       ? 'त्वचा की प्राकृतिक चमक बढ़ाने और चेहरे के रोमछिद्रों को साफ करने के लिए एक त्वरित व प्रभावी फेशियल ट्रीटमेंट।'
@@ -701,7 +755,15 @@ export function getLocalizedDescription(description?: string | null): string {
       : 'પ્રશિક્ષિત વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ ગેરંટી સાથે પૂરી પાડવામાં આવતી પ્રમાણિત સેવા.';
   }
 
+  // Dynamic context-aware overview based on service name
+  if (serviceName) {
+    const locName = getLocalizedServiceName(serviceName);
+    return lang === 'hi'
+      ? `${locName} के लिए प्रशिक्षित और बैकग्राउंड-सत्यापित पेशेवरों द्वारा 100% संतुष्टि और सुरक्षा गारंटी के साथ प्रदान की जाने वाली प्रीमियम होम सेवा।`
+      : `${locName} માટે પ્રશિક્ષિત અને બેકગ્રાઉન્ડ-ચકાસાયેલ નિષ્ણાતો દ્વારા ૧૦૦% સંતોષ અને સુરક્ષા ગેરંટી સાથે પૂરી પાડવામાં આવતી ઉત્તમ સેવા.`;
+  }
+
   return lang === 'hi'
     ? 'प्रशिक्षित और बैकग्राउंड-सत्यापित पेशेवरों द्वारा 7-दिवसीय स्मार्टसर्व वारंटी के साथ पूरी की जाने वाली सुरक्षित होम सेवा।'
-    : 'પ્રશિક્ષિત અને બેકગ્રાઉન્ડ-ચકાસાયેલ વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ વોરંટી સાથે પૂરી પાડવામાં આવતી સુરક્ષિત સેવા.';
+    : 'પ્રશિક્ષિત અને બેકગ્રાઉન્ડ-ચકાસાયેલ વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ વૉરંટી સાથે પૂરી પાડવામાં આવતી સુરક્ષિત સેવા.';
 }

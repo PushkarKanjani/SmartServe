@@ -10216,6 +10216,746 @@ export const FEATURE_TRANSLATIONS: Record<string, LangEntry> = {
     "hi": "zoology basics",
     "gu": "zoology basics"
   },
+  "structural heavy modifications": {
+    "hi": "संरचनात्मक भारी संशोधन",
+    "gu": "માળખાકીય મોટા ફેરફારો"
+  },
+  "spare hardware unless explicitly requested": {
+    "hi": "स्पेयर हार्डवेयर (जब तक स्पष्ट रूप से अनुरोध न किया गया हो)",
+    "gu": "સ્પેર હાર્ડવેર (જ્યાં સુધી સ્પષ્ટ વિનંતી ન કરવામાં આવી હોય)"
+  },
+  "do provide clear instructions before the service begins": {
+    "hi": "सेवा शुरू होने से पहले स्पष्ट निर्देश अवश्य दें",
+    "gu": "સેવા શરૂ કરતા પહેલા સ્પષ્ટ સૂચનાઓ ચોક્કસ આપો"
+  },
+  "do inspect the work during the final handover": {
+    "hi": "अंतिम हैंडओवर के दौरान कार्य का निरीक्षण अवश्य करें",
+    "gu": "અંતિમ હેન્ડઓવર દરમિયાન કામનું નિરીક્ષણ ચોક્કસ કરો"
+  },
+  "don't attempt to interrupt the core procedure": {
+    "hi": "मुख्य प्रक्रिया के दौरान व्यवधान डालने का प्रयास न करें",
+    "gu": "મુખ્ય પ્રક્રિયા દરમિયાન ખલેલ પહોંચાડવાનો પ્રયાસ ન કરો"
+  },
+  "don't use harsh chemicals on the treated area immediately after": {
+    "hi": "उपचार के तुरंत बाद उस क्षेत्र पर कठोर रसायनों का उपयोग न करें",
+    "gu": "સેવા પછી તરત જ તે વિસ્તાર પર તીવ્ર કેમિકલ્સનો ઉપયોગ ન કરો"
+  },
+  "post-service inspection and cleanup": {
+    "hi": "सेवा उपरांत निरीक्षण और सफाई",
+    "gu": "સેવા પછી નિરીક્ષણ અને સફાઈ"
+  },
+  "standard pedicure & manicure tool kit": {
+    "hi": "मानक पेडीक्योर और मेनिक्योर टूल किट",
+    "gu": "પ્રમાણભૂત પેડિક્યોર અને મેનિક્યોર ટૂલ કિટ"
+  },
+  "standard women's salon tool kit": {
+    "hi": "मानक महिला सैलून टूल किट",
+    "gu": "પ્રમાણભૂત મહિલા સલૂન ટૂલ કિટ"
+  },
+  "standard men's salon tool kit": {
+    "hi": "मानक पुरुष सैलून टूल किट",
+    "gu": "પ્રમાણભૂત પુરુષ સલૂન ટૂલ કિટ"
+  },
+  "connect devices to a secure network.": {
+    "hi": "उपकरणों को सुरक्षित नेटवर्क से कनेक्ट करें।",
+    "gu": "ઉપકરણોને સુરક્ષિત નેટવર્ક સાથે કનેક્ટ કરો."
+  },
+  "connect devices to a secure network": {
+    "hi": "उपकरणों को सुरक्षित नेटवर्क से कनेक्ट करें",
+    "gu": "ઉપકરણોને સુરક્ષિત નેટવર્ક સાથે કનેક્ટ કરો"
+  },
+  "do not expose indoor cameras to outdoor environments.": {
+    "hi": "इनडोर कैमरों को बाहरी वातावरण में न रखें।",
+    "gu": "ઇનડોર કેમેરાને બહારના વાતાવરણમાં ન મુકો."
+  },
+  "do not expose indoor cameras to outdoor environments": {
+    "hi": "इनडोर कैमरों को बाहरी वातावरण में न रखें",
+    "gu": "ઇનડોર કેમેરાને બહારના વાતાવરણમાં ન મુકો"
+  },
+  "change default passwords immediately after setup.": {
+    "hi": "सेटअप के तुरंत बाद डिफ़ॉल्ट पासवर्ड बदलें।",
+    "gu": "સેટઅપ પછી તરત જ ડિફોલ્ટ પાસવર્ડ બદલો."
+  },
+  "change default passwords immediately after setup": {
+    "hi": "सेटअप के तुरंत बाद डिफ़ॉल्ट पासवर्ड बदलें",
+    "gu": "સેટઅપ પછી તરત જ ડિફોલ્ટ પાસવર્ડ બદલો"
+  },
+  "drill machine": {
+    "hi": "ड्रिल मशीन",
+    "gu": "ડ્રિલ મશીન"
+  },
+  "screwdrivers": {
+    "hi": "पेचकश (स्क्रूड्राइवर)",
+    "gu": "સ્ક્રૂડ્રાઇવર"
+  },
+  "wire strippers": {
+    "hi": "वायर स्ट्रिपर",
+    "gu": "વાયર સ્ટ્રિપર"
+  },
+  "mounting hardware": {
+    "hi": "माउंटिंग हार्डवेयर",
+    "gu": "માઉન્ટિંગ હાર્ડવેર"
+  },
+  "ensure wi-fi availability": {
+    "hi": "वाई-फाई की उपलब्धता सुनिश्चित करें",
+    "gu": "વાઇ-ફાઇ ઉપલબ્ધતા સુનિશ્ચિત કરો"
+  },
+  "provide access to installation points": {
+    "hi": "इंस्टॉलेशन बिंदुओं तक पहुंच प्रदान करें",
+    "gu": "ઇન્સ્ટોલેશન પોઇન્ટ્સ સુધી પ્રવેશ આપો"
+  },
+  "do not touch exposed wiring before setup is complete": {
+    "hi": "सेटअप पूरा होने से पहले खुले तारों को न छुएं",
+    "gu": "સેટઅપ પૂર્ણ થાય તે પહેલાં ખુલ્લા વાયરિંગને સ્પર્શ કરશો નહીં"
+  },
+  "keep devices clean from dust": {
+    "hi": "उपकरणों को धूल से साफ रखें",
+    "gu": "ડિવાઇસને ધૂળથી સાફ રાખો"
+  },
+  "fully functional smart home system.": {
+    "hi": "पूरी तरह से कार्यशील स्मार्ट होम सिस्टम।",
+    "gu": "સંપૂર્ણ રીતે કાર્યરત સ્માર્ટ હોમ સિસ્ટમ."
+  },
+  "fully functional smart home system": {
+    "hi": "पूरी तरह से कार्यशील स्मार्ट होम सिस्टम",
+    "gu": "સંપૂર્ણ રીતે કાર્યરત સ્માર્ટ હોમ સિસ્ટમ"
+  },
+  "wi-fi connectivity issues are not covered under installation warranty.": {
+    "hi": "वाई-फाई कनेक्टिविटी समस्याएं इंस्टॉलेशन वारंटी के तहत कवर नहीं हैं।",
+    "gu": "વાઇ-ફાઇ કનેક્ટિવિટીની સમસ્યાઓ ઇન્સ્ટોલેશન વૉરંટી હેઠળ આવરી લેવામાં આવતી નથી."
+  },
+  "wi-fi connectivity issues are not covered under installation warranty": {
+    "hi": "वाई-फाई कनेक्टिविटी समस्याएं इंस्टॉलेशन वारंटी के तहत कवर नहीं हैं",
+    "gu": "વાઇ-ફાઇ કનેક્ટિવિટીની સમસ્યાઓ ઇન્સ્ટોલેશન વૉરંટી હેઠળ આવરી લેવામાં આવતી નથી"
+  },
+  "provide a safe and respectful working environment.": {
+    "hi": "सुरक्षित और सम्मानजनक कार्य वातावरण प्रदान करें।",
+    "gu": "સુરક્ષિત અને આદરપૂર્ણ કાર્ય વાતાવરણ પૂરું પાડો."
+  },
+  "provide a safe and respectful working environment": {
+    "hi": "सुरक्षित और सम्मानजनक कार्य वातावरण प्रदान करें",
+    "gu": "સુરક્ષિત અને આદરપૂર્ણ કાર્ય વાતાવરણ પૂરું પાડો"
+  },
+  "do not request services outside the agreed scope.": {
+    "hi": "सहमति वाले दायरे से बाहर की सेवाओं का अनुरोध न करें।",
+    "gu": "સહમત થયેલ કાર્યક્ષેત્ર બહારની સેવાઓની વિનંતી ન કરો."
+  },
+  "do not request services outside the agreed scope": {
+    "hi": "सहमति वाले दायरे से बाहर की सेवाओं का अनुरोध न करें",
+    "gu": "સહમત થયેલ કાર્યક્ષેત્ર બહારની સેવાઓની વિનંતી ન કરો"
+  },
+  "communicate your specific preferences clearly on the first day.": {
+    "hi": "पहले ही दिन अपनी विशिष्ट प्राथमिकताओं को स्पष्ट रूप से बताएं।",
+    "gu": "પ્રથમ દિવસે જ તમારી ચોક્કસ પસંદગીઓ સ્પષ્ટપણે જણાવો."
+  },
+  "communicate your specific preferences clearly on the first day": {
+    "hi": "पहले ही दिन अपनी विशिष्ट प्राथमिकताओं को स्पष्ट रूप से बताएं",
+    "gu": "પ્રથમ દિવસે જ તમારી ચોક્કસ પસંદગીઓ સ્પષ્ટપણે જણાવો"
+  },
+  "standard household cleaning tools": {
+    "hi": "मानक घरेलू सफाई उपकरण",
+    "gu": "પ્રમાણભૂત ઘરગથ્થુ સફાઈ સાધનો"
+  },
+  "basic cooking utensils (provided by customer)": {
+    "hi": "बुनियादी खाना पकाने के बर्तन (ग्राहक द्वारा प्रदान किए जाने वाले)",
+    "gu": "મૂળભૂત રસોઈ વાસણો (ગ્રાહક દ્વારા પૂરા પાડવામાં આવતા)"
+  },
+  "provide access to the premises": {
+    "hi": "परिसर तक पहुंच प्रदान करें",
+    "gu": "જગ્યા પર પ્રવેશની સુવિધા આપો"
+  },
+  "ensure a safe working environment": {
+    "hi": "सुरक्षित कार्य वातावरण सुनिश्चित करें",
+    "gu": "સુરક્ષિત કાર્ય વાતાવરણ સુનિશ્ચિત કરો"
+  },
+  "provide necessary groceries/materials": {
+    "hi": "आवश्यक किराने का सामान/सामग्री प्रदान करें",
+    "gu": "જરૂરી કરિયાણું/સામગ્રી પૂરી પાડો"
+  },
+  "provide clear instructions for future visits": {
+    "hi": "भविष्य की विज़िट के लिए स्पष्ट निर्देश दें",
+    "gu": "ભવિષ્યની મુલાકાતો માટે સ્પષ્ટ સૂચનાઓ આપો"
+  },
+  "maintain communication regarding preferences": {
+    "hi": "पसंद और प्राथमिकताओं के बारे में संवाद बनाए रखें",
+    "gu": "પસંદગી અંગે સ્પષ્ટ સંવાદ જાળવો"
+  },
+  "reliable and high-quality domestic assistance.": {
+    "hi": "विश्वसनीय और उच्च गुणवत्ता वाली घरेलू सहायता।",
+    "gu": "વિશ્વસનીય અને ઉચ્ચ ગુણવત્તાવાળી ઘરેલું સહાય."
+  },
+  "reliable and high-quality domestic assistance": {
+    "hi": "विश्वसनीय और उच्च गुणवत्ता वाली घरेलू सहायता",
+    "gu": "વિશ્વસનીય અને ઉચ્ચ ગુણવત્તાવાળી ઘરેલું સહાય"
+  },
+  "all personnel are background verified for safety and security.": {
+    "hi": "सुरक्षा के लिए सभी कर्मियों का बैकग्राउंड सत्यापित है।",
+    "gu": "સુરક્ષા અને સલામતી માટે તમામ સ્ટાફનું બેકગ્રાઉન્ડ ચકાસાયેલ છે."
+  },
+  "all personnel are background verified for safety and security": {
+    "hi": "सुरक्षा के लिए सभी कर्मियों का बैकग्राउंड सत्यापित है",
+    "gu": "સુરક્ષા અને સલામતી માટે તમામ સ્ટાફનું બેકગ્રાઉન્ડ ચકાસાયેલ છે"
+  },
+  "attend every session punctually.": {
+    "hi": "प्रत्येक सत्र में समय पर उपस्थित रहें।",
+    "gu": "દરેક સત્રમાં સમયસર હાજરી આપો."
+  },
+  "attend every session punctually": {
+    "hi": "प्रत्येक सत्र में समय पर उपस्थित रहें",
+    "gu": "દરેક સત્રમાં સમયસર હાજરી આપો"
+  },
+  "do not skip assigned practice work between sessions.": {
+    "hi": "सत्रों के बीच दिए गए अभ्यास कार्य को न छोड़ें।",
+    "gu": "સત્રો વચ્ચે સોંપેલ અભ્યાસ કાર્ય કરવાનું ન ચૂકો."
+  },
+  "do not skip assigned practice work between sessions": {
+    "hi": "सत्रों के बीच दिए गए अभ्यास कार्य को न छोड़ें",
+    "gu": "સત્રો વચ્ચે સોંપેલ અભ્યાસ કાર્ય કરવાનું ન ચૂકો"
+  },
+  "revise notes within 24 hours to retain 80% more.": {
+    "hi": "80% अधिक याद रखने के लिए 24 घंटे के भीतर नोट्स दोहराएं।",
+    "gu": "૮૦% વધુ યાદ રાખવા માટે ૨૪ કલાકમાં નોટ્સનું પુનરાવર્તન કરો."
+  },
+  "revise notes within 24 hours to retain 80% more": {
+    "hi": "80% अधिक याद रखने के लिए 24 घंटे के भीतर नोट्स दोहराएं",
+    "gu": "૮૦% વધુ યાદ રાખવા માટે ૨૪ કલાકમાં નોટ્સનું પુનરાવર્તન કરો"
+  },
+  "whiteboard or digital board": {
+    "hi": "व्हाइटबोर्ड या डिजिटल बोर्ड",
+    "gu": "વ્હાઇટબોર્ડ અથવા ડિજિટલ બોર્ડ"
+  },
+  "reference textbooks": {
+    "hi": "संदर्भ पुस्तकें",
+    "gu": "સંદર્ભ પુસ્તકો"
+  },
+  "practice worksheets": {
+    "hi": "अभ्यास वर्कशीट",
+    "gu": "પ્રેક્ટિસ વર્કશીટ્સ"
+  },
+  "online resources": {
+    "hi": "ऑनलाइन संसाधन",
+    "gu": "ઓનલાઇન સંસાધનો"
+  },
+  "ensure a quiet study environment": {
+    "hi": "शांत अध्ययन वातावरण सुनिश्चित करें",
+    "gu": "શાંત અભ્યાસ વાતાવરણ સુનિશ્ચિત કરો"
+  },
+  "have necessary stationery and books ready": {
+    "hi": "आवश्यक स्टेशनरी और पुस्तकें तैयार रखें",
+    "gu": "જરૂરી સ્ટેશનરી અને પુસ્તકો તૈયાર રાખો"
+  },
+  "share syllabus or exam board details upfront": {
+    "hi": "पाठ्यक्रम या परीक्षा बोर्ड का विवरण पहले ही साझा करें",
+    "gu": "અભ્યાસક્રમ અથવા પરીક્ષા બોર્ડની વિગતો અગાઉથી જણાવો"
+  },
+  "complete assigned homework before the next session": {
+    "hi": "अगले सत्र से पहले दिया गया होमवर्क पूरा करें",
+    "gu": "આગામી સત્ર પહેલાં સોંપેલું હોમવર્ક પૂરું કરો"
+  },
+  "review notes within 24 hours of each session": {
+    "hi": "प्रत्येक सत्र के 24 घंटे के भीतर नोट्स की समीक्षा करें",
+    "gu": "દરેક સત્રના 24 કલાકમાં નોંધોનું પુનરાવર્તન કરો"
+  },
+  "measurable improvement in understanding, grades, and confidence.": {
+    "hi": "समझ, ग्रेड और आत्मविश्वास में मापने योग्य सुधार।",
+    "gu": "સમજણ, ગુણ અને આત્મવિશ્વાસમાં નોંધપાત્ર સુધારો."
+  },
+  "measurable improvement in understanding, grades, and confidence": {
+    "hi": "समझ, ग्रेड और आत्मविश्वास में मापने योग्य सुधार",
+    "gu": "સમજણ, ગુણ અને આત્મવિશ્વાસમાં નોંધપાત્ર સુધારો"
+  },
+  "minimum 4-session commitment recommended for meaningful progress.": {
+    "hi": "सार्थक प्रगति के लिए न्यूनतम 4 सत्रों की सिफारिश की जाती है।",
+    "gu": "અર્થપૂર્ણ પ્રગતિ માટે ઓછામાં ઓછા 4 સત્રોની ભલામણ કરવામાં આવે છે."
+  },
+  "minimum 4-session commitment recommended for meaningful progress": {
+    "hi": "सार्थक प्रगति के लिए न्यूनतम 4 सत्रों की सिफारिश की जाती है",
+    "gu": "અર્થપૂર્ણ પ્રગતિ માટે ઓછામાં ઓછા 4 સત્રોની ભલામણ કરવામાં આવે છે"
+  },
+  "communicate openly about pain or discomfort during sessions.": {
+    "hi": "सत्र के दौरान दर्द या असुविधा के बारे में खुलकर बताएं।",
+    "gu": "સત્ર દરમિયાન દુખાવો કે અગવડતા વિશે ખુલીને વાત કરો."
+  },
+  "communicate openly about pain or discomfort during sessions": {
+    "hi": "सत्र के दौरान दर्द या असुविधा के बारे में खुलकर बताएं",
+    "gu": "સત્ર દરમિયાન દુખાવો કે અગવડતા વિશે ખુલીને વાત કરો"
+  },
+  "do not skip prescribed rest days.": {
+    "hi": "निर्धारित आराम के दिनों को न छोड़ें।",
+    "gu": "સૂચવેલા આરામના દિવસોને અવગણશો નહીં."
+  },
+  "do not skip prescribed rest days": {
+    "hi": "निर्धारित आराम के दिनों को न छोड़ें",
+    "gu": "સૂચવેલા આરામના દિવસોને અવગણશો નહીં"
+  },
+  "assessment forms": {
+    "hi": "मूल्यांकन प्रपत्र",
+    "gu": "મૂલ્યાંકન ફોર્મ"
+  },
+  "exercise equipment (as required)": {
+    "hi": "व्यायाम उपकरण (आवश्यकतानुसार)",
+    "gu": "કસરત સાધનો (જરૂરિયાત મુજબ)"
+  },
+  "nutritional guides": {
+    "hi": "पोषण संबंधी मार्गदर्शिका",
+    "gu": "પોષણ માર્ગદર્શિકા"
+  },
+  "digital tracking tools": {
+    "hi": "डिजिटल ट्रैकिंग टूल्स",
+    "gu": "ડિજિટલ ટ્રેકિંગ ટૂલ્સ"
+  },
+  "wear comfortable clothing": {
+    "hi": "आरामदायक कपड़े पहनें",
+    "gu": "આરામદાયક કપડાં પહેરો"
+  },
+  "ensure adequate space for sessions": {
+    "hi": "सत्र के लिए पर्याप्त जगह सुनिश्चित करें",
+    "gu": "સત્રો માટે પૂરતી જગ્યા સુનિશ્ચિત કરો"
+  },
+  "keep hydrated": {
+    "hi": "पर्याप्त पानी पिएं (हाइड्रेटेड रहें)",
+    "gu": "હાઇડ્રેટેડ રહો (પૂરતું પાણી પીવો)"
+  },
+  "follow post-session cool-down routines": {
+    "hi": "सत्र के बाद कूल-डाउन रूटीन का पालन करें",
+    "gu": "સત્ર પછી કૂલ-ડાઉન નિયમોનું પાલન કરો"
+  },
+  "adhere to recommended diet and rest": {
+    "hi": "अनुशंसित आहार और आराम का पालन करें",
+    "gu": "સૂચવેલ આહાર અને આરામનું પાલન કરો"
+  },
+  "improved fitness levels, reduced pain, and enhanced mental well-being.": {
+    "hi": "बेहतर फिटनेस स्तर, दर्द में कमी और बेहतर मानसिक स्वास्थ्य।",
+    "gu": "સુધારેલ ફિટનેસ સ્તર, પીડામાં ઘટાડો અને શ્રેષ્ઠ માનસિક સુખાકારી."
+  },
+  "improved fitness levels, reduced pain, and enhanced mental well-being": {
+    "hi": "बेहतर फिटनेस स्तर, दर्द में कमी और बेहतर मानसिक स्वास्थ्य",
+    "gu": "સુધારેલ ફિટનેસ સ્તર, પીડામાં ઘટાડો અને શ્રેષ્ઠ માનસિક સુખાકારી"
+  },
+  "please disclose any medical conditions before sessions begin.": {
+    "hi": "सत्र शुरू होने से पहले कृपया किसी भी चिकित्सीय स्थिति का खुलासा करें।",
+    "gu": "સત્રો શરૂ થાય તે પહેલાં કૃપા કરીને કોઈપણ તબીબી સ્થિતિ જણાવો."
+  },
+  "please disclose any medical conditions before sessions begin": {
+    "hi": "सत्र शुरू होने से पहले कृपया किसी भी चिकित्सीय स्थिति का खुलासा करें",
+    "gu": "સત્રો શરૂ થાય તે પહેલાં કૃપા કરીને કોઈપણ તબીબી સ્થિતિ જણાવો"
+  },
+  "spare parts or structural replacement unless quoted": {
+    "hi": "स्पेयर पार्ट्स या संरचनात्मक प्रतिस्थापन (जब तक कोटेशन न दिया गया हो)",
+    "gu": "સ્પેર પાર્ટ્સ અથવા માળખાકીય રિપ્લેસમેન્ટ (જ્યાં સુધી જણાવેલ ન હોય)"
+  },
+  "hazardous materials": {
+    "hi": "खतरनाक सामग्री",
+    "gu": "જોખમી સામગ્રી"
+  },
+  "standard supplies and equipment": {
+    "hi": "मानक सामग्री और उपकरण",
+    "gu": "પ્રમાણભૂત સામગ્રી અને સાધનો"
+  },
+  "post-service cleanup and inspection": {
+    "hi": "सेवा उपरांत सफाई और निरीक्षण",
+    "gu": "સેવા પછી સફાઈ અને નિરીક્ષણ"
+  },
+  "expert guidance and aftercare tips": {
+    "hi": "विशेषज्ञ मार्गदर्शन और देखभाल के टिप्स",
+    "gu": "નિષ્ણાત માર્ગદર્શન અને સંભાળ માટેની ટિપ્સ"
+  },
+  "share detailed event requirements upfront to avoid last-minute changes.": {
+    "hi": "अंतिम समय के बदलावों से बचने के लिए पहले ही विस्तृत आवश्यकताएं साझा करें।",
+    "gu": "છેલ્લી ઘડીના ફેરફારો ટાળવા માટે અગાઉથી વિગતવાર જરૂરિયાતો જણાવો."
+  },
+  "share detailed event requirements upfront to avoid last-minute changes": {
+    "hi": "अंतिम समय के बदलावों से बचने के लिए पहले ही विस्तृत आवश्यकताएं साझा करें",
+    "gu": "છેલ્લી ઘડીના ફેરફારો ટાળવા માટે અગાઉથી વિગતવાર જરૂરિયાતો જણાવો"
+  },
+  "do not make last-minute changes to guest count or venue without notice.": {
+    "hi": "बिना सूचना के मेहमानों की संख्या या स्थान में अंतिम समय में बदलाव न करें।",
+    "gu": "પૂર્વ સૂચના વિના મહેમાનોની સંખ્યા કે સ્થળમાં છેલ્લી ઘડીએ ફેરફાર ન કરો."
+  },
+  "do not make last-minute changes to guest count or venue without notice": {
+    "hi": "बिना सूचना के मेहमानों की संख्या या स्थान में अंतिम समय में बदलाव न करें",
+    "gu": "પૂર્વ સૂચના વિના મહેમાનોની સંખ્યા કે સ્થળમાં છેલ્લી ઘડીએ ફેરફાર ન કરો"
+  },
+  "book early during wedding or festival season for best availability.": {
+    "hi": "सर्वोत्तम उपलब्धता के लिए शादी या त्योहारों के मौसम में जल्दी बुक करें।",
+    "gu": "લગ્ન કે તહેવારોની સિઝનમાં ઉત્તમ ઉપલબ્ધતા માટે વહેલા બુકિંગ કરો."
+  },
+  "book early during wedding or festival season for best availability": {
+    "hi": "सर्वोत्तम उपलब्धता के लिए शादी या त्योहारों के मौसम में जल्दी बुक करें",
+    "gu": "લગ્ન કે તહેવારોની સિઝનમાં ઉત્તમ ઉપલબ્ધતા માટે વહેલા બુકિંગ કરો"
+  },
+  "event planning software": {
+    "hi": "इवेंट प्लानिंग सॉफ्टवेयर",
+    "gu": "ઇવેન્ટ પ્લાનિંગ સોફ્ટવેર"
+  },
+  "professional equipment": {
+    "hi": "पेशेवर उपकरण",
+    "gu": "વ્યાવસાયિક સાધનો"
+  },
+  "logistics checklist": {
+    "hi": "लॉजिस्टिक्स चेकलिस्ट",
+    "gu": "લોજિસ્ટિક્સ ચેકલિસ્ટ"
+  },
+  "vendor contact directory": {
+    "hi": "विक्रेता संपर्क निर्देशिका",
+    "gu": "વેન્ડર સંપર્ક ડિરેક્ટરી"
+  },
+  "provide venue details in advance": {
+    "hi": "स्थान का विवरण पहले ही प्रदान करें",
+    "gu": "સ્થળની વિગતો અગાઉથી જણાવો"
+  },
+  "share guest list and requirements": {
+    "hi": "अतिथियों की सूची और आवश्यकताएं साझा करें",
+    "gu": "મહેમાનોની યાદી અને જરૂરિયાતો જણાવો"
+  },
+  "confirm timeline and schedule": {
+    "hi": "समयरेखा और कार्यक्रम की पुष्टि करें",
+    "gu": "સમયપત્રક અને કાર્યક્રમની પુષ્ટિ કરો"
+  },
+  "share feedback to improve future events": {
+    "hi": "भविष्य के आयोजनों को बेहतर बनाने के लिए प्रतिक्रिया दें",
+    "gu": "ભવિષ્યની ઇવેન્ટ્સ સુધારવા માટે પ્રતિસાદ આપો"
+  },
+  "review delivered photos/videos within 7 days": {
+    "hi": "7 दिनों के भीतर प्राप्त फोटो/वीडियो की समीक्षा करें",
+    "gu": "૭ દિવસમાં મળેલી તસવીરો/વીડિયોની સમીક્ષા કરો"
+  },
+  "a seamlessly executed event with lasting memories.": {
+    "hi": "चिरस्थायी यादों के साथ निर्बाध रूप से आयोजित कार्यक्रम।",
+    "gu": "યાદગાર ક્ષણો સાથે સુચારુ રીતે આયોજિત ઇવેન્ટ."
+  },
+  "a seamlessly executed event with lasting memories": {
+    "hi": "चिरस्थायी यादों के साथ निर्बाध रूप से आयोजित कार्यक्रम",
+    "gu": "યાદગાર ક્ષણો સાથે સુચારુ રીતે આયોજિત ઇવેન્ટ"
+  },
+  "minimum advance booking of 7 days required for all events.": {
+    "hi": "सभी आयोजनों के लिए न्यूनतम 7 दिन पहले बुकिंग आवश्यक है।",
+    "gu": "તમામ ઇવેન્ટ્સ માટે ઓછામાં ઓછા 7 દિવસ અગાઉ બુકિંગ જરૂરી છે."
+  },
+  "minimum advance booking of 7 days required for all events": {
+    "hi": "सभी आयोजनों के लिए न्यूनतम 7 दिन पहले बुकिंग आवश्यक है",
+    "gu": "તમામ ઇવેન્ટ્સ માટે ઓછામાં ઓછા 7 દિવસ અગાઉ બુકિંગ જરૂરી છે"
+  },
+  "share your pet's medical history with the professional before each visit.": {
+    "hi": "प्रत्येक विज़िट से पहले पेशेवर के साथ अपने पालतू जानवर का मेडिकल इतिहास साझा करें।",
+    "gu": "દરેક મુલાકાત પહેલાં નિષ્ણાત સાથે તમારા પાલતુ પ્રાણીનો તબીબી ઇતિહાસ જણાવો."
+  },
+  "share your pet's medical history with the professional before each visit": {
+    "hi": "प्रत्येक विज़िट से पहले पेशेवर के साथ अपने पालतू जानवर का मेडिकल इतिहास साझा करें",
+    "gu": "દરેક મુલાકાત પહેલાં નિષ્ણાત સાથે તમારા પાલતુ પ્રાણીનો તબીબી ઇતિહાસ જણાવો"
+  },
+  "do not bathe your dog immediately before a grooming appointment.": {
+    "hi": "ग्रूमिंग अपॉइंटमेंट से तुरंत पहले अपने कुत्ते को न नहलाएं।",
+    "gu": "ગ્રૂમિંગ એપોઇન્ટમેન્ટ પહેલાં તરત તમારા શ્વાનને નવડાવશો નહીં."
+  },
+  "do not bathe your dog immediately before a grooming appointment": {
+    "hi": "ग्रूमिंग अपॉइंटमेंट से तुरंत पहले अपने कुत्ते को न नहलाएं",
+    "gu": "ગ્રૂમિંગ એપોઇન્ટમેન્ટ પહેલાં તરત તમારા શ્વાનને નવડાવશો નહીં"
+  },
+  "regular grooming every 4-6 weeks keeps your pet's coat healthy.": {
+    "hi": "हर 4-6 सप्ताह में नियमित ग्रूमिंग आपके पालतू जानवर के फर को स्वस्थ रखती है।",
+    "gu": "દર ૪-૬ અઠવાડિયે નિયમિત ગ્રૂમિંગ તમારા પાલતુ પ્રાણીની રૂંવાટીને સ્વસ્થ રાખે છે."
+  },
+  "regular grooming every 4-6 weeks keeps your pet's coat healthy": {
+    "hi": "हर 4-6 सप्ताह में नियमित ग्रूमिंग आपके पालतू जानवर के फर को स्वस्थ रखती है",
+    "gu": "દર ૪-૬ અઠવાડિયે નિયમિત ગ્રૂમિંગ તમારા પાલતુ પ્રાણીની રૂંવાટીને સ્વસ્થ રાખે છે"
+  },
+  "professional grooming kit": {
+    "hi": "पेशेवर ग्रूमिंग किट",
+    "gu": "વ્યાવસાયિક ગ્રૂમિંગ કિટ"
+  },
+  "pet-safe cleaning products": {
+    "hi": "पालतू जानवरों के अनुकूल सफाई उत्पाद",
+    "gu": "પાલતુ પ્રાણીઓ માટે સુરક્ષિત સફાઈ ઉત્પાદનો"
+  },
+  "first-aid kit": {
+    "hi": "प्राथमिक चिकित्सा किट (फर्स्ट एड किट)",
+    "gu": "પ્રાથમિક સારવાર કિટ (ફર્સ્ટ-એઇડ કિટ)"
+  },
+  "leash and harness": {
+    "hi": "पट्टा और हार्नेस",
+    "gu": "પટ્ટો અને હાર્નેસ"
+  },
+  "ensure pet has been fed at least 2 hours before grooming": {
+    "hi": "सुनिश्चित करें कि ग्रूमिंग से कम से कम 2 घंटे पहले पालतू जानवर को खाना खिलाया गया हो",
+    "gu": "ખાતરી કરો કે ગ્રૂમિંગના ઓછામાં ઓછા ૨ કલાક પહેલાં પાલતુને ખવડાવ્યું હોય"
+  },
+  "provide vaccination records if applicable": {
+    "hi": "यदि लागू हो तो टीकाकरण रिकॉर्ड प्रदान करें",
+    "gu": "જો લાગુ હોય તો રસીકરણ રેકોર્ડ આપો"
+  },
+  "keep a calm environment during the visit": {
+    "hi": "विज़िट के दौरान शांत वातावरण बनाए रखें",
+    "gu": "મુલાકાત દરમિયાન શાંત વાતાવરણ રાખો"
+  },
+  "monitor pet behaviour for 24 hours post-service": {
+    "hi": "सेवा के बाद 24 घंटे तक पालतू जानवर के व्यवहार की निगरानी करें",
+    "gu": "સેવા પછી ૨૪ કલાક સુધી પાલતુ પ્રાણીના વર્તન પર નજર રાખો"
+  },
+  "follow any dietary or medication advice given": {
+    "hi": "दी गई किसी भी आहार या दवा संबंधी सलाह का पालन करें",
+    "gu": "આપેલ કોઈપણ આહાર અથવા દવા સંબંધી સલાહનું પાલન કરો"
+  },
+  "a clean, healthy, and happy pet with improved coat and behaviour.": {
+    "hi": "बेहतर फर और अच्छे व्यवहार के साथ एक स्वच्छ, स्वस्थ और खुशहाल पालतू जानवर।",
+    "gu": "સુધારેલ રૂંવાટી અને વર્તન સાથે સ્વચ્છ, તંદુરસ્ત અને ખુશ પાલતુ પ્રાણી."
+  },
+  "a clean, healthy, and happy pet with improved coat and behaviour": {
+    "hi": "बेहतर फर और अच्छे व्यवहार के साथ एक स्वच्छ, स्वस्थ और खुशहाल पालतू जानवर",
+    "gu": "સુધારેલ રૂંવાટી અને વર્તન સાથે સ્વચ્છ, તંદુરસ્ત અને ખુશ પાલતુ પ્રાણી"
+  },
+  "describe error messages or symptoms clearly to speed up diagnosis.": {
+    "hi": "शीघ्र निदान के लिए त्रुटि संदेशों या लक्षणों का स्पष्ट वर्णन करें।",
+    "gu": "ઝડપી નિદાન માટે એરર મેસેજ અથવા લક્ષણોનું સ્પષ્ટ વર્ણન કરો."
+  },
+  "describe error messages or symptoms clearly to speed up diagnosis": {
+    "hi": "शीघ्र निदान के लिए त्रुटि संदेशों या लक्षणों का स्पष्ट वर्णन करें",
+    "gu": "ઝડપી નિદાન માટે એરર મેસેજ અથવા લક્ષણોનું સ્પષ્ટ વર્ણન કરો"
+  },
+  "always back up your data weekly to avoid permanent loss.": {
+    "hi": "स्थायी नुकसान से बचने के लिए हमेशा साप्ताहिक रूप से अपना डेटा बैकअप लें।",
+    "gu": "કાયમી નુકસાનથી બચવા માટે હંમેશાં સાપ્તાહિક ધોરણે ડેટા બેકઅપ લો."
+  },
+  "always back up your data weekly to avoid permanent loss": {
+    "hi": "स्थायी नुकसान से बचने के लिए हमेशा साप्ताहिक रूप से अपना डेटा बैकअप लें",
+    "gu": "કાયમી નુકસાનથી બચવા માટે હંમેશાં સાપ્તાહિક ધોરણે ડેટા બેકઅપ લો"
+  },
+  "diagnostic software": {
+    "hi": "डायग्नोस्टिक सॉफ्टवेयर",
+    "gu": "ડાયગ્નોસ્ટિક સોફ્ટવેર"
+  },
+  "screwdriver kit": {
+    "hi": "पेचकश किट (स्क्रूड्राइवर किट)",
+    "gu": "સ્ક્રૂડ્રાઇવર કિટ"
+  },
+  "anti-static tools": {
+    "hi": "एंटी-स्टैटिक उपकरण",
+    "gu": "એન્ટી-સ્ટેટિક સાધનો"
+  },
+  "network analyser": {
+    "hi": "नेटवर्क विश्लेषक (एनालाइज़र)",
+    "gu": "નેટવર્ક એનાલાઇઝર"
+  },
+  "back up important data before the visit": {
+    "hi": "विज़िट से पहले महत्वपूर्ण डेटा का बैकअप लें",
+    "gu": "મુલાકાત પહેલાં મહત્વપૂર્ણ ડેટાનો બેકઅપ લો"
+  },
+  "ensure stable power supply": {
+    "hi": "स्थिर बिजली आपूर्ति सुनिश्चित करें",
+    "gu": "સ્થિર વીજ પુરવઠો સુનિશ્ચિત કરો"
+  },
+  "provide access to router/modem if networking issue": {
+    "hi": "नेटवर्किंग समस्या होने पर राउटर/मॉडेम तक पहुंच प्रदान करें",
+    "gu": "જો નેટવર્કિંગ સમસ્યા હોય તો રાઉટર/મોડેમ સુધી પ્રવેશ આપો"
+  },
+  "keep os and software updated regularly": {
+    "hi": "ऑपरेटिंग सिस्टम और सॉफ्टवेयर को नियमित रूप से अपडेट रखें",
+    "gu": "ઓપરેટિંગ સિસ્ટમ અને સોફ્ટવેરને નિયમિતપણે અપડેટ રાખો"
+  },
+  "use a ups to prevent power surge damage": {
+    "hi": "पावर सर्ज से होने वाले नुकसान को रोकने के लिए यूपीएस का उपयोग करें",
+    "gu": "પાવર સર્જના નુકસાનથી બચવા માટે યુપીએસનો ઉપયોગ કરો"
+  },
+  "a fully functional device with improved performance and security.": {
+    "hi": "बेहतर प्रदर्शन और सुरक्षा के साथ पूरी तरह कार्यशील उपकरण।",
+    "gu": "બહેતર કામગીરી અને સુરક્ષા સાથે સંપૂર્ણ કાર્યરત ડિવાઇસ."
+  },
+  "a fully functional device with improved performance and security": {
+    "hi": "बेहतर प्रदर्शन और सुरक्षा के साथ पूरी तरह कार्यशील उपकरण",
+    "gu": "બહેતર કામગીરી અને સુરક્ષા સાથે સંપૂર્ણ કાર્યરત ડિવાઇસ"
+  },
+  "data loss due to hardware failure is not covered unless data recovery service is booked.": {
+    "hi": "हार्डवेयर विफलता के कारण डेटा हानि तब तक कवर नहीं होती जब तक डेटा रिकवरी सेवा बुक न की गई हो।",
+    "gu": "હાર્ડવેર નિષ્ફળતાને કારણે ડેટા નુકસાન આવરી લેવાતું નથી જ્યાં સુધી ડેટા રિકવરી સેવા બુક ન હોય."
+  },
+  "data loss due to hardware failure is not covered unless data recovery service is booked": {
+    "hi": "हार्डवेयर विफलता के कारण डेटा हानि तब तक कवर नहीं होती जब तक डेटा रिकवरी सेवा बुक न की गई हो",
+    "gu": "હાર્ડવેર નિષ્ફળતાને કારણે ડેટા નુકસાન આવરી લેવાતું નથી જ્યાં સુધી ડેટા રિકવરી સેવા બુક ન હોય"
+  },
+  "share complete and accurate information for faster processing.": {
+    "hi": "तेज़ प्रसंस्करण के लिए पूर्ण और सटीक जानकारी साझा करें।",
+    "gu": "ઝડપી પ્રક્રિયા માટે સંપૂર્ણ અને સચોટ માહિતી આપો."
+  },
+  "share complete and accurate information for faster processing": {
+    "hi": "तेज़ प्रसंस्करण के लिए पूर्ण और सटीक जानकारी साझा करें",
+    "gu": "ઝડપી પ્રક્રિયા માટે સંપૂર્ણ અને સચોટ માહિતી આપો"
+  },
+  "keep your tax filings up to date to avoid penalties.": {
+    "hi": "जुर्माने से बचने के लिए अपने टैक्स रिटर्न समय पर फाइल करें।",
+    "gu": "દંડથી બચવા માટે તમારા કરવેરા રિટર્ન સમયસર ફાઇલ રાખો."
+  },
+  "keep your tax filings up to date to avoid penalties": {
+    "hi": "जुर्माने से बचने के लिए अपने टैक्स रिटर्न समय पर फाइल करें",
+    "gu": "દંડથી બચવા માટે તમારા કરવેરા રિટર્ન સમયસર ફાઇલ રાખો"
+  },
+  "professional software (tally, ms office, etc.)": {
+    "hi": "पेशेवर सॉफ्टवेयर (टैली, एमएस ऑफिस, आदि)",
+    "gu": "વ્યાવસાયિક સોફ્ટવેર (ટેલી, એમએસ ઓફિસ વગેરે)"
+  },
+  "legal databases": {
+    "hi": "कानूनी डेटाबेस",
+    "gu": "કાનૂની ડેટાબેઝ"
+  },
+  "secure document portal": {
+    "hi": "सुरक्षित दस्तावेज़ पोर्टल",
+    "gu": "સુરક્ષિત દસ્તાવેજ પોર્ટલ"
+  },
+  "crm tools": {
+    "hi": "सीआरएम टूल्स",
+    "gu": "સીઆરએમ સાધનો"
+  },
+  "provide all relevant business documents upfront": {
+    "hi": "सभी प्रासंगिक व्यावसायिक दस्तावेज़ पहले ही प्रदान करें",
+    "gu": "તમામ સંબંધિત વ્યાવસાયિક દસ્તાવેજો અગાઉથી પૂરા પાડો"
+  },
+  "assign a point of contact for queries": {
+    "hi": "प्रश्नों के लिए एक संपर्क व्यक्ति नियुक्त करें",
+    "gu": "પ્રશ્નો અને પૂછપરછ માટે સંપર્ક વ્યક્તિ નિયુક્ત કરો"
+  },
+  "ensure digital access for required portals": {
+    "hi": "आवश्यक पोर्टलों के लिए डिजिटल एक्सेस सुनिश्चित करें",
+    "gu": "જરૂરી પોર્ટલ માટે ડિજિટલ ઍક્સેસ સુનિશ્ચિત કરો"
+  },
+  "file all received documents securely": {
+    "hi": "प्राप्त सभी दस्तावेज़ों को सुरक्षित रूप से सुरक्षित रखें",
+    "gu": "મળેલા તમામ દસ્તાવેજો સુરક્ષિત રીતે સંગ્રહિત કરો"
+  },
+  "schedule follow-up compliance reviews annually": {
+    "hi": "सालाना अनुपालन समीक्षा का कार्यक्रम निर्धारित करें",
+    "gu": "વાર્ષિક કાયદાકીય સમીક્ષાનું સમયપત્રક બનાવો"
+  },
+  "compliant, efficient, and growth-ready business operations.": {
+    "hi": "अनुपालनयुक्त, कुशल और विकास के लिए तैयार व्यावसायिक संचालन।",
+    "gu": "સુસંગત, કાર્યક્ષમ અને વ્યવસાય વૃદ્ધિ માટે સજ્જ કામગીરી."
+  },
+  "compliant, efficient, and growth-ready business operations": {
+    "hi": "अनुपालनयुक्त, कुशल और विकास के लिए तैयार व्यावसायिक संचालन",
+    "gu": "સુસંગત, કાર્યક્ષમ અને વ્યવસાય વૃદ્ધિ માટે સજ્જ કામગીરી"
+  },
+  "all services are subject to applicable government regulations and timelines.": {
+    "hi": "सभी सेवाएं लागू सरकारी नियमों और समयसीमा के अधीन हैं।",
+    "gu": "તમામ સેવાઓ લાગુ સરકારી નિયમો અને સમયમર્યાદાને આધીન છે."
+  },
+  "all services are subject to applicable government regulations and timelines": {
+    "hi": "सभी सेवाएं लागू सरकारी नियमों और समयसीमा के अधीन हैं",
+    "gu": "તમામ સેવાઓ લાગુ સરકારી નિયમો અને સમયમર્યાદાને આધીન છે"
+  },
+  "declare high-value items before the move for proper insurance coverage.": {
+    "hi": "उचित बीमा कवरेज के लिए शिफ्टिंग से पहले उच्च मूल्य वाली वस्तुओं की घोषणा करें।",
+    "gu": "યોગ્ય વીમા કવરેજ માટે શિફ્ટિંગ પહેલાં કિંમતી સામાનની વિગતો આપો."
+  },
+  "declare high-value items before the move for proper insurance coverage": {
+    "hi": "उचित बीमा कवरेज के लिए शिफ्टिंग से पहले उच्च मूल्य वाली वस्तुओं की घोषणा करें",
+    "gu": "યોગ્ય વીમા કવરેજ માટે શિફ્ટિંગ પહેલાં કિંમતી સામાનની વિગતો આપો"
+  },
+  "do not overload boxes — it increases the risk of damage.": {
+    "hi": "बॉक्स को अधिक न भरें - इससे नुकसान का खतरा बढ़ जाता है।",
+    "gu": "બોક્સમાં વધુ પડતો સામાન ન ભરો - તેનાથી નુકસાનનું જોખમ વધે છે."
+  },
+  "do not overload boxes  it increases the risk of damage.": {
+    "hi": "बॉक्स को अधिक न भरें - इससे नुकसान का खतरा बढ़ जाता है।",
+    "gu": "બોક્સમાં વધુ પડતો સામાન ન ભરો - તેનાથી નુકસાનનું જોખમ વધે છે."
+  },
+  "do not overload boxes it increases the risk of damage": {
+    "hi": "बॉक्स को अधिक न भरें - इससे नुकसान का खतरा बढ़ जाता है",
+    "gu": "બોક્સમાં વધુ પડતો સામાન ન ભરો - તેનાથી નુકસાનનું જોખમ વધે છે"
+  },
+  "label all boxes by room name to speed up unpacking.": {
+    "hi": "अनपैकिंग तेज़ करने के लिए सभी बॉक्स पर कमरे के नाम का लेबल लगाएं।",
+    "gu": "અનપેકિંગ ઝડપી બનાવવા માટે તમામ બોક્સ પર રૂમના નામનું લેબલ લગાવો."
+  },
+  "label all boxes by room name to speed up unpacking": {
+    "hi": "अनपैकिंग तेज़ करने के लिए सभी बॉक्स पर कमरे के नाम का लेबल लगाएं",
+    "gu": "અનપેકિંગ ઝડપી બનાવવા માટે તમામ બોક્સ પર રૂમના નામનું લેબલ લગાવો"
+  },
+  "moving blankets and straps": {
+    "hi": "मूविंग कंबल और सुरक्षा पट्टियाँ",
+    "gu": "મુવિંગ બ્લેન્કેટ્સ અને પટ્ટા"
+  },
+  "trolleys and dollies": {
+    "hi": "ट्रॉली और डॉली",
+    "gu": "ટ્રોલી અને ડોલી"
+  },
+  "packing tape and boxes": {
+    "hi": "पैकिंग टेप और डिब्बे",
+    "gu": "પેકિંગ ટેપ અને બોક્સ"
+  },
+  "gps-enabled truck": {
+    "hi": "जीपीएस-सक्षम ट्रक",
+    "gu": "જીપીએસ-સક્ષમ ટ્રક"
+  },
+  "sort and label boxes before the team arrives": {
+    "hi": "टीम के आने से पहले डिब्बों को छांटें और लेबल लगाएं",
+    "gu": "ટીમ આવે તે પહેલાં બોક્સને ગોઠવો અને લેબલ લગાવો"
+  },
+  "disconnect appliances 24 hours before moving day": {
+    "hi": "शिफ्टिंग के दिन से 24 घंटे पहले उपकरणों को अनप्लग/डिस्कनेक्ट करें",
+    "gu": "શિફ્ટિંગના ૨૪ કલાક પહેલાં ઉપકરણોને ડિસ્કનેક્ટ કરો"
+  },
+  "ensure parking access at both locations": {
+    "hi": "दोनों स्थानों पर पार्किंग की सुविधा सुनिश्चित करें",
+    "gu": "બંને સ્થળોએ પાર્કિંગની સુવિધા સુનિશ્ચિત કરો"
+  },
+  "check all items against inventory within 24 hours": {
+    "hi": "24 घंटे के भीतर इन्वेंट्री के साथ सभी वस्तुओं की जांच करें",
+    "gu": "૨૪ કલાકમાં ઇન્વેન્ટરી સાથે તમામ સામાન ચકાસી લો"
+  },
+  "report any damage within 48 hours for warranty claim": {
+    "hi": "वारंटी दावे के लिए 48 घंटे के भीतर किसी भी क्षति की सूचना दें",
+    "gu": "વૉરંટી ક્લેમ માટે ૪૮ કલાકમાં કોઈપણ નુકસાનની જાણ કરો"
+  },
+  "a damage-free, on-time move with all belongings safely delivered.": {
+    "hi": "सभी सामानों की सुरक्षित डिलीवरी के साथ नुकसान-मुक्त और समय पर शिफ्टिंग।",
+    "gu": "તમામ સામાનની સુરક્ષિત ડિલિવરી સાથે નુકસાન-મુક્ત અને સમયસર શિફ્ટિંગ."
+  },
+  "a damage-free, on-time move with all belongings safely delivered": {
+    "hi": "सभी सामानों की सुरक्षित डिलीवरी के साथ नुकसान-मुक्त और समय पर शिफ्टिंग",
+    "gu": "તમામ સામાનની સુરક્ષિત ડિલિવરી સાથે નુકસાન-મુક્ત અને સમયસર શિફ્ટિંગ"
+  },
+  "insurance coverage applies to standard household goods only; valuables should be declared upfront.": {
+    "hi": "बीमा केवल मानक घरेलू सामानों पर लागू होता है; कीमती सामान की घोषणा पहले ही की जानी चाहिए।",
+    "gu": "વીમો માત્ર સામાન્ય ઘરગથ્થુ સામાન પર લાગુ થાય છે; કિંમતી સામાન અગાઉ જાહેર કરવો જોઈએ."
+  },
+  "insurance coverage applies to standard household goods only; valuables should be declared upfront": {
+    "hi": "बीमा केवल मानक घरेलू सामानों पर लागू होता है; कीमती सामान की घोषणा पहले ही की जानी चाहिए",
+    "gu": "વીમો માત્ર સામાન્ય ઘરગથ્થુ સામાન પર લાગુ થાય છે; કિંમતી સામાન અગાઉ જાહેર કરવો જોઈએ"
+  },
+  "stay consistent even 3 sessions per week makes a significant difference.": {
+    "hi": "निरंतरता बनाए रखें - प्रति सप्ताह 3 सत्र भी महत्वपूर्ण अंतर लाते हैं।",
+    "gu": "નિયમિત રહો - દર અઠવાડિયે ૩ સત્રો પણ મોટો તફાવત લાવી શકે છે."
+  },
+  "stay consistent - even 3 sessions per week makes a significant difference.": {
+    "hi": "निरंतरता बनाए रखें - प्रति सप्ताह 3 सत्र भी महत्वपूर्ण अंतर लाते हैं।",
+    "gu": "નિયમિત રહો - દર અઠવાડિયે ૩ સત્રો પણ મોટો તફાવત લાવી શકે છે."
+  },
+  "stay consistent — even 3 sessions per week makes a significant difference.": {
+    "hi": "निरंतरता बनाए रखें - प्रति सप्ताह 3 सत्र भी महत्वपूर्ण अंतर लाते हैं।",
+    "gu": "નિયમિત રહો - દર અઠવાડિયે ૩ સત્રો પણ મોટો તફાવત લાવી શકે છે."
+  },
+  "aggressive pets may require additional handling precautions - please disclose temperament.": {
+    "hi": "आक्रामक पालतू जानवरों को अतिरिक्त सावधानी की आवश्यकता हो सकती है - कृपया स्वभाव बताएं।",
+    "gu": "આક્રમક પાલતુ પ્રાણીઓ માટે વધારાની સાવચેતીની જરૂર પડી શકે છે - કૃપા કરીને સ્વભાવ જણાવો."
+  },
+  "aggressive pets may require additional handling precautions — please disclose temperament.": {
+    "hi": "आक्रामक पालतू जानवरों को अतिरिक्त सावधानी की आवश्यकता हो सकती है - कृपया स्वभाव बताएं।",
+    "gu": "આક્રમક પાલતુ પ્રાણીઓ માટે વધારાની સાવચેતીની જરૂર પડી શકે છે - કૃપા કરીને સ્વભાવ જણાવો."
+  },
+  "do not attempt diy fixes before the technician arrives - it may void the warranty.": {
+    "hi": "तकनीशियन के आने से पहले स्वयं मरम्मत का प्रयास न करें - इससे वारंटी रद्द हो सकती है।",
+    "gu": "ટેકનિશિયન આવે તે પહેલાં જાતે રિપેર કરવાનો પ્રયાસ ન કરો - તેનાથી વૉરંટી રદ થઈ શકે છે."
+  },
+  "do not attempt diy fixes before the technician arrives — it may void the warranty.": {
+    "hi": "तकनीशियन के आने से पहले स्वयं मरम्मत का प्रयास न करें - इससे वारंटी रद्द हो सकती है।",
+    "gu": "ટેકનિશિયન આવે તે પહેલાં જાતે રિપેર કરવાનો પ્રયાસ ન કરો - તેનાથી વૉરંટી રદ થઈ શકે છે."
+  },
+  "do not delay statutory filings - late fees can be substantial.": {
+    "hi": "वैधानिक फाइलिंग में देरी न करें - विलंब शुल्क अधिक हो सकता है।",
+    "gu": "કાયદાકીય ફાઇલિંગમાં વિલંબ ન કરો - લેઇટ ફી વધુ હોઈ શકે છે."
+  },
+  "do not delay statutory filings — late fees can be substantial.": {
+    "hi": "वैधानिक फाइलिंग में देरी न करें - विलंब शुल्क अधिक हो सकता है।",
+    "gu": "કાયદાકીય ફાઇલિંગમાં વિલંબ ન કરો - લેઇટ ફી વધુ હોઈ શકે છે."
+  },
 };
 
 export const WORD_TRANSLATIONS: Record<string, LangEntry> = {
