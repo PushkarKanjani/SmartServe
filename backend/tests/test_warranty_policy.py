@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 from decimal import Decimal
 from datetime import datetime, timezone, timedelta
 import pytest
@@ -180,7 +180,8 @@ def test_issue_warranty_calculated_from_completion_time(db_session: Session, war
     duration = (warranty.expires_at - warranty.issued_at).days
     assert duration == 7
     # Issued at matches completion timestamp within 1 second tolerance
-    assert abs(warranty.issued_at.timestamp() - completion_ts.timestamp()) < 5
+    issued_ts = warranty.issued_at.replace(tzinfo=timezone.utc) if warranty.issued_at.tzinfo is None else warranty.issued_at
+    assert abs(issued_ts.timestamp() - completion_ts.timestamp()) < 5
 
 
 def test_beauty_booking_does_not_receive_warranty(db_session: Session, warranty_actors):
