@@ -767,3 +767,103 @@ export function getLocalizedDescription(description?: string | null, serviceName
     ? 'प्रशिक्षित और बैकग्राउंड-सत्यापित पेशेवरों द्वारा 7-दिवसीय स्मार्टसर्व वारंटी के साथ पूरी की जाने वाली सुरक्षित होम सेवा।'
     : 'પ્રશિક્ષિત અને બેકગ્રાઉન્ડ-ચકાસાયેલ વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ વૉરંટી સાથે પૂરી પાડવામાં આવતી સુરક્ષિત સેવા.';
 }
+
+
+/**
+ * Localize Catalog Exclusions
+ */
+export function getLocalizedExcluded(text?: string | null): string {
+  if (!text) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return text;
+
+  const loc = getLocalizedFeature(text);
+  if (loc && loc !== text && !hasLatin(loc)) return loc;
+
+  const lower = text.toLowerCase().trim();
+  if (lower.includes('structural') || lower.includes('heavy modification')) {
+    return lang === 'hi' ? 'संरचनात्मक भारी संशोधन या तोड़फोड़' : 'માળખાકીય મોટા ફેરફારો અથવા તોડફોડ';
+  }
+  if (lower.includes('spare hardware') || lower.includes('unless explicitly')) {
+    return lang === 'hi' ? 'अतिरिक्त हार्डवेयर (जब तक स्पष्ट रूप से अनुरोध न किया गया हो)' : 'સ્પેર હાર્ડવેર (જ્યાં સુધી સ્પષ્ટ વિનંતી ન કરવામાં આવી હોય)';
+  }
+  if (lower.includes('refrigerant') || lower.includes('gas leak') || lower.includes('gas charging')) {
+    return lang === 'hi' ? 'रेफ्रिजरेंट गैस रिसाव मरम्मत और रीफिल (अलग से देय)' : 'રેફ્રિજન્ટ ગેસ લીકેજ રિપેરિંગ અને ટોપ-અપ (અલગથી ચૂકવવાપાત્ર)';
+  }
+  if (lower.includes('wiring') || lower.includes('socket installation')) {
+    return lang === 'hi' ? 'विद्युत वायरिंग विस्तार या नए स्विच बोर्ड की स्थापना' : 'ઇલેક્ટ્રિકલ વાયરિંગ વિસ્તરણ અથવા નવા સ્વીચ બોર્ડ ઇન્સ્ટોલેશન';
+  }
+  if (lower.includes('civil') || lower.includes('plaster') || lower.includes('masonry')) {
+    return lang === 'hi' ? 'सिविल निर्माण, दीवार प्लास्टर या टाइल तोड़फोड़ कार्य' : 'સિવિલ બાંધકામ, દિવાલ પ્લાસ્ટર અથવા ટાઇલ્સ તોડફોડ કામગીરી';
+  }
+  if (lower.includes('repainting') || lower.includes('re-lamination') || lower.includes('polishing')) {
+    return lang === 'hi' ? 'कैबिनेट की पूरी पेंटिंग या नया लेमिनेशन लगाना' : 'કેબિનેટનું સંપૂર્ણ રી-પેઇન્ટિંગ અથવા નવું લેમિનેશન કરવું';
+  }
+  if (lower.includes('cost of') || lower.includes('parts')) {
+    return lang === 'hi' ? 'नए स्पेयर पार्ट्स या एक्सेसरीज़ की अतिरिक्त लागत' : 'નવા સ્પેરપાર્ટ્સ અથવા એસેસરીઝનો વધારાનો ખર્ચ';
+  }
+
+  return loc;
+}
+
+/**
+ * Localize Catalog Recommended Dos
+ */
+export function getLocalizedDo(text?: string | null): string {
+  if (!text) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return text;
+
+  const loc = getLocalizedFeature(text);
+  if (loc && loc !== text && !hasLatin(loc)) return loc;
+
+  const lower = text.toLowerCase().trim();
+  if (lower.includes('clear instructions') || lower.includes('before the service begins')) {
+    return lang === 'hi' ? 'सेवा शुरू होने से पहले तकनीशियन को स्पष्ट निर्देश अवश्य दें' : 'સેવા શરૂ કરતા પહેલા ટેકનિશિયનને સ્પષ્ટ સૂચનાઓ ચોક્કસ આપો';
+  }
+  if (lower.includes('final handover') || lower.includes('inspect the work')) {
+    return lang === 'hi' ? 'अंतिम हैंडओवर के दौरान पूरे कार्य का बारीकी से निरीक्षण करें' : 'અંતિમ હેન્ડઓવર દરમિયાન સમગ્ર કામનું બારીકાઈથી નિરીક્ષણ કરો';
+  }
+  if (lower.includes('ventilated') || lower.includes('ventilation')) {
+    return lang === 'hi' ? 'कार्य क्षेत्र में उचित वेंटिलेशन और खिड़कियां खुली रखें' : 'કાર્ય વિસ્તારમાં યોગ્ય વેન્ટિલેશન અને બારીઓ ખુલ્લી રાખો';
+  }
+  if (lower.includes('turn off') || lower.includes('switch off')) {
+    return lang === 'hi' ? 'सर्विसिंग से पहले मुख्य पावर सप्लाई या वाल्व बंद कर दें' : 'સર્વિસિંગ પહેલાં મુખ્ય પાવર સપ્લાય અથવા વાલ્વ બંધ કરો';
+  }
+  if (lower.includes('clean') && lower.includes('filter')) {
+    return lang === 'hi' ? 'फिल्टर को नियमित रूप से साफ करें ताकि बेहतर कार्यक्षमता बनी रहे' : 'ફિલ્ટરને નિયમિતપણે સાફ કરો જેથી ઉત્તમ કાર્યક્ષમતા જળવાઈ રહે';
+  }
+
+  return loc;
+}
+
+/**
+ * Localize Catalog Recommended Don'ts
+ */
+export function getLocalizedDont(text?: string | null): string {
+  if (!text) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return text;
+
+  const loc = getLocalizedFeature(text);
+  if (loc && loc !== text && !hasLatin(loc)) return loc;
+
+  const lower = text.toLowerCase().trim();
+  if (lower.includes('interrupt') || lower.includes('core procedure')) {
+    return lang === 'hi' ? 'मुख्य सेवा प्रक्रिया के दौरान बीच में बाधा डालने का प्रयास न करें' : 'મુખ્ય પ્રક્રિયા દરમિયાન વચ્ચે ખલેલ પહોંચાડવાનો પ્રયાસ ન કરો';
+  }
+  if (lower.includes('harsh chemicals') || lower.includes('treated area')) {
+    return lang === 'hi' ? 'सेवा के तुरंत बाद उपचारित क्षेत्र पर कठोर रासायनिक क्लीनर का उपयोग न करें' : 'સેવા પછી તરત જ તે વિસ્તાર પર તીવ્ર રાસાયણિક ક્લીનર્સનો ઉપયોગ ન કરો';
+  }
+  if (lower.includes('drag') || lower.includes('floor')) {
+    return lang === 'hi' ? 'फर्श पर भारी फर्नीचर या मशीन को बिना उठाए न घसीटें' : 'ફ્લોર પર ભારે ફર્નિચર કે મશીનને ઊંચક્યા વગર ખેંચશો નહીં';
+  }
+  if (lower.includes('force open') || lower.includes('brute force')) {
+    return lang === 'hi' ? 'जाम हुए दरवाजों या उपकरणों को जबरदस्ती खोलने का प्रयास न करें' : 'જામ થયેલા દરવાજા કે સાધનોને બળપૂર્વક ખોલવાનો પ્રયાસ ન કરો';
+  }
+  if (lower.includes('diy') || lower.includes('before the technician')) {
+    return lang === 'hi' ? 'तकनीशियन के आने से पहले स्वयं मरम्मत का प्रयास न करें (वारंटी शून्य हो सकती है)' : 'ટેકનિશિયન આવે તે પહેલાં જાતે રિપેરિંગનો પ્રયાસ ન કરો (વોરંટી રદ થઈ શકે છે)';
+  }
+
+  return loc;
+}

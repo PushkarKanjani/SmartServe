@@ -1,0 +1,281 @@
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usepackage{graphicx}
+
+% Brand Color Definitions
+\definecolor{SmartGreen}{RGB}{47, 82, 51}
+\definecolor{SmartGold}{RGB}{201, 161, 90}
+\definecolor{SmartDark}{RGB}{31, 42, 30}
+\definecolor{SmartIvory}{RGB}{250, 247, 240}
+\definecolor{SmartBlue}{RGB}{37, 99, 235}
+\definecolor{SmartAlert}{RGB}{220, 38, 38}
+
+\setbeamercolor{background canvas}{bg=SmartIvory}
+\setbeamercolor{palette primary}{bg=SmartGreen,fg=white}
+\setbeamercolor{structure}{fg=SmartGreen}
+\setbeamercolor{title}{fg=SmartGreen}
+\setbeamercolor{frametitle}{bg=SmartGreen,fg=white}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+
+\setbeamertemplate{footline}{
+  \leavevmode%
+  \hbox{%
+  \begin{beamercolorbox}[wd=\paperwidth,ht=2.5ex,dp=1ex,leftskip=1cm,rightskip=1cm]{palette primary}%
+    \tiny \textbf{PDEU ICT MAJOR PROJECT 2026} \hfill \textbf{SmartServe: Hyperlocal Services Platform} \hfill Slide \insertframenumber{} of \inserttotalframenumber
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
+
+\title{\textbf{SmartServe}}
+\subtitle{Production-Grade Hyperlocal Services Marketplace \& Multi-Tenant White-Label Engine}
+\author{\textbf{Pushkar Kanjani (21BCP037) \& Team}}
+\institute{Department of Information \& Communication Technology \\ Pandit Deendayal Energy University (PDEU), Gandhinagar}
+\date{Academic Evaluation 2026}
+
+\begin{document}
+
+% SLIDE 1: TITLE SLIDE
+\begin{frame}[plain]
+  \begin{tcolorbox}[colback=white,colframe=SmartGold,arc=4mm,width=\textwidth,height=0.92\textheight,halign=center]
+    \vspace{0.3cm}
+    {\scriptsize \textbf{\color{SmartGold}FINAL B.TECH ICT PROJECT PRESENTATION $\bullet$ ACADEMIC YEAR 2026}}\\[0.2cm]
+    {\Huge \textbf{\color{SmartGreen}SmartServe}}\\[0.15cm]
+    {\large \textbf{\color{SmartDark}Production-Grade Hyperlocal Services Marketplace \& Multi-Tenant White-Label Engine}}\\[0.3cm]
+    {\small \color{gray} An event-driven distributed architecture with real-time slot protection, fraud-proof two-stage OTP verification, trilingual localization (EN, GU, HI), and in-memory TTL caching (~98\% latency reduction).}\\[0.4cm]
+    \begin{center}
+      \colorbox{SmartGreen!15}{\scriptsize \textbf{\color{SmartGreen} 457 Catalog Services }} \hspace{0.2cm}
+      \colorbox{SmartBlue!15}{\scriptsize \textbf{\color{SmartBlue} Kafka Event Fabric }} \hspace{0.2cm}
+      \colorbox{SmartGold!20}{\scriptsize \textbf{\color{SmartDark} Two-Stage OTP Engine }} \hspace{0.2cm}
+      \colorbox{SmartGreen!15}{\scriptsize \textbf{\color{SmartGreen} 100\% Trilingual (EN, GU, HI) }}
+    \end{center}
+    \vspace{0.4cm}
+    \hrule\vspace{0.3cm}
+    {\footnotesize \textbf{Presenters:} Pushkar Kanjani (21BCP037) \& Team \hfill \textbf{Mentor:} Faculty Project Guide} \\
+    {\scriptsize \color{gray} Department of ICT, School of Technology, Pandit Deendayal Energy University (PDEU)}
+  \end{tcolorbox}
+\end{frame}
+
+% SLIDE 2: INDUSTRY REALITY & COMPETITOR AUDIT
+\begin{frame}{Market Reality: Operational Bottlenecks in Monopolistic Platforms}
+\begin{columns}[T]
+  \begin{column}{0.48\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartAlert,arc=3mm,title=\textbf{\scriptsize INCUMBENT MONOPOLY DEFICIENCIES}]
+      {\scriptsize \textbf{Urban Company \& Pronto Vulnerabilities:}}
+      \begin{itemize}\setlength\itemsep{0.2em}
+        \item \textbf{\tiny Algorithmic Bound (Greedy KNN):} Greedy matching bound $\le 50\%$ (Karp-Vazirani-Vazirani Theorem); 30-35\% unpaid deadhead partner travel.
+        \item \textbf{\tiny Surge Price Gouging:} Up to 2.5x seasonal surge; 25-30\% commission sparking partner strikes.
+        \item \textbf{\tiny Hardware Extortion:} ₹1,400 charged for ₹200 capacitor.
+        \item \textbf{\tiny Single OTP Fraud:} Remote ghost completions; English-only barrier alienating 85\%+ regional users.
+      \end{itemize}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.48\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGreen,arc=3mm,title=\textbf{\scriptsize SMARTSERVE COUNTERMEASURES}]
+      {\scriptsize \textbf{Engineered Fairness \& Platform Trust:}}
+      \begin{itemize}\setlength\itemsep{0.2em}
+        \item \textbf{\tiny Batch Dispatch Optimization:} Formulated as bipartite matching minimizing commute fatigue.
+        \item \textbf{\tiny Hard-Capped Transparent Surges:} Max +20\% surge limit and 10\% max discount displayed upfront.
+        \item \textbf{\tiny Two-Stage Cryptographic OTP:} Start OTP (physical arrival) + Complete OTP (customer quality handover).
+        \item \textbf{\tiny 100\% Native Localization:} Pure Gujarati and Hindi across 457 services with zero English leakage.
+      \end{itemize}
+    \end{tcolorbox}
+  \end{column}
+\end{columns}
+\end{frame}
+
+% SLIDE 3: SYSTEM ARCHITECTURE & CACHING
+\begin{frame}{Distributed System Architecture \& In-Memory Cache Optimization}
+\begin{columns}[T]
+  \begin{column}{0.55\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=gray!40,arc=3mm]
+      \centering
+      \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{assets/architecture_diagram.png}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.42\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGreen,arc=3mm,title=\textbf{\scriptsize VERIFIED TELEMETRY \& BENCHMARKS}]
+      {\tiny \textbf{Test Suite: test\_performance\_benchmarks.py}}\\[0.15cm]
+      \textbf{\scriptsize Cold DB Latency:} 85.4 ms \\
+      \textbf{\scriptsize Warm Cache Latency:} \textbf{\color{SmartGreen}1.82 ms (-97.9\%)} \\
+      \textbf{\scriptsize Cache Hit Ratio:} > 85.0\% concurrent \\[0.25cm]
+      \hrule\vspace{0.2cm}
+      {\scriptsize \textbf{Architecture Highlights:}}
+      \begin{itemize}\setlength\itemsep{0.2em}
+        \item \textbf{\tiny 4 Tiers:} 3 React Portals + FastAPI + Kafka + In-Memory Cache.
+        \item \textbf{\tiny Kafka Resilience:} Automatic degraded mode; zero server crash during broker disconnects.
+        \item \textbf{\tiny Invalidation:} Thread-safe prefix purge on service mutation.
+      \end{itemize}
+    \end{tcolorbox}
+  \end{column}
+\end{columns}
+\end{frame}
+
+% SLIDE 4: REAL-TIME OPERATIONAL DISPATCH & SLOTS
+\begin{frame}{Real-Time Operational Workflows: Dynamic Dispatch \& Slot Protection}
+\begin{columns}[T]
+  \begin{column}{0.52\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGreen,arc=3mm,title=\textbf{\scriptsize REAL-TIME LEAD BUFFER \& DISPATCH ENFORCEMENT}]
+      \begin{itemize}\setlength\itemsep{0.3em}
+        \item \textbf{\scriptsize Dynamic 30-Minute Lead Buffer:} Booking at 11:15 PM dynamically strips elapsed daytime slots (10:30 AM, 02:00 PM, 10:30 PM).
+        \item \textbf{\scriptsize Intelligent Automated Day-Roll:} Auto-advances date picker to Tomorrow with valid morning slots pre-selected.
+        \item \textbf{\scriptsize Double-Lock Security:} Client-side real-time filter + Backend assertion in eligibility\_service.py rejecting past timestamps (HTTP 400).
+        \item \textbf{\scriptsize 100\% Catalog Coverage (457/457):} All services mapped to verified specialists with active 7-day rolling calendar (438 slots).
+      \end{itemize}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.45\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=gray!40,arc=3mm,title=\textbf{\scriptsize VERIFIED LIVE BOOKING MODAL}]
+      \centering
+      \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{assets/booking_modal_crop.png}
+    \end{tcolorbox}
+  \end{column}
+\end{columns}
+\end{frame}
+
+% SLIDE 5: TWO-STAGE OTP & PLATFORM INTEGRITY
+\begin{frame}{Trust, Safety \& Financial Integrity: Two-Stage OTP \& Warranty Engine}
+\begin{columns}[T]
+  \begin{column}{0.45\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGreen,arc=3mm,title=\textbf{\scriptsize PLATFORM GOVERNANCE}]
+      \begin{itemize}\setlength\itemsep{0.3em}
+        \item \textbf{\scriptsize Two-Stage OTP Handshake:} \\
+          - \textbf{Start OTP}: Physical presence confirmation; unlocks timer.\\
+          - \textbf{Complete OTP}: Quality inspection handover authorization.
+        \item \textbf{\scriptsize Reconciled COD Lifecycle:} \\
+          Pending $\rightarrow$ Collected $\rightarrow$ Platform Reconciled.
+        \item \textbf{\scriptsize 7--15 Day Warranty:} Automated warranty issuance; online claim resolution.
+        \item \textbf{\scriptsize Transparent Pricing Ceilings:} Max +20\% surge cap; 10\% promotional discount cap.
+      \end{itemize}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.52\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=gray!40,arc=3mm,title=\textbf{\scriptsize SEQUENCE SWIMLANE VERIFICATION}]
+      \centering
+      \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{assets/sequence_swimlane.png}
+    \end{tcolorbox}
+  \end{column}
+\end{columns}
+\end{frame}
+
+% SLIDE 6: TRILINGUAL LOCALIZATION
+\begin{frame}{Zero English Leaks: Native Trilingual Hyperlocal Localization}
+\begin{columns}[T]
+  \begin{column}{0.48\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGreen,arc=3mm,title=\textbf{\scriptsize VERNACULAR INCLUSION ENGINE}]
+      {\scriptsize \textbf{Zero English Leaks across 16 Structural Sections:}}
+      \begin{itemize}\setlength\itemsep{0.15em}
+        \item \textbf{\tiny Process Steps:} પ્રારંભિક મૂલ્યાંકન, તૈયારી અને સેટઅપ, મુખ્ય અમલીકરણ
+        \item \textbf{\tiny Exclusions:} માળખાકીય મોટા ફેરફારો, સ્પેર હાર્ડવેર
+        \item \textbf{\tiny Warranties:} કારીગરી પર 7 દિવસની સર્વિસ વૉરંટી
+        \item \textbf{\tiny Badges:} મહત્તમ +20\%, 10\% સુધી
+        \item \textbf{\tiny Aftercare \& Dos/Don'ts:} 100\% pure Gujarati/Hindi.
+      \end{itemize}
+      \vspace{0.1cm}
+      {\tiny \textbf{Engine:} Dynamic pattern transliteration + dictionary normalizer with clean UTF-8 unicode rendering.}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.48\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=gray!40,arc=3mm,title=\textbf{\scriptsize LIVE GUJARATI SERVICE VIEW}]
+      \centering
+      \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{assets/gujarati_service_crop.png}
+    \end{tcolorbox}
+  \end{column}
+\end{columns}
+\end{frame}
+
+% SLIDE 7: B2B FRANCHISE WHITE-LABEL
+\begin{frame}{The B2B Multi-Tenant White-Label Franchise Operating Engine}
+\begin{tcolorbox}[colback=white,colframe=SmartGold,arc=3mm]
+  {\scriptsize \textbf{\color{SmartGold}PLUG-AND-PLAY WHITE-LABEL PLATFORM AS A SERVICE}}\\[0.1cm]
+  {\small \textbf{\color{SmartGreen}Turnkey Multi-Tenant Hyperlocal Infrastructure:}}
+  {\scriptsize Regional franchise entrepreneurs deploy their own branded marketplace with custom branding, territory language, and local catalogs with zero code rewrites.}
+\end{tcolorbox}
+\vspace{0.2cm}
+\begin{columns}[T]
+  \begin{column}{0.31\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGreen,arc=3mm,title=\textbf{\tiny FRANCHISE A: GUJARAT CLUSTER}]
+      {\tiny \textbf{Gujarat HomeCare Solutions}}
+      \begin{itemize}\setlength\itemsep{0.15em}
+        \item \textbf{\tiny Brand:} Custom Logo \& Theme
+        \item \textbf{\tiny Lang:} Gujarati ('ગુ') Interface
+        \item \textbf{\tiny Catalog:} 55 Beauty + 32 Cleaning
+        \item \textbf{\tiny Pricing:} Ahmedabad/Surat Rates
+      \end{itemize}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.31\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartBlue,arc=3mm,title=\textbf{\tiny FRANCHISE B: DELHI NCR FACILITIES}]
+      {\tiny \textbf{NCR Metro Facilities}}
+      \begin{itemize}\setlength\itemsep{0.15em}
+        \item \textbf{\tiny Brand:} Corporate Blue Theme
+        \item \textbf{\tiny Lang:} Dual Hindi \& English
+        \item \textbf{\tiny Catalog:} 46 AC + 39 Electrical
+        \item \textbf{\tiny Pricing:} B2B Corporate Contracts
+      \end{itemize}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.31\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGold,arc=3mm,title=\textbf{\tiny FRANCHISE C: QUICK-CHORE HUB}]
+      {\tiny \textbf{ProntoFix Hyperlocal}}
+      \begin{itemize}\setlength\itemsep{0.15em}
+        \item \textbf{\tiny Brand:} Urban Gold Palette
+        \item \textbf{\tiny Lang:} Regional Dialect
+        \item \textbf{\tiny Catalog:} 30-min Emergency Repair
+        \item \textbf{\tiny Pricing:} Dynamic +20\% cap
+      \end{itemize}
+    \end{tcolorbox}
+  \end{column}
+\end{columns}
+\end{frame}
+
+% SLIDE 8: TECHNICAL VALIDATION & PRODUCTION STATUS
+\begin{frame}{Technical Validation, System Metrics \& Production Deliverables}
+\begin{columns}[T]
+  \begin{column}{0.23\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGreen,arc=2mm,halign=center]
+      {\tiny \textbf{TEST SUITE}}\\[0.1cm]
+      {\large \textbf{\color{SmartGreen}36 / 36}} \\
+      {\tiny 100\% pytest pass in 7.92s}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.23\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartBlue,arc=2mm,halign=center]
+      {\tiny \textbf{FRONTEND BUILDS}}\\[0.1cm]
+      {\large \textbf{\color{SmartBlue}0 ERRORS}} \\
+      {\tiny Clean Vite build (5.73s)}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.23\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartDark,arc=2mm,halign=center]
+      {\tiny \textbf{CATALOG SCALE}}\\[0.1cm]
+      {\large \textbf{\color{SmartDark}457 SERVICES}} \\
+      {\tiny Across 14 Categories}
+    \end{tcolorbox}
+  \end{column}
+  \begin{column}{0.23\textwidth}
+    \begin{tcolorbox}[colback=white,colframe=SmartGold,arc=2mm,halign=center]
+      {\tiny \textbf{ROLLING SLOTS}}\\[0.1cm]
+      {\large \textbf{\color{SmartGold}438 SLOTS}} \\
+      {\tiny 18 verified providers}
+    \end{tcolorbox}
+  \end{column}
+\end{columns}
+\vspace{0.3cm}
+\begin{tcolorbox}[colback=white,colframe=SmartGreen,arc=3mm,title=\textbf{\scriptsize LIVE PRODUCTION DELIVERABLES SUMMARY}]
+  \begin{itemize}\setlength\itemsep{0.2em}
+    \item \textbf{\scriptsize Live Backend API:} FastAPI on Port 8000 (\texttt{\{"status":"healthy","database":"connected"\}}).
+    \item \textbf{\scriptsize 3 Live React Portals:} Customer (:5174), Provider (:5175), Operations Admin (:5173).
+    \item \textbf{\scriptsize Complete Git State:} Commit 8a247fb pushed to \texttt{origin/feat/smartserve-production-enhancements}.
+    \item \textbf{\scriptsize Delivery Guarantee:} Deliver what was promised --- An enterprise-grade, localized hyperlocal marketplace.
+  \end{itemize}
+\end{tcolorbox}
+\end{frame}
+
+\end{document}

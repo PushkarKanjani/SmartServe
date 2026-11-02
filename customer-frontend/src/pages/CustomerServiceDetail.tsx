@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
-import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription, getLocalizedStepDescription, getLocalizedWarrantyText, getLocalizedFAQQuestion, getLocalizedFAQAnswer, getLocalizedSurgeText, getLocalizedDiscountText } from '../utils/localizedNames';
+import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription, getLocalizedStepDescription, getLocalizedWarrantyText, getLocalizedFAQQuestion, getLocalizedFAQAnswer, getLocalizedSurgeText, getLocalizedDiscountText, getLocalizedExcluded, getLocalizedDo, getLocalizedDont } from '../utils/localizedNames';
 import { 
   Clock, 
   Star, 
@@ -623,7 +623,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="w-5 h-5 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <XCircle className="w-3.5 h-3.5 text-rose-500" />
                     </div>
-                    <span className="text-xs sm:text-sm text-[#1F2A1E]/75">{getLocalizedFeature(item)}</span>
+                    <span className="text-xs sm:text-sm text-[#1F2A1E]/75">{getLocalizedExcluded(item)}</span>
                   </div>
                 ))}
               </div>
@@ -871,7 +871,7 @@ export const CustomerServiceDetail: React.FC = () => {
                       {service.dos.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3 rounded-xl border border-[#10B981]/20">
                           <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
-                          <span>{getLocalizedFeature(item)}</span>
+                          <span>{getLocalizedDo(item)}</span>
                         </div>
                       ))}
                     </div>
@@ -887,7 +887,7 @@ export const CustomerServiceDetail: React.FC = () => {
                       {service.donts.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-rose-950 bg-[#FDFCF7] p-3 rounded-xl border border-rose-200">
                           <span className="text-rose-600 font-bold flex-shrink-0">✕</span>
-                          <span>{getLocalizedFeature(item)}</span>
+                          <span>{getLocalizedDont(item)}</span>
                         </div>
                       ))}
                     </div>
