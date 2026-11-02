@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getServiceDetail, getServiceEligibleProviders, ServiceItem, EligibleProvider, ProviderSlotDetail } from '../api/catalog';
 import { createBooking } from '../api/bookings';
@@ -6,7 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
-import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription } from '../utils/localizedNames';
+import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription, getLocalizedStepDescription, getLocalizedWarrantyText, getLocalizedFAQQuestion, getLocalizedFAQAnswer } from '../utils/localizedNames';
 import { 
   Clock, 
   Star, 
@@ -652,7 +652,7 @@ export const CustomerServiceDetail: React.FC = () => {
                         )}
                       </div>
                       {step.description && (
-                        <p className="text-xs text-[#1F2A1E]/70 leading-relaxed">{getLocalizedDescription(step.description)}</p>
+                        <p className="text-xs text-[#1F2A1E]/70 leading-relaxed">{getLocalizedStepDescription(step.description)}</p>
                       )}
                     </div>
                   </div>
@@ -800,7 +800,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 </h3>
               </div>
               <p className="text-sm text-[#FAF7F0]/85 font-medium leading-relaxed">
-                {service.warranty}
+                {getLocalizedWarrantyText(service.warranty)}
               </p>
             </div>
           )}
@@ -815,8 +815,8 @@ export const CustomerServiceDetail: React.FC = () => {
               <div className="space-y-3">
                 {service.faqs.map((faq, idx) => (
                   <div key={idx} className="p-4 rounded-2xl bg-[#FAF7F0] border border-[#E5DEC9]/70 space-y-1.5">
-                    <h4 className="text-sm font-bold text-[#1F2A1E]">{faq.question}</h4>
-                    <p className="text-xs text-[#1F2A1E]/70 leading-relaxed font-sans">{faq.answer}</p>
+                    <h4 className="text-sm font-bold text-[#1F2A1E]">{getLocalizedFAQQuestion(faq.question)}</h4>
+                    <p className="text-xs text-[#1F2A1E]/70 leading-relaxed font-sans">{getLocalizedFAQAnswer(faq.answer)}</p>
                   </div>
                 ))}
               </div>
@@ -834,7 +834,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {service.tips.map((tip, idx) => (
                   <div key={idx} className="flex items-start gap-3 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3.5 rounded-xl border border-[#C9A15A]/30">
                     <span className="w-5 h-5 rounded-full bg-[#C9A15A]/20 text-[#C9A15A] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                      ★
+                      â˜…
                     </span>
                     <span className="font-medium">{getLocalizedFeature(tip)}</span>
                   </div>
@@ -873,7 +873,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="space-y-2">
                       {service.donts.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-rose-950 bg-[#FDFCF7] p-3 rounded-xl border border-rose-200">
-                          <span className="text-rose-600 font-bold flex-shrink-0">✕</span>
+                          <span className="text-rose-600 font-bold flex-shrink-0">âœ•</span>
                           <span>{getLocalizedFeature(item)}</span>
                         </div>
                       ))}
@@ -1022,7 +1022,7 @@ export const CustomerServiceDetail: React.FC = () => {
                   <Layers className="w-4 h-4 text-[#C9A15A]" />
                   <span>
                     {inBundle
-                      ? t('booking.in_bundle', { defaultValue: 'Added to Bundle ✓ (View Bundle)' })
+                      ? t('booking.in_bundle', { defaultValue: 'Added to Bundle âœ“ (View Bundle)' })
                       : t('booking.add_to_bundle', { defaultValue: '+ Add to Service Bundle' })}
                   </span>
                 </button>
@@ -1065,7 +1065,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 onClick={() => setShowBookingModal(false)}
                 className="text-[#1F2A1E]/50 hover:text-[#1F2A1E] p-1.5 rounded-full hover:bg-black/5 text-sm font-bold transition-colors"
               >
-                ✕
+                âœ•
               </button>
             </div>
 
@@ -1197,7 +1197,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between text-xs">
                       <span className="text-amber-900 font-medium">{t('booking.earliest_dispatch_window', { defaultValue: 'Earliest Dispatch Window:' })}</span>
                       <span className="font-bold text-amber-950 bg-white px-2.5 py-1 rounded-lg border border-amber-300 shadow-xs">
-                        📅 {earliestEmergencySlot.date} at ⏰ {earliestEmergencySlot.time}
+                        ðŸ“… {earliestEmergencySlot.date} at â° {earliestEmergencySlot.time}
                       </span>
                     </div>
                   )}
@@ -1257,7 +1257,7 @@ export const CustomerServiceDetail: React.FC = () => {
                             <div className="flex items-center gap-2">
                               <p className="text-xs font-bold text-[#1F2A1E]">{prov.full_name}</p>
                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                ⭐ {prov.reliability_score}% {t('provider.reliability_short', { defaultValue: 'Reliability' })}
+                                â­ {prov.reliability_score}% {t('provider.reliability_short', { defaultValue: 'Reliability' })}
                               </span>
                               <span className="text-[10px] text-[#1F2A1E]/50 font-medium">
                                 {prov.experience_years} {t('provider.years_exp', { defaultValue: 'yrs exp' })}

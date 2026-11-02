@@ -1,4 +1,4 @@
-// Master Multilingual Catalog Data (100% Native Coverage)
+﻿// Master Multilingual Catalog Data (100% Native Coverage)
 // Covers Categories, Subcategories, Services, Features, and Vocabulary
 
 export interface LangEntry {
@@ -365,6 +365,10 @@ export const SUBCATEGORY_TRANSLATIONS: Record<string, LangEntry> = {
   "makeup event styling": {
     "hi": "मेकअप व इवेंट स्टाइलिंग",
     "gu": "મેકઅપ અને ઇવેન્ટ સ્ટાઇલિંગ"
+  },
+  "makeup & styling": {
+    "hi": "मेकअप और स्टाइलिंग",
+    "gu": "મેકઅપ અને સ્ટાઇલિંગ"
   },
   "makeup styling": {
     "hi": "मेकअप और स्टाइलिंग",
@@ -10687,4 +10691,157 @@ export const WORD_TRANSLATIONS: Record<string, LangEntry> = {
     "hi": "वायरिंग",
     "gu": "વાયરિંગ"
   },
+  "a clean and safe environment": {
+    "hi": "स्वच्छ और सुरक्षित वातावरण",
+    "gu": "સ્વચ્છ અને સુરક્ષિત વાતાવરણ"
+  },
+  "are the tools and products safe?": {
+    "hi": "क्या उपकरण और उत्पाद सुरक्षित हैं?",
+    "gu": "શું સાધનો અને ઉત્પાદનો સુરક્ષિત છે?"
+  },
+  "avoid touching the treated area immediately": {
+    "hi": "तुरंत उपचारित क्षेत्र को छूने से बचें",
+    "gu": "સેવા લીધેલ વિસ્તારને તરત સ્પર્શ કરવાનું ટાળો"
+  },
+  "book in advance during weekends and holidays.": {
+    "hi": "सप्ताहांत और छुट्टियों के दौरान पहले से बुक करें।",
+    "gu": "સપ્તાહના અંતે અને રજાઓ દરમિયાન અગાઉ બુક કરો."
+  },
+  "book in advance during weekends and holidays": {
+    "hi": "सप्ताहांत और छुट्टियों के दौरान पहले से बुक करें",
+    "gu": "સપ્તાહના અંતે અને રજાઓ દરમિયાન અગાઉ બુક કરો"
+  },
+  "cleanup & handover": {
+    "hi": "सफाई और हैंडओवर",
+    "gu": "સફાઈ અને હેન્ડઓવર"
+  },
+  "complete customer satisfaction": {
+    "hi": "ग्राहक की पूर्ण संतुष्टि",
+    "gu": "ગ્રાહકનો સંપૂર્ણ સંતોષ"
+  },
+  "core execution": {
+    "hi": "मुख्य निष्पादन",
+    "gu": "મુખ્ય અમલીકરણ"
+  },
+  "diagnosis & inspection": {
+    "hi": "निदान और निरीक्षण",
+    "gu": "નિદાન અને નિરીક્ષણ"
+  },
+  "disassembly & cleaning": {
+    "hi": "विखंडन और सफाई",
+    "gu": "ડિસએસેમ્બ્લી અને સફાઈ"
+  },
+  "disposable sheets/covers if applicable": {
+    "hi": "यदि लागू हो तो डिस्पोजेबल शीट/कवर",
+    "gu": "નિકાલજોગ શીટ્સ/કવર (જો લાગુ હોય)"
+  },
+  "eco-friendly supplies and consumables": {
+    "hi": "पर्यावरण-अनुकूल आपूर्ति और उपभोग्य सामग्री",
+    "gu": "ઇકો-ફ્રેન્ડલી સામગ્રી અને વપરાશ્ય સાધનો"
+  },
+  "ensure a clear working space": {
+    "hi": "एक स्पष्ट कार्यक्षेत्र सुनिश्चित करें",
+    "gu": "કાર્ય માટે યોગ્ય અને ખુલ્લી જગ્યા રાખો"
+  },
+  "final inspection & cleanup": {
+    "hi": "अंतिम निरीक्षण और सफाई",
+    "gu": "અંતિમ નિરીક્ષણ અને સફાઈ"
+  },
+  "finishing touches": {
+    "hi": "अंतिम फिनिशिंग",
+    "gu": "અંતિમ ફિનિશિંગ"
+  },
+  "follow the professional's specific post-service advice": {
+    "hi": "पेशेवर की विशेष सेवा-पश्चात सलाह का पालन करें",
+    "gu": "નિષ્ણાતની ચોક્કસ સેવા-પછીની સલાહ અનુસરો"
+  },
+  "initial assessment": {
+    "hi": "प्रारंभिक मूल्यांकन",
+    "gu": "પ્રારંભિક મૂલ્યાંકન"
+  },
+  "keep pets and children away from the service area": {
+    "hi": "पालतू जानवरों और बच्चों को सेवा क्षेत्र से दूर रखें",
+    "gu": "પાલતુ પ્રાણીઓ અને બાળકોને સેવા વિસ્તારથી દૂર રાખો"
+  },
+  "keep the area dry/ventilated for at least 2 hours": {
+    "hi": "क्षेत्र को कम से कम 2 घंटे सूखा/हवादार रखें",
+    "gu": "ઓછામાં ઓછા ૨ કલાક સૂકો/હવાઉજાળો રાખો"
+  },
+  "material application": {
+    "hi": "सामग्री अनुप्रयोग",
+    "gu": "સામગ્રી પ્રયોગ"
+  },
+  "please inform the professional of any allergies or sensitivities beforehand": {
+    "hi": "किसी भी एलर्जी या संवेदनशीलता के बारे में पहले से पेशेवर को सूचित करें",
+    "gu": "કોઈ પણ એલર્જી કે સંવેદનશીલતા વિશે નિષ્ણાતને અગાઉ જ જણાવો"
+  },
+  "preparation & setup": {
+    "hi": "तैयारी और सेटअप",
+    "gu": "તૈયારી અને સેટઅપ"
+  },
+  "provide access to a power socket and water supply if needed": {
+    "hi": "यदि आवश्यक हो तो बिजली सॉकेट और पानी की आपूर्ति तक पहुंच प्रदान करें",
+    "gu": "જો જરૂરી હોય તો પાવર સોકેટ અને પાણીની સુવિધા આપો"
+  },
+  "reassembly & testing": {
+    "hi": "पुनर्संयोजन और परीक्षण",
+    "gu": "પુનઃ એસેમ્બ્લી અને ટેસ્ટિંગ"
+  },
+  "regular maintenance can significantly extend the lifespan of the results.": {
+    "hi": "नियमित रखरखाव से परिणामों की आयु काफी बढ़ सकती है।",
+    "gu": "નિયમિત જાળવણી પરિણામોની અસર નોંધપાત્ર રીતે વધારી શકે છે."
+  },
+  "regular maintenance can significantly extend the lifespan of the results": {
+    "hi": "नियमित रखरखाव से परिणामों की आयु काफी बढ़ सकती है",
+    "gu": "નિયમિત જાળવણી પરિણામોની અસર નોંધपात्र रूपे वधारी शके छे"
+  },
+  "safety gear (gloves, masks, etc.)": {
+    "hi": "सुरक्षा उपकरण (दस्ताने, मास्क, आदि)",
+    "gu": "સુરક્ષા ગિયર (મોજાં, માસ્ક વગેરે)"
+  },
+  "sanitization equipment": {
+    "hi": "सैनिटाइजेशन उपकरण",
+    "gu": "સેનિટાઇઝેશન સાધનો"
+  },
+  "service duration may vary based on actual on-site conditions": {
+    "hi": "सेवा की अवधि वास्तविक साइट स्थितियों के आधार पर भिन्न हो सकती है",
+    "gu": "સ્થળની વાસ્તવિક સ્થિતિ મુજબ સેવાનો સમય બદલાઈ શકે છે"
+  },
+  "service duration may vary based on actual on  site conditions": {
+    "hi": "सेवा की अवधि वास्तविक साइट स्थितियों के आधार पर भिन्न हो सकती है",
+    "gu": "સ્થળની વાસ્તવિક સ્થિતિ મુજબ સેવાનો સમય બદલાઈ શકે છે"
+  },
+  "site assessment & preparation": {
+    "hi": "साइट मूल्यांकन और तैयारी",
+    "gu": "સ્થળ મૂલ્યાંકન અને તૈયારી"
+  },
+  "standard makeup & styling tool kit": {
+    "hi": "स्टैंडर्ड मेकअप और स्टाइलिंग टूल किट",
+    "gu": "સ્ટાન્ડર્ડ મેકઅપ અને સ્ટાઇલિંગ ટૂલ કિટ"
+  },
+  "standard makeup & styling toolkit": {
+    "hi": "स्टैंडर्ड मेकअप और स्टाइलिंग टूल किट",
+    "gu": "સ્ટાન્ડર્ડ મેકઅ� અને સ્ટાઇલિંગ ટૂલ કિટ"
+  },
+  "yes, strictly industry-approved and sanitized before every appointment": {
+    "hi": "हाँ, प्रत्येक अपॉइंटमेंट से पहले कड़ाई से उद्योग-अनुमोदित और स्वच्छ किया जाता है",
+    "gu": "હા, દરેક એપોઇન્ટમેન્ટ પહેલાં ઉદ્યોગ-પ્રમાણિત અને સ્વચ્છ"
+  },
+  "yes, strictly industry-approved and sanitized before every appointment.": {
+    "hi": "हाँ, प्रत्येक अपॉइंटमेंट से पहले कड़ाई से उद्योग-अनुमोदित और स्वच्छ किया जाता है।",
+    "gu": "હા, દરેક એપોઇન્ટમેન્ટ પહેલાં ઉદ્યોગ-પ્રમાણિત અને સ્વચ્છ."
+  },
+  "is the pricing transparent?": {
+    "hi": "क्या कीमतें पारदर्शी हैं?",
+    "gu": "શું કિંમતો પારદર્શક છે?"
+  },
+  "yes, exact upfront pricing with zero hidden charges.": {
+    "hi": "हाँ, बिना किसी छुपे शुल्क के सटीक अग्रिम मूल्य निर्धारण।",
+    "gu": "હા, કોઈપણ છુપા ચાર્જ વગર ચોક્કસ અગાઉથી નક્કી કરેલ કિંમત."
+  },
+  "yes, exact upfront pricing with zero hidden charges": {
+    "hi": "हाँ, बिना किसी छुपे शुल्क के सटीक अग्रिम मूल्य निर्धारण",
+    "gu": "હા, કોઈપણ છુપા ચાર્જ વગર ચોક્કસ અગાઉથી નક્કી કરેલ કિંમત"
+  }
+
 };
