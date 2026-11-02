@@ -51,7 +51,9 @@ def generate_slot_times(slot: Availability, active_bookings: List[Booking]) -> L
     Strictly filters out past dates and active booking overlaps.
     """
     slot_date = slot.slot_date
-    if slot_date < date.today():
+    now_dt = datetime.now()
+    today_val = now_dt.date()
+    if slot_date < today_val:
         return []
 
     curr_hour = slot.start_time.hour
@@ -75,11 +77,18 @@ def generate_slot_times(slot: Availability, active_bookings: List[Booking]) -> L
         candidates.append(time(h, m))
         t += step_mins
 
+    # Real-time lead buffer: at least 30 minutes ahead of current time for same-day bookings
+    min_lead_time = now_dt + timedelta(minutes=30)
+
     valid_times = []
     for cand in candidates:
         cand_dt = datetime.combine(slot_date, cand)
 
-        # Conflict check against active bookings (60-minute window)
+        # 1. Past & elapsed time guard for same-day slots
+        if slot_date == today_val and cand_dt <= min_lead_time:
+            continue
+
+        # 2. Conflict check against active bookings (60-minute window)
         has_conflict = False
         for b in active_bookings:
             if not b.scheduled_time:
@@ -118,10 +127,11 @@ def find_eligible_provider(
     if hasattr(check_dt, "tzinfo") and check_dt.tzinfo is not None:
         check_dt = check_dt.replace(tzinfo=None)
 
+    now_dt = datetime.now()
     req_date = check_dt.date()
     req_time = check_dt.time()
 
-    if req_date < date.today():
+    if req_date < now_dt.date() or (req_date == now_dt.date() and check_dt <= now_dt):
         return None, None, "Cannot schedule a booking in the past. Please select an upcoming date and time."
 
     # Step 1: Filter by Service Association

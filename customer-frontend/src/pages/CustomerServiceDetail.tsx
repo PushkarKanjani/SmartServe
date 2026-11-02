@@ -191,16 +191,29 @@ export const CustomerServiceDetail: React.FC = () => {
       return h * 60 + m;
     };
 
+    const currentNow = new Date();
+    const currentNowMinutes = currentNow.getHours() * 60 + currentNow.getMinutes();
+    // 30 minute minimum operational lead time for same-day bookings
+    const minLeadTimeMinutes = currentNowMinutes + 30;
+
     // Combine across slots by date, strictly filtering out past dates
     const map = new Map<string, ProviderSlotDetail>();
     targetSlots.forEach((slot) => {
       if (slot.slot_date < todayStr) return; // Prevent past dates
+
+      // Strictly filter out past or elapsed times if slot date is today
+      let filteredTimes = slot.available_times || [];
+      if (slot.slot_date === todayStr) {
+        filteredTimes = filteredTimes.filter((timeStr) => parseTimeMinutes(timeStr) > minLeadTimeMinutes);
+      }
+      if (filteredTimes.length === 0) return;
+
       if (!map.has(slot.slot_date)) {
-        const sortedTimes = Array.from(new Set(slot.available_times || [])).sort((a, b) => parseTimeMinutes(a) - parseTimeMinutes(b));
+        const sortedTimes = Array.from(new Set(filteredTimes)).sort((a, b) => parseTimeMinutes(a) - parseTimeMinutes(b));
         map.set(slot.slot_date, { ...slot, available_times: sortedTimes });
       } else {
         const existing = map.get(slot.slot_date)!;
-        const combined = Array.from(new Set([...existing.available_times, ...(slot.available_times || [])])).sort((a, b) => parseTimeMinutes(a) - parseTimeMinutes(b));
+        const combined = Array.from(new Set([...existing.available_times, ...filteredTimes])).sort((a, b) => parseTimeMinutes(a) - parseTimeMinutes(b));
         map.set(slot.slot_date, { ...existing, available_times: combined });
       }
     });
@@ -1093,7 +1106,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {/* Direct Native Date Picker allowing any future booking date */}
                 <input
                   type="date"
-                  min={todayStr}
+                  min={availableDates[0] || todayStr}
                   value={bookingDate}
                   onChange={(e) => setBookingDate(e.target.value)}
                   className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl px-4 text-sm font-medium text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
