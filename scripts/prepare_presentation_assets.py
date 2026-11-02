@@ -26,3 +26,4 @@ if os.path.exists(loc_src):
     cropped_loc = im2.crop(crop_box2)
     cropped_loc.save(os.path.join(assets_dir, 'gujarati_service_crop.png'))
     print("Saved gujarati_service_crop.png")
+

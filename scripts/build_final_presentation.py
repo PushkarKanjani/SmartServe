@@ -80,6 +80,11 @@ def add_card(slide, left, top, width, height, bg_color=C_CARD_BG, border_color=C
     shape.line.width = Pt(1.4)
     return shape
 
+def add_notes(slide, notes_text):
+    notes_slide = slide.notes_slide
+    text_frame = notes_slide.notes_text_frame
+    text_frame.text = notes_text
+
 def add_badge(slide, left, top, width, height, text, bg_color, text_color):
     shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, width, height)
     shape.fill.solid()
@@ -105,92 +110,171 @@ def create_presentation():
     blank_layout = prs.slide_layouts[6]
 
     # ==================================================================
-    # SLIDE 1: TITLE SLIDE
+    # SLIDE 1: TITLE SLIDE (WITH PDEU LOGO, MENTOR, & ROLL NUMBERS)
     # ==================================================================
     s1 = prs.slides.add_slide(blank_layout)
     set_slide_background(s1, C_PRIMARY)
 
-    # Hero card
+    # Hero card in center with gold border
     add_card(s1, Inches(0.9), Inches(0.55), Inches(11.533), Inches(6.4), bg_color=C_CARD_BG, border_color=C_SECONDARY)
 
+    # Add PDEU Logo at top left of hero card
     if os.path.exists(PDEU_LOGO_PATH):
         try:
-            s1.shapes.add_picture(PDEU_LOGO_PATH, Inches(1.4), Inches(0.8), Inches(3.2), Inches(0.86))
+            s1.shapes.add_picture(PDEU_LOGO_PATH, Inches(1.3), Inches(0.75), Inches(3.2), Inches(0.86))
         except Exception:
             pass
 
-    tbox1 = s1.shapes.add_textbox(Inches(1.4), Inches(1.9), Inches(10.5), Inches(4.8))
-    tf1 = tbox1.text_frame
+    # University header text next to logo
+    tb_univ = s1.shapes.add_textbox(Inches(4.7), Inches(0.75), Inches(7.3), Inches(0.86))
+    tf_u = tb_univ.text_frame
+    tf_u.word_wrap = True
+    p_u1 = tf_u.paragraphs[0]
+    r_u1 = p_u1.add_run()
+    r_u1.text = "PANDIT DEENDAYAL ENERGY UNIVERSITY (PDEU)"
+    r_u1.font.bold = True
+    r_u1.font.size = Pt(16)
+    r_u1.font.color.rgb = C_DARK
+    
+    p_u2 = tf_u.add_paragraph()
+    p_u2.space_before = Pt(2)
+    r_u2 = p_u2.add_run()
+    r_u2.text = "DEPARTMENT OF INFORMATION AND COMMUNICATION TECHNOLOGY (ICT)\nFINAL B.TECH ICT PROJECT EVALUATION  •  SEMESTER 7 (2026-2027)"
+    r_u2.font.bold = True
+    r_u2.font.size = Pt(11.5)
+    r_u2.font.color.rgb = C_DARK
+
+    # Title & Subtitle box
+    t_box = s1.shapes.add_textbox(Inches(1.3), Inches(1.75), Inches(10.733), Inches(1.7))
+    tf1 = t_box.text_frame
     tf1.word_wrap = True
+    
+    p1 = tf1.paragraphs[0]
+    r1 = p1.add_run()
+    r1.text = "SMARTSERVE: Intelligent Multi-Service\nOn-Demand Marketplace & Operations Platform"
+    r1.font.name = FONT_HEADING
+    r1.font.size = Pt(26)
+    r1.font.bold = True
+    r1.font.color.rgb = C_PRIMARY
+    
+    p2 = tf1.add_paragraph()
+    p2.space_before = Pt(5)
+    r2 = p2.add_run()
+    r2.text = "A Multi-Tenant Cloud Architecture with Real-Time Rolling Slot Protection, Two-Stage Cryptographic OTP, 457-Service Master Catalog & Regional Franchise Engine"
+    r2.font.name = FONT_BODY
+    r2.font.size = Pt(12.5)
+    r2.font.color.rgb = C_MUTED
 
-    p_meta = tf1.paragraphs[0]
-    r_meta = p_meta.add_run()
-    r_meta.text = "FINAL B.TECH ICT PROJECT EVALUATION  •  ACADEMIC YEAR 2026"
-    r_meta.font.name = FONT_BODY
-    r_meta.font.size = Pt(12)
-    r_meta.font.bold = True
-    r_meta.font.color.rgb = C_SECONDARY
+    # Three Profile Cards Side-by-Side: Pushkar, Aastha, and Mentor Dr. Deepak Kumar Sharma
+    # 1. Pushkar Card
+    add_card(s1, Inches(1.3), Inches(3.6), Inches(3.6), Inches(1.65), bg_color=RGBColor(248, 250, 252), border_color=C_PRIMARY)
+    tb_p = s1.shapes.add_textbox(Inches(1.42), Inches(3.7), Inches(3.36), Inches(1.45))
+    tf_p = tb_p.text_frame
+    tf_p.word_wrap = True
+    p_p1 = tf_p.paragraphs[0]
+    r_p1 = p_p1.add_run()
+    r_p1.text = "PUSHKAR KANJANI"
+    r_p1.font.bold = True
+    r_p1.font.size = Pt(14)
+    r_p1.font.color.rgb = C_PRIMARY
+    
+    p_p2 = tf_p.add_paragraph()
+    p_p2.space_before = Pt(3)
+    r_p2 = p_p2.add_run()
+    r_p2.text = "Roll Number: "
+    r_p2.font.bold = True
+    r_p2.font.size = Pt(13)
+    r_p2.font.color.rgb = C_DARK
+    r_p2_val = p_p2.add_run()
+    r_p2_val.text = "23BIT153"
+    r_p2_val.font.bold = True
+    r_p2_val.font.size = Pt(13.5)
+    r_p2_val.font.color.rgb = C_WARN_AMBER
+    
+    p_p3 = tf_p.add_paragraph()
+    p_p3.space_before = Pt(2)
+    p_p3.add_run().text = "B.Tech in ICT, PDEU (7th Sem)"
+    p_p3.runs[0].font.size = Pt(11.5)
+    p_p3.runs[0].font.color.rgb = C_MUTED
 
-    p_h1 = tf1.add_paragraph()
-    p_h1.space_before = Pt(8)
-    r_h1 = p_h1.add_run()
-    r_h1.text = "SmartServe"
-    r_h1.font.name = FONT_HEADING
-    r_h1.font.size = Pt(36)
-    r_h1.font.bold = True
-    r_h1.font.color.rgb = C_PRIMARY
+    # 2. Aastha Card
+    add_card(s1, Inches(5.1), Inches(3.6), Inches(3.6), Inches(1.65), bg_color=RGBColor(248, 250, 252), border_color=C_PRIMARY)
+    tb_a = s1.shapes.add_textbox(Inches(5.22), Inches(3.7), Inches(3.36), Inches(1.45))
+    tf_a = tb_a.text_frame
+    tf_a.word_wrap = True
+    p_a1 = tf_a.paragraphs[0]
+    r_a1 = p_a1.add_run()
+    r_a1.text = "AASTHA"
+    r_a1.font.bold = True
+    r_a1.font.size = Pt(14)
+    r_a1.font.color.rgb = C_PRIMARY
+    
+    p_a2 = tf_a.add_paragraph()
+    p_a2.space_before = Pt(3)
+    r_a2 = p_a2.add_run()
+    r_a2.text = "Roll Number: "
+    r_a2.font.bold = True
+    r_a2.font.size = Pt(13)
+    r_a2.font.color.rgb = C_DARK
+    r_a2_val = p_a2.add_run()
+    r_a2_val.text = "23BIT095"
+    r_a2_val.font.bold = True
+    r_a2_val.font.size = Pt(13.5)
+    r_a2_val.font.color.rgb = C_WARN_AMBER
+    
+    p_a3 = tf_a.add_paragraph()
+    p_a3.space_before = Pt(2)
+    p_a3.add_run().text = "B.Tech in ICT, PDEU (7th Sem)"
+    p_a3.runs[0].font.size = Pt(11.5)
+    p_a3.runs[0].font.color.rgb = C_MUTED
 
-    p_sub = tf1.add_paragraph()
-    p_sub.space_before = Pt(4)
-    r_sub = p_sub.add_run()
-    r_sub.text = "Production-Grade Hyperlocal Services Marketplace & Multi-Tenant White-Label Engine"
-    r_sub.font.name = FONT_BODY
-    r_sub.font.size = Pt(16)
-    r_sub.font.bold = True
-    r_sub.font.color.rgb = C_DARK
+    # 3. Project Mentor Card (Right side)
+    add_card(s1, Inches(8.9), Inches(3.6), Inches(3.3), Inches(1.65), bg_color=RGBColor(254, 252, 232), border_color=C_SECONDARY)
+    tb_men = s1.shapes.add_textbox(Inches(9.02), Inches(3.7), Inches(3.06), Inches(1.45))
+    tf_men = tb_men.text_frame
+    tf_men.word_wrap = True
+    p_mh = tf_men.paragraphs[0]
+    r_mh = p_mh.add_run()
+    r_mh.text = "PROJECT MENTOR:"
+    r_mh.font.bold = True
+    r_mh.font.size = Pt(11)
+    r_mh.font.color.rgb = C_SECONDARY
+    
+    p_mn = tf_men.add_paragraph()
+    p_mn.space_before = Pt(3)
+    r_mn = p_mn.add_run()
+    r_mn.text = "Dr. Deepak Kumar Sharma"
+    r_mn.font.bold = True
+    r_mn.font.size = Pt(13.5)
+    r_mn.font.color.rgb = C_PRIMARY
+    
+    p_md = tf_men.add_paragraph()
+    p_md.space_before = Pt(2)
+    p_md.add_run().text = "Asst. Professor\nDepartment of ICT, SoT, PDEU"
+    p_md.runs[0].font.size = Pt(11.5)
+    p_md.runs[0].font.color.rgb = C_DARK
 
-    p_desc = tf1.add_paragraph()
-    p_desc.space_before = Pt(10)
-    r_desc = p_desc.add_run()
-    r_desc.text = "An event-driven distributed platform featuring real-time rolling slot protection, fraud-proof two-stage OTP verification, trilingual localization (EN, GU, HI), and in-memory caching (~98% latency reduction)."
-    r_desc.font.name = FONT_BODY
-    r_desc.font.size = Pt(12.5)
-    r_desc.font.color.rgb = C_MUTED
+    # Milestone Banner at Bottom
+    add_card(s1, Inches(1.3), Inches(5.4), Inches(10.9), Inches(1.2), bg_color=RGBColor(240, 253, 244), border_color=C_GREEN_LIVE)
+    tb_m = s1.shapes.add_textbox(Inches(1.5), Inches(5.45), Inches(10.5), Inches(1.1))
+    tf_m = tb_m.text_frame
+    tf_m.word_wrap = True
+    p_m = tf_m.paragraphs[0]
+    r_mt = p_m.add_run()
+    r_mt.text = "FINAL EVALUATION MILESTONE STATUS (VERSION 1.0): "
+    r_mt.font.bold = True
+    r_mt.font.size = Pt(12)
+    r_mt.font.color.rgb = C_GREEN_LIVE
+    r_mb = p_m.add_run()
+    r_mb.text = "100% Production Ready  •  FastAPI Core Engine, 457 Catalog Services, Rolling Slot Protection, Two-Stage Cryptographic OTP, Trilingual Localization (EN/GU/HI), & Regional Franchise White-Label Architecture Verified."
+    r_mb.font.size = Pt(11.5)
+    r_mb.font.color.rgb = C_DARK
 
-    # 4 Status Badges
-    badge_y = Inches(4.35)
-    add_badge(s1, Inches(1.4), badge_y, Inches(2.55), Inches(0.42), "✓ 457 Live Catalog Services", RGBColor(240, 253, 244), C_GREEN_LIVE)
-    add_badge(s1, Inches(4.1), badge_y, Inches(2.45), Inches(0.42), "⚡ Kafka Real-Time Event Fabric", RGBColor(239, 246, 255), C_ACCENT_BLUE)
-    add_badge(s1, Inches(6.7), badge_y, Inches(2.45), Inches(0.42), "🛡️ Two-Stage Cryptographic OTP", RGBColor(254, 243, 199), C_WARN_AMBER)
-    add_badge(s1, Inches(9.3), badge_y, Inches(2.6), Inches(0.42), "🌐 100% Trilingual (EN, GU, HI)", RGBColor(240, 253, 244), C_PRIMARY)
-
-    # Presenters & Mentor box
-    cred_box = s1.shapes.add_textbox(Inches(1.4), Inches(5.1), Inches(10.5), Inches(1.4))
-    tf_cred = cred_box.text_frame
-    tf_cred.word_wrap = True
-
-    p_c1 = tf_cred.paragraphs[0]
-    r_c1 = p_c1.add_run()
-    r_c1.text = "Student Presenters:  "
-    r_c1.font.bold = True
-    r_c1.font.size = Pt(12)
-    r_c1.font.color.rgb = C_DARK
-    r_c1b = p_c1.add_run()
-    r_c1b.text = "Pushkar Kanjani (21BCP037) & Team  |  B.Tech Information & Communication Technology"
-    r_c1b.font.size = Pt(12)
-    r_c1b.font.color.rgb = C_MUTED
-
-    p_c2 = tf_cred.add_paragraph()
-    p_c2.space_before = Pt(4)
-    r_c2 = p_c2.add_run()
-    r_c2.text = "Institution:  "
-    r_c2.font.bold = True
-    r_c2.font.size = Pt(12)
-    r_c2.font.color.rgb = C_DARK
-    r_c2b = p_c2.add_run()
-    r_c2b.text = "Department of ICT, School of Technology, Pandit Deendayal Energy University (PDEU)"
-    r_c2b.font.size = Pt(12)
-    r_c2b.font.color.rgb = C_MUTED
+    add_notes(s1,
+        "Presenter Cue: Greet the respected evaluation committee and our project mentor Dr. Deepak Kumar Sharma Sir. "
+        "Introduce yourself: Pushkar Kanjani (23BIT153) and Aastha (23BIT095), B.Tech in ICT, Pandit Deendayal Energy University (PDEU). "
+        "State clearly that this presentation represents the Final Project Evaluation (Version 1.0) of SmartServe. "
+        "Highlight that all components—FastAPI core engine, rolling provider slot protection, 457 catalog services, trilingual localization, and multi-tenant franchise architecture—are 100% implemented, tested, and live.")
 
     # ==================================================================
     # SLIDE 2: INDUSTRY REALITY & COMPETITOR VULNERABILITIES
@@ -798,30 +882,50 @@ def generate_latex_beamer():
 
 \title{\textbf{SmartServe}}
 \subtitle{Production-Grade Hyperlocal Services Marketplace \& Multi-Tenant White-Label Engine}
-\author{\textbf{Pushkar Kanjani (21BCP037) \& Team}}
+\author{\textbf{Pushkar Kanjani (23BIT153) \& Aastha (23BIT095)}}
 \institute{Department of Information \& Communication Technology \\ Pandit Deendayal Energy University (PDEU), Gandhinagar}
-\date{Academic Evaluation 2026}
+\date{Final B.Tech Project Evaluation $\bullet$ Academic Year 2026-2027}
 
 \begin{document}
 
-% SLIDE 1: TITLE SLIDE
+% SLIDE 1: TITLE SLIDE (WITH PDEU HEADER, CARDS, & MENTOR)
 \begin{frame}[plain]
   \begin{tcolorbox}[colback=white,colframe=SmartGold,arc=4mm,width=\textwidth,height=0.92\textheight,halign=center]
-    \vspace{0.3cm}
-    {\scriptsize \textbf{\color{SmartGold}FINAL B.TECH ICT PROJECT PRESENTATION $\bullet$ ACADEMIC YEAR 2026}}\\[0.2cm]
-    {\Huge \textbf{\color{SmartGreen}SmartServe}}\\[0.15cm]
-    {\large \textbf{\color{SmartDark}Production-Grade Hyperlocal Services Marketplace \& Multi-Tenant White-Label Engine}}\\[0.3cm]
-    {\small \color{gray} An event-driven distributed architecture with real-time slot protection, fraud-proof two-stage OTP verification, trilingual localization (EN, GU, HI), and in-memory TTL caching (~98\% latency reduction).}\\[0.4cm]
-    \begin{center}
-      \colorbox{SmartGreen!15}{\scriptsize \textbf{\color{SmartGreen} 457 Catalog Services }} \hspace{0.2cm}
-      \colorbox{SmartBlue!15}{\scriptsize \textbf{\color{SmartBlue} Kafka Event Fabric }} \hspace{0.2cm}
-      \colorbox{SmartGold!20}{\scriptsize \textbf{\color{SmartDark} Two-Stage OTP Engine }} \hspace{0.2cm}
-      \colorbox{SmartGreen!15}{\scriptsize \textbf{\color{SmartGreen} 100\% Trilingual (EN, GU, HI) }}
-    \end{center}
-    \vspace{0.4cm}
-    \hrule\vspace{0.3cm}
-    {\footnotesize \textbf{Presenters:} Pushkar Kanjani (21BCP037) \& Team \hfill \textbf{Mentor:} Faculty Project Guide} \\
-    {\scriptsize \color{gray} Department of ICT, School of Technology, Pandit Deendayal Energy University (PDEU)}
+    \vspace{0.1cm}
+    {\scriptsize \textbf{\color{SmartDark}PANDIT DEENDAYAL ENERGY UNIVERSITY (PDEU)}}\\[0.04cm]
+    {\tiny \textbf{\color{gray}DEPARTMENT OF INFORMATION AND COMMUNICATION TECHNOLOGY (ICT) $\bullet$ FINAL EVALUATION (2026-2027)}}\\[0.18cm]
+    {\Large \textbf{\color{SmartGreen}SMARTSERVE: Intelligent Multi-Service Platform}}\\[0.08cm]
+    {\small \textbf{\color{SmartDark}Hyperlocal On-Demand Services Marketplace \& Multi-Tenant White-Label Engine}}\\[0.12cm]
+    {\tiny \color{gray} Real-Time Rolling Slot Protection $\bullet$ Two-Stage Cryptographic OTP $\bullet$ 457 Catalog Services $\bullet$ Trilingual (EN/GU/HI) $\bullet$ In-Memory Caching}\\[0.25cm]
+    
+    \begin{columns}[T]
+      \begin{column}{0.31\textwidth}
+        \begin{tcolorbox}[colback=blue!4,colframe=SmartGreen,arc=2mm,halign=left]
+          {\footnotesize \textbf{\color{SmartGreen}PUSHKAR KANJANI}}\\[0.04cm]
+          {\scriptsize \textbf{Roll:} \color{SmartGold!90!black}\textbf{23BIT153}}\\[0.04cm]
+          {\tiny \color{gray}B.Tech ICT, PDEU (7th Sem)}
+        \end{tcolorbox}
+      \end{column}
+      \begin{column}{0.31\textwidth}
+        \begin{tcolorbox}[colback=blue!4,colframe=SmartGreen,arc=2mm,halign=left]
+          {\footnotesize \textbf{\color{SmartGreen}AASTHA}}\\[0.04cm]
+          {\scriptsize \textbf{Roll:} \color{SmartGold!90!black}\textbf{23BIT095}}\\[0.04cm]
+          {\tiny \color{gray}B.Tech ICT, PDEU (7th Sem)}
+        \end{tcolorbox}
+      \end{column}
+      \begin{column}{0.33\textwidth}
+        \begin{tcolorbox}[colback=yellow!6,colframe=SmartGold,arc=2mm,halign=left]
+          {\tiny \textbf{\color{SmartGold}PROJECT MENTOR:}}\\[0.04cm]
+          {\footnotesize \textbf{\color{SmartGreen}Dr. Deepak Kumar Sharma}}\\[0.04cm]
+          {\tiny \color{SmartDark}Asst. Professor, Dept. of ICT, SoT, PDEU}
+        \end{tcolorbox}
+      \end{column}
+    \end{columns}
+    
+    \vspace{0.2cm}
+    \begin{tcolorbox}[colback=green!8,colframe=SmartGreen!80,arc=2mm]
+      {\scriptsize \textbf{\color{SmartGreen}FINAL EVALUATION MILESTONE STATUS (VERSION 1.0):} \color{SmartDark}100\% Production Ready $\bullet$ FastAPI Core Engine, 457 Catalog Services, Rolling Slot Protection, Two-Stage Cryptographic OTP, Trilingual Engine \& Regional White-Label Architecture Verified.}
+    \end{tcolorbox}
   \end{tcolorbox}
 \end{frame}
 
@@ -1051,3 +1155,4 @@ if __name__ == "__main__":
     create_presentation()
     export_to_pdf()
     generate_latex_beamer()
+
