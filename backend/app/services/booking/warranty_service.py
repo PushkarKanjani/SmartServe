@@ -165,12 +165,12 @@ def validate_warranty_claim(
     Validate whether a warranty claim can be raised.
     Returns (is_valid, message, nominal_fee).
     """
-    if not warranty:
-        return False, "No active warranty record found for this service.", 0.0
-
-    policy = get_warranty_policy(category, service_name or warranty.service_name)
+    policy = get_warranty_policy(category, service_name or (warranty.service_name if warranty else None))
     if not policy["is_eligible"]:
         return False, policy["terms"], 0.0
+
+    if not warranty:
+        return False, "No active warranty record found for this service.", 0.0
 
     now_utc = datetime.now(timezone.utc)
     exp = warranty.expires_at

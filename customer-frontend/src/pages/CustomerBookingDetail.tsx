@@ -78,30 +78,39 @@ export const CustomerBookingDetail: React.FC = () => {
   const [customerCoords, setCustomerCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
-  // Request actual customer browser geolocation (Requirement 8)
+  // Only silently read browser geolocation if permission was ALREADY granted by user;
+  // Never trigger an abrupt permission prompt automatically on page mount.
   useEffect(() => {
     if (!('geolocation' in navigator)) {
       setCustomerGeoPermission('unsupported');
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCustomerGeoPermission('granted');
-        setCustomerCoords({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
+
+    if ('permissions' in navigator && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' as PermissionName })
+        .then((result) => {
+          setCustomerGeoPermission(result.state);
+          if (result.state === 'granted') {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                setCustomerCoords({
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude,
+                });
+                if (bookingId) {
+                  updateCustomerLocation(bookingId, pos.coords.latitude, pos.coords.longitude);
+                }
+              },
+              () => {},
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            );
+          }
+        })
+        .catch(() => {
+          // If query fails or is unsupported, do not pop up on mount
         });
-        if (bookingId) {
-          updateCustomerLocation(bookingId, pos.coords.latitude, pos.coords.longitude);
-        }
-      },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setCustomerGeoPermission('denied');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
+    }
   }, [bookingId]);
 
   const effectiveCustomerLocation: CustomerLocationInfo | null = customerCoords
@@ -729,6 +738,8 @@ export const CustomerBookingDetail: React.FC = () => {
           bookingId={booking.id}
           serviceName={booking.service_name}
           warranty={booking.warranty}
+          isEligible={booking.is_warranty_eligible}
+          exclusionReason={booking.warranty_exclusion_reason}
           onClaimRaised={() => {
             getBookingDetail(booking.id).then(setBooking).catch(() => {});
           }}

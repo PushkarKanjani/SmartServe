@@ -1631,6 +1631,11 @@ def create_customer_booking(
     except Exception:
         pass
 
+    from app.services.booking.warranty_service import get_warranty_policy
+    w_pol = get_warranty_policy(new_booking.category, new_booking.service_name)
+    is_w_eligible = bool(w_pol.get("is_eligible", True))
+    w_excl_reason = w_pol.get("terms") if not is_w_eligible else None
+
     return BookingDetail(
         id=str(new_booking.id),
         booking_reference=new_booking.booking_reference,
@@ -1658,6 +1663,8 @@ def create_customer_booking(
         completion_otp=new_booking.completion_otp,
         emergency_flag=new_booking.emergency_flag,
         timeline=new_booking.timeline,
+        is_warranty_eligible=is_w_eligible,
+        warranty_exclusion_reason=w_excl_reason,
         created_at=new_booking.created_at,
     )
 
@@ -1703,6 +1710,13 @@ def get_booking_by_id(
                 "service_area": p.service_area or "Bengaluru, India",
             }
 
+    service_cat = record.get_category() if hasattr(record, "get_category") else (record.category or "General")
+    service_nm = record.get_service_name() if hasattr(record, "get_service_name") else (record.service_name or "Home Service")
+    from app.services.booking.warranty_service import get_warranty_policy
+    w_pol = get_warranty_policy(service_cat, service_nm)
+    is_w_eligible = bool(w_pol.get("is_eligible", True))
+    w_excl_reason = w_pol.get("terms") if not is_w_eligible else None
+
     return BookingDetail(
         id=str(record.id),
         booking_reference=record.booking_reference,
@@ -1711,8 +1725,8 @@ def get_booking_by_id(
         provider_name=record.provider.full_name if record.provider else None,
         provider=provider_info,
         service_id=str(record.service_id),
-        service_name=record.get_service_name() if hasattr(record, "get_service_name") else (record.service_name or "Home Service"),
-        category=record.get_category() if hasattr(record, "get_category") else (record.category or "General"),
+        service_name=service_nm,
+        category=service_cat,
         status=str(record.status.value if hasattr(record.status, "value") else record.status),
         scheduled_date=record.scheduled_date,
         scheduled_time=record.scheduled_time.strftime("%H:%M:%S") if hasattr(record.scheduled_time, "strftime") else str(record.scheduled_time),
@@ -1742,6 +1756,8 @@ def get_booking_by_id(
             "claim_notes": record.warranty.claim_notes,
             "days_remaining": max(0, (record.warranty.expires_at.date() - datetime.utcnow().date()).days) if record.warranty.expires_at else 0,
         } if record.warranty else None,
+        is_warranty_eligible=is_w_eligible,
+        warranty_exclusion_reason=w_excl_reason,
         otp_code=record.completion_otp if str(record.status).lower() == 'started' else (record.start_otp or record.otp_code),
         start_otp=record.start_otp,
         completion_otp=record.completion_otp,
@@ -2119,24 +2135,57 @@ def cancel_booking(
             detail=f"Cannot cancel booking with current status '{record.status}'."
         )
 
-    record.status = "CANCELLED"
+    from app.services.booking.state_machine import transition_booking_status, BookingStatus
+    from app.models.user import User
+
+    # Customer user proxy for state machine timeline audit
+    user_actor = current_customer.user or User(
+        id=current_customer.user_id,
+        email=current_customer.email,
+        password_hash="",
+        role="customer",
+    )
+
+    record = transition_booking_status(
+        db=db,
+        booking_id=record.id,
+        next_status=BookingStatus.CANCELLED.value,
+        user=user_actor,
+        reason=effective_reason,
+    )
     record.cancellation_reason = effective_reason
+    db.add(record)
     db.commit()
     db.refresh(record)
 
-    # Automated Notification Trigger: Booking Cancelled
-    try:
-        from app.services.notification import notify_booking_event
-        notify_booking_event(db, record, "booking.cancelled", extra_context={"notes": effective_reason})
-    except Exception as exc:
-        pass
-    
+    # Broadcast realtime cancellation event to customer, provider, admin
+    from app.core.websockets import broadcast_realtime
+    channels = ["dashboard", "bookings", f"booking_{record.id}"]
+    if record.provider_id:
+        channels.extend([f"provider_{record.provider_id}", f"user_{record.provider_id}"])
+    channels.extend([f"customer_{current_customer.id}", f"user_{current_customer.id}"])
+
+    broadcast_realtime(channels, {
+        "event_id": str(uuid.uuid4()),
+        "type": "BOOKING_CANCELLED",
+        "event": "booking.cancelled",
+        "event_type": "booking.cancelled",
+        "booking_id": str(record.id),
+        "status": "Cancelled",
+        "cancellation_reason": effective_reason,
+    })
+
     sched_time_str = (
         record.scheduled_time.strftime("%H:%M:%S")
         if hasattr(record.scheduled_time, "strftime")
         else str(record.scheduled_time)
     )
-    
+
+    from app.services.booking.warranty_service import get_warranty_policy
+    w_pol = get_warranty_policy(record.get_category(), record.get_service_name())
+    is_w_eligible = bool(w_pol.get("is_eligible", True))
+    w_excl_reason = w_pol.get("terms") if not is_w_eligible else None
+
     return BookingDetail(
         id=str(record.id),
         booking_reference=record.booking_reference,
@@ -2160,6 +2209,8 @@ def cancel_booking(
         otp_code=record.otp_code,
         emergency_flag=record.emergency_flag,
         timeline=record.timeline,
+        is_warranty_eligible=is_w_eligible,
+        warranty_exclusion_reason=w_excl_reason,
         created_at=record.created_at,
     )
 

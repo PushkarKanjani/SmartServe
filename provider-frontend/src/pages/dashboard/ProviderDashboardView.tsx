@@ -267,6 +267,20 @@ export const ProviderDashboardView: React.FC = () => {
   const lastLocationSentRef = useRef<{ lat: number; lng: number; time: number } | null>(null);
   const [devSimulatingBookingId, setDevSimulatingBookingId] = useState<string | null>(null);
   const devSimIntervalRef = useRef<any>(null);
+  const gpsWatchIdRef = useRef<number | null>(null);
+  const gpsIntervalRef = useRef<any>(null);
+
+  const stopGpsTracking = () => {
+    if (gpsWatchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(gpsWatchIdRef.current);
+      gpsWatchIdRef.current = null;
+    }
+    if (gpsIntervalRef.current !== null) {
+      clearInterval(gpsIntervalRef.current);
+      gpsIntervalRef.current = null;
+    }
+    setIsBroadcastingGps(false);
+  };
 
   const handleDevSimulateRoute = async (booking: any) => {
     if (devSimulatingBookingId === booking.id) {
@@ -362,8 +376,12 @@ export const ProviderDashboardView: React.FC = () => {
       setLocationPermission('granted');
       setLastGpsSync(new Date().toLocaleTimeString());
       setIsBroadcastingGps(true);
-    } catch (err) {
+    } catch (err: any) {
       console.warn('GPS location post error:', err);
+      // If backend returns 400 (job finished, cancelled, or not active), halt watcher immediately
+      if (err?.response?.status === 400) {
+        stopGpsTracking();
+      }
     }
   };
 
@@ -393,7 +411,7 @@ export const ProviderDashboardView: React.FC = () => {
   // Geolocation watch lifecycle while active booking exists
   useEffect(() => {
     if (!activeBooking) {
-      setIsBroadcastingGps(false);
+      stopGpsTracking();
       return;
     }
 
@@ -417,15 +435,16 @@ export const ProviderDashboardView: React.FC = () => {
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 }
     );
+    gpsWatchIdRef.current = watchId;
 
     // Regular interval sync every 6 seconds
     const interval = setInterval(() => {
       triggerCurrentGps(activeBooking.id, false);
     }, 6000);
+    gpsIntervalRef.current = interval;
 
     return () => {
-      navigator.geolocation.clearWatch(watchId);
-      clearInterval(interval);
+      stopGpsTracking();
     };
   }, [activeBooking?.id, activeBooking?.status]);
 

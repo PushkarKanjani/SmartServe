@@ -56,6 +56,8 @@ export interface BookingDetail {
   before_photos?: string[];
   after_photos?: string[];
   warranty?: WarrantyInfo | null;
+  is_warranty_eligible?: boolean;
+  warranty_exclusion_reason?: string;
   provider_id?: string;
   provider_name?: string;
   provider?: ProviderProfileInfo | null;
