@@ -38,7 +38,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { subscribeToRealtime } from '../utils/realtime';
+import { subscribeToRealtime, getCustomerRealtimeChannels } from '../utils/realtime';
 import { CustomerLiveMap } from '../components/CustomerLiveMap';
 import { CustomerProviderCard, BookingTimeline } from '../components/CustomerProviderCard';
 import { WarrantyCard } from '../components/common/WarrantyCard';
@@ -171,9 +171,11 @@ export const CustomerBookingDetail: React.FC = () => {
     fetchDetail();
     if (!bookingId) return;
 
-    // Real-Time WebSocket Subscription for booking status & live GPS tracking (No Polling Required)
+    const channels = getCustomerRealtimeChannels([`booking_${bookingId}`]);
+
+    // Real-Time WebSocket Subscription for booking status & live GPS tracking
     const unsubscribeWs = subscribeToRealtime(
-      [`booking_${bookingId}`, 'bookings', 'dashboard'],
+      channels,
       (payload) => {
         const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
         if (targetId && targetId === String(bookingId).toLowerCase()) {
@@ -238,8 +240,27 @@ export const CustomerBookingDetail: React.FC = () => {
       (status) => setWsStatus(status)
     );
 
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        getBookingDetail(bookingId)
+          .then((data) => setBooking(data))
+          .catch(() => {});
+      }
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    const fallbackPoll = setInterval(() => {
+      getBookingDetail(bookingId)
+        .then((data) => setBooking(data))
+        .catch(() => {});
+    }, 8000);
+
     return () => {
       unsubscribeWs();
+      clearInterval(fallbackPoll);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
   }, [bookingId]);
 
@@ -269,7 +290,7 @@ export const CustomerBookingDetail: React.FC = () => {
 
     fetchChat();
 
-    const channels = [`booking_${bookingId}`, `booking_chat_${bookingId}`, 'support', 'support_tickets'];
+    const channels = [`booking_${bookingId}`, `booking_chat_${bookingId}`];
     if (chatTicket?.id) {
       channels.push(`ticket_${chatTicket.id}`);
     }

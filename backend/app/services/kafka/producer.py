@@ -123,11 +123,40 @@ class KafkaProducerService:
             self._last_error = safe_exc
             return False
 
+    def _relay_inprocess_degraded(self, topic: str, event_dict: Dict[str, Any]) -> bool:
+        """
+        When Kafka broker is unavailable or disabled (degraded mode), route the event
+        directly into the in-process KafkaConsumerService handler so real-time WebSocket
+        notifications (chat, tickets, bookings, location) keep flowing cleanly.
+        """
+        try:
+            from app.services.kafka.consumer import kafka_consumer
+            from app.core.websockets import ws_manager
+
+            target_loop = self._loop or ws_manager._loop
+            try:
+                current_loop = asyncio.get_running_loop()
+            except RuntimeError:
+                current_loop = None
+
+            if current_loop and current_loop.is_running() and (target_loop is None or target_loop is current_loop):
+                current_loop.create_task(kafka_consumer._process_message(topic, event_dict))
+                return True
+            if target_loop and target_loop.is_running():
+                asyncio.run_coroutine_threadsafe(
+                    kafka_consumer._process_message(topic, event_dict),
+                    target_loop,
+                )
+                return True
+        except Exception as exc:
+            logger.debug("[Kafka Degraded Relay] In-process dispatch error: %s", exc)
+        return False
+
     def publish_event(self, topic: str, event: Union[KafkaEvent, Dict[str, Any]]) -> bool:
         """
         Publish an event to a Kafka topic.
         Safe for use from synchronous FastAPI endpoint threads, background workers,
-        or coroutines.  Kafka failure NEVER breaks the calling REST/PostgreSQL transaction.
+        or coroutines. Falls back to in-process consumer dispatch in degraded mode.
         """
         if isinstance(event, KafkaEvent):
             event_dict = event.to_dict()
@@ -140,11 +169,12 @@ class KafkaProducerService:
         kafka_event_store.record_published(topic, event_dict)
 
         if not self._is_running or not self._producer:
+            relayed = self._relay_inprocess_degraded(topic, event_dict)
             logger.info(
-                "[Kafka Event Recorded] (Producer inactive) Topic: %s | Type: %s | ID: %s",
-                topic, event_dict.get("event_type"), event_dict.get("event_id"),
+                "[Kafka Event Degraded Relay=%s] Topic: %s | Type: %s | ID: %s",
+                relayed, topic, event_dict.get("event_type"), event_dict.get("event_id"),
             )
-            return False
+            return relayed
 
         try:
             try:

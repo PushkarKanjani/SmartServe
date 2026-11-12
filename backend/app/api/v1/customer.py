@@ -1604,7 +1604,9 @@ def create_customer_booking(
         channels.extend([f"provider_{new_booking.provider_id}", f"user_{new_booking.provider_id}"])
     channels.extend([f"customer_{current_customer.id}", f"user_{current_customer.id}"])
 
+    shared_event_id = str(uuid.uuid4())
     broadcast_realtime(channels, {
+        "event_id": shared_event_id,
         "type": "BOOKING_CREATED",
         "event": "booking.created",
         "event_type": "booking.created",
@@ -1618,6 +1620,7 @@ def create_customer_booking(
     try:
         from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
         booking_event = KafkaEvent(
+            event_id=shared_event_id,
             event_type=KafkaTopics.BOOKING_CREATED,
             booking_id=str(new_booking.id),
             sender_id=str(current_customer.id),
@@ -1981,13 +1984,14 @@ def get_booking_location(
 
     provider_loc_data = None
     if loc:
+        from app.core.websockets import to_utc_iso
         provider_loc_data = {
             "latitude": float(loc.latitude),
             "longitude": float(loc.longitude),
             "heading": float(loc.heading) if loc.heading is not None else None,
             "speed": float(loc.speed) if loc.speed is not None else None,
             "accuracy": float(loc.accuracy) if loc.accuracy is not None else None,
-            "updated_at": loc.updated_at.isoformat() if loc.updated_at else None,
+            "updated_at": to_utc_iso(loc.updated_at),
         }
 
     c_lat = 28.6280

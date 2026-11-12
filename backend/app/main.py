@@ -62,6 +62,10 @@ async def keep_render_alive():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Bind Uvicorn's main event loop to the WebSocket manager for thread-safe sync broadcasts
+    from app.core.websockets import ws_manager
+    ws_manager.set_event_loop(asyncio.get_running_loop())
+
     # Startup: Spawn Kafka producer & consumer non-blockingly as background tasks.
     # This ensures Uvicorn immediately begins accepting HTTP connections and serving
     # the /health endpoint without waiting for broker connections on cold boot.

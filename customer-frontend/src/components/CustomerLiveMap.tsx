@@ -86,8 +86,14 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
       return;
     }
 
+    const parseUtcTimestamp = (raw: string): number => {
+      const trimmed = raw.trim();
+      const hasOffset = /[zZ]|[+-]\d{2}:?\d{2}$/.test(trimmed);
+      return new Date(hasOffset ? trimmed : `${trimmed}Z`).getTime();
+    };
+
     const updateFreshness = () => {
-      const diffMs = Date.now() - new Date(providerLocation.updated_at!).getTime();
+      const diffMs = Date.now() - parseUtcTimestamp(providerLocation.updated_at!);
       const secs = Math.max(0, Math.floor(diffMs / 1000));
 
       if (secs < 10) {

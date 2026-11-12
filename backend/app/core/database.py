@@ -1,9 +1,12 @@
+import logging
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.postgresql import JSONB
 from app.core.config import settings
+
+logger = logging.getLogger("smartserve.database")
 
 @compiles(JSONB, "sqlite")
 def compile_jsonb_sqlite(type_, compiler, **kw):
@@ -25,8 +28,32 @@ if m:
         port_part = f":{port}" if port else ""
         database_url = f"{scheme}{user}:{encoded_pwd}@{host}{port_part}/{db}"
 
+def _ensure_sqlite_schema_parity(sqlite_engine) -> None:
+    """Apply lightweight additive column migrations on SQLite dev DB if stale."""
+    migrations = {
+        "combined_bookings": {
+            "coupon_code": "VARCHAR(100)",
+            "coupon_discount": "NUMERIC(10, 2) DEFAULT 0",
+        }
+    }
+    try:
+        insp = inspect(sqlite_engine)
+        existing_tables = set(insp.get_table_names())
+        with sqlite_engine.begin() as conn:
+            for table_name, cols in migrations.items():
+                if table_name not in existing_tables:
+                    continue
+                existing_cols = {c["name"] for c in insp.get_columns(table_name)}
+                for col_name, col_ddl in cols.items():
+                    if col_name not in existing_cols:
+                        conn.execute(text(f'ALTER TABLE "{table_name}" ADD COLUMN "{col_name}" {col_ddl}'))
+                        logger.warning("[Database] Added missing SQLite column %s.%s", table_name, col_name)
+    except Exception as exc:
+        logger.warning("[Database] SQLite schema parity check skipped/failed: %s", exc)
+
+
 def get_engine():
-    timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "15" if os.getenv("ENVIRONMENT") == "production" else "5"))
+    timeout = int(os.getenv("DB_CONNECT_TIMEOUT", "15"))
     pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
     max_overflow = int(os.getenv("DB_MAX_OVERFLOW", "3"))
     pool_timeout = int(os.getenv("DB_POOL_TIMEOUT", "10"))
@@ -46,17 +73,26 @@ def get_engine():
                 pass
             return engine_test
         elif "sqlite" in database_url:
-            return create_engine(database_url, connect_args={"check_same_thread": False})
+            sqlite_engine = create_engine(database_url, connect_args={"check_same_thread": False})
+            _ensure_sqlite_schema_parity(sqlite_engine)
+            return sqlite_engine
         else:
             return create_engine(database_url)
     except Exception as e:
-        if os.getenv("ENVIRONMENT") == "production":
+        if os.getenv("ENVIRONMENT") == "production" or os.getenv("ALLOW_SQLITE_FALLBACK", "true").lower() == "false":
             raise e
         sqlite_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "smartserve_dev.db"))
-        return create_engine(
+        logger.critical(
+            "[Database] Primary Postgres connection failed (%s). Falling back to local SQLite: %s",
+            str(e).splitlines()[0],
+            sqlite_path,
+        )
+        sqlite_engine = create_engine(
             f"sqlite:///{sqlite_path}",
             connect_args={"check_same_thread": False},
         )
+        _ensure_sqlite_schema_parity(sqlite_engine)
+        return sqlite_engine
 
 
 engine = get_engine()

@@ -6,7 +6,7 @@ import { formatDateINR } from '../utils/formatters';
 import { getLocalizedStatus, getLocalizedSupportCategory } from '../utils/localizedNames';
 import { useToast } from '../hooks/useToast';
 import { HelpCircle, Plus, Clock, ChevronRight, Loader2, AlertCircle, RefreshCw, Send } from 'lucide-react';
-import { subscribeToRealtime } from '../utils/realtime';
+import { subscribeToRealtime, getCustomerRealtimeChannels } from '../utils/realtime';
 
 export const CustomerSupport: React.FC = () => {
   const navigate = useNavigate();
@@ -47,7 +47,8 @@ export const CustomerSupport: React.FC = () => {
   useEffect(() => {
     fetchTickets();
 
-    const unsubscribeWs = subscribeToRealtime(['support_tickets', 'support'], (payload) => {
+    const channels = getCustomerRealtimeChannels();
+    const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
       const type = payload.type || payload.event_type || payload.event;
       if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {
         getCustomerTickets().then((data) => setTickets(data)).catch(() => {});

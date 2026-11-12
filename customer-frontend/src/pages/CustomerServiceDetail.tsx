@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getServiceDetail, getServiceEligibleProviders, ServiceItem, EligibleProvider, ProviderSlotDetail } from '../api/catalog';
 import { createBooking } from '../api/bookings';
@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
+import { subscribeToRealtime } from '../utils/realtime';
 import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription, getLocalizedStepDescription, getLocalizedWarrantyText, getLocalizedFAQQuestion, getLocalizedFAQAnswer, getLocalizedSurgeText, getLocalizedDiscountText, getLocalizedExcluded, getLocalizedDo, getLocalizedDont } from '../utils/localizedNames';
 import { 
   Clock, 
@@ -96,6 +97,31 @@ export const CustomerServiceDetail: React.FC = () => {
       }
     };
     fetchDetail();
+
+    const refreshCatalogLive = () => {
+      if (!serviceId) return;
+      getServiceDetail(serviceId)
+        .then((data) => setService(data))
+        .catch(() => {});
+      getServiceEligibleProviders(serviceId)
+        .then((provs) => setEligibleProviders(provs))
+        .catch(() => {});
+    };
+
+    const unsubscribeCatalogWs = subscribeToRealtime(['catalog_updates'], (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (type === 'PROVIDER_CATALOG_UPDATED' || type === 'provider.catalog.updated') {
+        refreshCatalogLive();
+      }
+    });
+
+    const handleWindowFocus = () => refreshCatalogLive();
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      unsubscribeCatalogWs();
+      window.removeEventListener('focus', handleWindowFocus);
+    };
   }, [serviceId]);
 
   useEffect(() => {

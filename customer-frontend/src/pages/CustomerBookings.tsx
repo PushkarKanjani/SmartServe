@@ -6,7 +6,7 @@ import { getCustomerBookings, BookingDetail } from '../api/bookings';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
 import { Calendar, Clock, ChevronRight, Loader2, Plus, AlertCircle, RefreshCw, KeyRound } from 'lucide-react';
-import { subscribeToRealtime } from '../utils/realtime';
+import { subscribeToRealtime, getCustomerRealtimeChannels } from '../utils/realtime';
 
 export const CustomerBookings: React.FC = () => {
   const { t } = useTranslation();
@@ -38,20 +38,7 @@ export const CustomerBookings: React.FC = () => {
   useEffect(() => {
     fetchBookings();
 
-    let customerId = '';
-    let userId = '';
-    try {
-      const rawUser = localStorage.getItem('smartserve_customer_user');
-      if (rawUser) {
-        const parsed = JSON.parse(rawUser);
-        customerId = parsed.customer_id || '';
-        userId = parsed.user_id || '';
-      }
-    } catch (e) {}
-
-    const channels = ['bookings'];
-    if (customerId) channels.push(`customer_${customerId}`);
-    if (userId) channels.push(`customer_${userId}`, `user_${userId}`);
+    const channels = getCustomerRealtimeChannels();
 
     // Real-Time Kafka -> WebSocket Subscription (No Polling Required)
     const unsubscribeWs = subscribeToRealtime(channels, (payload) => {

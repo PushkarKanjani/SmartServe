@@ -14,13 +14,39 @@ import { getApiBaseUrl } from '../api/client';
 
 type MessageHandler = (data: any) => void;
 
+export function getCustomerRealtimeChannels(extraChannels: string[] = []): string[] {
+  const channels = new Set<string>(extraChannels.filter(Boolean));
+  if (typeof window !== 'undefined') {
+    try {
+      const rawUser = localStorage.getItem('smartserve_customer_user');
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        if (parsed.customer_id) channels.add(`customer_${parsed.customer_id}`);
+        if (parsed.user_id) {
+          channels.add(`customer_${parsed.user_id}`);
+          channels.add(`user_${parsed.user_id}`);
+        }
+      }
+    } catch (_) {}
+  }
+  return Array.from(channels);
+}
+
 export function getWebSocketUrl(channels: string[] = []): string {
   const rawApiUrl = getApiBaseUrl();
   const isHttps = rawApiUrl.startsWith('https:') || (typeof window !== 'undefined' && window.location.protocol === 'https:');
   const wsProtocol = isHttps ? 'wss:' : 'ws:';
   const hostDomain = rawApiUrl.replace(/^https?:\/\//, '').replace(/\/api\/v1\/?$/, '');
-  const channelParam = channels.length > 0 ? `?channels=${encodeURIComponent(channels.join(','))}` : '';
-  return `${wsProtocol}//${hostDomain}/ws/stream${channelParam}`;
+  const token = typeof window !== 'undefined' ? localStorage.getItem('smartserve_customer_token') : null;
+  const params = new URLSearchParams();
+  if (channels.length > 0) {
+    params.set('channels', channels.join(','));
+  }
+  if (token) {
+    params.set('token', token);
+  }
+  const queryString = params.toString() ? `?${params.toString()}` : '';
+  return `${wsProtocol}//${hostDomain}/ws/stream${queryString}`;
 }
 
 export function subscribeToRealtime(
@@ -95,6 +121,10 @@ export function subscribeToRealtime(
         if (gen !== generation || disposed) { socket.close(); return; }
         retryCount = 0;
         onStatusChange?.('connected');
+        const token = typeof window !== 'undefined' ? localStorage.getItem('smartserve_customer_token') : null;
+        if (token && socket.readyState === WebSocket.OPEN) {
+          try { socket.send(JSON.stringify({ action: 'auth', token })); } catch (_) {}
+        }
         pingInterval = setInterval(() => {
           if (socket.readyState === WebSocket.OPEN) {
             try { socket.send(JSON.stringify({ action: 'ping' })); } catch (_) {}
@@ -107,7 +137,15 @@ export function subscribeToRealtime(
         try {
           const data = JSON.parse(event.data);
           // Skip control frames
-          if (data.type === 'pong' || data.type === 'CONNECTION_ESTABLISHED' || data.type === 'SUBSCRIBED' || data.type === 'UNSUBSCRIBED') return;
+          if (
+            data.type === 'pong' ||
+            data.type === 'CONNECTION_ESTABLISHED' ||
+            data.type === 'SUBSCRIBED' ||
+            data.type === 'UNSUBSCRIBED' ||
+            data.type === 'AUTH_SUCCESS'
+          ) {
+            return;
+          }
 
           // Event deduplication per subscription using event_id
           const eventId = data.event_id;
