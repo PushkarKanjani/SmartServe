@@ -115,6 +115,8 @@ export interface EligibleProvider {
   reliability_score: number;
   acceptance_rate: number;
   service_area?: string;
+  distance_km?: number | null;
+  is_location_fresh?: boolean;
   available_slots: string[];
   structured_slots?: ProviderSlotDetail[];
   is_available: boolean;

@@ -9,6 +9,9 @@ from app.models.customer import Booking
 from app.models.user import User
 
 
+PROVIDER_LOCATION_FRESHNESS_HOURS = 48.0
+
+
 def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
     Calculate the great circle distance in kilometers between two GPS coordinates
@@ -129,6 +132,9 @@ def find_eligible_provider(
     service_id: uuid.UUID,
     scheduled_datetime: datetime,
     requested_provider_id: Optional[uuid.UUID] = None,
+    customer_lat: Optional[float] = None,
+    customer_lng: Optional[float] = None,
+    max_radius_km: Optional[float] = 50.0,
 ) -> Tuple[Optional[Provider], Optional[Availability], str]:
     """
     Determine the most eligible provider for a requested service and time slot.
@@ -139,6 +145,7 @@ def find_eligible_provider(
     3. Verification & Active Status: Provider must be approved (is_verified == True) and user account active.
     4. Availability Window: Provider must have an active, FREE slot covering requested date and time.
     5. Conflict Prevention: Provider must not have an active booking overlapping the requested slot.
+    6. Proximity & Freshness: Nearest eligible provider with fresh GPS location (<= 48h) is prioritized.
     """
     check_dt = scheduled_datetime
     if hasattr(check_dt, "tzinfo") and check_dt.tzinfo is not None:
@@ -234,20 +241,80 @@ def find_eligible_provider(
         matched_slot = provider_slot_map.get(chosen.user_id)
         return chosen, matched_slot, "Selected provider assigned"
 
-    # Step 5: Auto-assign best candidate (highest reliability score, acceptance rate)
-    # In development mode, prioritize the primary demo provider account (demo.provider@smartserve.com)
-    primary_demo_id = uuid.UUID("1e86f045-6e78-49c8-8035-3820786a9d18")
-    eligible_candidates.sort(
-        key=lambda p: (
-            1 if p.user_id == primary_demo_id else 0,
-            float(p.reliability_score or 100.0),
-            float(p.acceptance_rate or 100.0),
-            float(p.experience_years or 0)
-        ),
-        reverse=True
-    )
+    # Step 5: Auto-assign best candidate based on real GPS proximity, freshness, and quality metrics
+    now_utc = datetime.utcnow()
+    candidate_meta = []
+    for p in eligible_candidates:
+        prov_loc = (
+            db.query(ProviderLocation)
+            .filter(
+                ProviderLocation.provider_id == p.user_id,
+                ProviderLocation.is_active == True,
+            )
+            .first()
+        )
+        has_fresh_gps = False
+        dist_km = 99999.0
+        if prov_loc and prov_loc.latitude is not None and prov_loc.longitude is not None:
+            loc_time = prov_loc.updated_at
+            if hasattr(loc_time, "tzinfo") and loc_time.tzinfo is not None:
+                loc_time = loc_time.replace(tzinfo=None)
+            age_hours = (now_utc - loc_time).total_seconds() / 3600.0
+            if age_hours <= PROVIDER_LOCATION_FRESHNESS_HOURS:
+                has_fresh_gps = True
+                if customer_lat is not None and customer_lng is not None:
+                    dist_km = calculate_haversine_distance(
+                        customer_lat, customer_lng, float(prov_loc.latitude), float(prov_loc.longitude)
+                    )
 
-    selected_provider = eligible_candidates[0]
+        in_radius = True
+        if customer_lat is not None and customer_lng is not None and max_radius_km is not None and has_fresh_gps:
+            in_radius = (dist_km <= max_radius_km)
+
+        candidate_meta.append({
+            "provider": p,
+            "has_fresh_gps": has_fresh_gps,
+            "in_radius": in_radius,
+            "dist_km": dist_km,
+            "reliability_score": float(p.reliability_score or 100.0),
+            "acceptance_rate": float(p.acceptance_rate or 100.0),
+            "experience_years": float(p.experience_years or 0),
+        })
+
+    if customer_lat is not None and customer_lng is not None:
+        # Prioritize candidates with fresh GPS within radius, ordered by distance ascending
+        in_radius_candidates = [c for c in candidate_meta if c["has_fresh_gps"] and c["in_radius"]]
+        if in_radius_candidates:
+            in_radius_candidates.sort(
+                key=lambda c: (
+                    c["dist_km"],
+                    -c["reliability_score"],
+                    -c["acceptance_rate"],
+                    -c["experience_years"],
+                )
+            )
+            selected_provider = in_radius_candidates[0]["provider"]
+        else:
+            # Fall back to best overall verified provider if no candidate in radius has fresh GPS
+            candidate_meta.sort(
+                key=lambda c: (
+                    -c["reliability_score"],
+                    -c["acceptance_rate"],
+                    -c["experience_years"],
+                    c["dist_km"],
+                )
+            )
+            selected_provider = candidate_meta[0]["provider"]
+    else:
+        candidate_meta.sort(
+            key=lambda c: (
+                -c["reliability_score"],
+                -c["acceptance_rate"],
+                -c["experience_years"],
+            )
+        )
+        selected_provider = candidate_meta[0]["provider"]
+
     matched_slot = provider_slot_map.get(selected_provider.user_id)
     return selected_provider, matched_slot, "Eligible provider assigned"
 
@@ -298,24 +365,26 @@ def get_eligible_providers(
         ).first()
 
         distance_km: Optional[float] = None
-        has_gps_coords = (
-            customer_lat is not None and
-            customer_lng is not None and
-            prov_loc is not None and
-            prov_loc.latitude is not None and
-            prov_loc.longitude is not None
-        )
+        has_fresh_gps = False
+        if prov_loc and prov_loc.latitude is not None and prov_loc.longitude is not None:
+            loc_time = prov_loc.updated_at
+            if hasattr(loc_time, "tzinfo") and loc_time.tzinfo is not None:
+                loc_time = loc_time.replace(tzinfo=None)
+            age_hours = (datetime.utcnow() - loc_time).total_seconds() / 3600.0
+            if age_hours <= PROVIDER_LOCATION_FRESHNESS_HOURS:
+                has_fresh_gps = True
 
-        if has_gps_coords:
-            distance_km = calculate_haversine_distance(
-                customer_lat,
-                customer_lng,
-                float(prov_loc.latitude),
-                float(prov_loc.longitude),
-            )
-            if max_radius_km is not None and distance_km > max_radius_km:
-                # Exclude provider outside serviceable radius
-                continue
+        if customer_lat is not None and customer_lng is not None:
+            if has_fresh_gps:
+                distance_km = calculate_haversine_distance(
+                    customer_lat,
+                    customer_lng,
+                    float(prov_loc.latitude),
+                    float(prov_loc.longitude),
+                )
+                if max_radius_km is not None and distance_km > max_radius_km:
+                    # Exclude provider outside serviceable radius
+                    continue
         elif customer_city:
             area = (p.service_area or "").strip().lower()
             city_norm = customer_city.strip().lower()
@@ -377,6 +446,7 @@ def get_eligible_providers(
             "acceptance_rate": float(p.acceptance_rate or 100.0),
             "service_area": p.service_area or "Citywide",
             "distance_km": distance_km,
+            "is_location_fresh": has_fresh_gps,
             "available_slots": slot_list,
             "structured_slots": structured_slots,
             "is_available": len(structured_slots) > 0,
@@ -385,6 +455,7 @@ def get_eligible_providers(
     if customer_lat is not None and customer_lng is not None:
         results.sort(
             key=lambda x: (
+                0 if (x["distance_km"] is not None and x.get("is_location_fresh", False)) else 1,
                 x["distance_km"] if x["distance_km"] is not None else 9999.0,
                 -x["reliability_score"],
                 -x["acceptance_rate"],

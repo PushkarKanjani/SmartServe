@@ -121,19 +121,19 @@ class Booking(Base):
 
     @property
     def city(self) -> str:
-        return "Noida"
+        return getattr(self, "_city", "") or ""
 
     @city.setter
     def city(self, value):
-        pass
+        self._city = value
 
     @property
     def pincode(self) -> str:
-        return "201301"
+        return getattr(self, "_pincode", "") or ""
 
     @pincode.setter
     def pincode(self, value):
-        pass
+        self._pincode = value
 
     @property
     def notes(self) -> str:

@@ -1437,8 +1437,12 @@ def create_customer_booking(
             detail="A service location is required to place a booking. Please provide an address or set your service location."
         )
 
-    resolved_city = payload.city or (loc_dict.get("city") if loc_dict else None) or "Noida"
-    resolved_pincode = payload.pincode or (loc_dict.get("postal_code") if loc_dict else None) or "201301"
+    resolved_city = payload.city or (loc_dict.get("city") if loc_dict else None) or ""
+    resolved_pincode = payload.pincode or (loc_dict.get("postal_code") if loc_dict else None) or ""
+
+    # Extract customer device GPS coordinates from payload or profile location
+    cust_lat = payload.latitude if payload.latitude is not None else (float(loc_dict.get("latitude")) if (loc_dict and loc_dict.get("latitude") is not None) else None)
+    cust_lng = payload.longitude if payload.longitude is not None else (float(loc_dict.get("longitude")) if (loc_dict and loc_dict.get("longitude") is not None) else None)
 
     db_service = None
     try:
@@ -1473,9 +1477,14 @@ def create_customer_booking(
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid provider ID format")
 
-    # Determine eligible provider based on approved status, service association, availability, and requested slot
+    # Determine eligible provider based on approved status, service association, availability, and GPS proximity
     eligible_provider, matched_slot, eligibility_msg = find_eligible_provider(
-        db, srv_id, parsed_sched_time, requested_provider_id=requested_prov_uuid
+        db,
+        srv_id,
+        parsed_sched_time,
+        requested_provider_id=requested_prov_uuid,
+        customer_lat=cust_lat,
+        customer_lng=cust_lng,
     )
 
     if not eligible_provider:
@@ -1493,6 +1502,18 @@ def create_customer_booking(
         "provider_id": str(eligible_provider.user_id),
         "timestamp": datetime.utcnow().isoformat(),
     }
+    if cust_lat is not None and cust_lng is not None:
+        initial_event["latitude"] = cust_lat
+        initial_event["longitude"] = cust_lng
+
+    timeline_events = [initial_event]
+    if cust_lat is not None and cust_lng is not None:
+        timeline_events.append({
+            "event": "Customer Coordinates Updated",
+            "latitude": cust_lat,
+            "longitude": cust_lng,
+            "timestamp": datetime.utcnow().isoformat(),
+        })
 
     coupon_obj = None
     coupon_discount = Decimal("0.00")
@@ -1532,7 +1553,7 @@ def create_customer_booking(
         pincode=resolved_pincode,
         total_price=total_price,
         notes=payload.notes,
-        timeline=[initial_event],
+        timeline=timeline_events,
         emergency_flag="EMERGENCY" if is_emergency else None,
         coupon_code=coupon_obj.code if coupon_obj else None,
         coupon_discount=coupon_discount,
@@ -2028,21 +2049,27 @@ def get_booking_location(
             "updated_at": to_utc_iso(loc.updated_at),
         }
 
-    c_lat = 28.6280
-    c_lng = 77.3649
+    c_lat = None
+    c_lng = None
     if record.timeline:
         for item in reversed(record.timeline):
-            if isinstance(item, dict) and item.get("event") == "Customer Coordinates Updated":
+            if isinstance(item, dict) and item.get("event") in ["Customer Coordinates Updated", "Booking Requested", "Emergency Fast-Track Dispatch"]:
                 if item.get("latitude") is not None and item.get("longitude") is not None:
                     c_lat = float(item["latitude"])
                     c_lng = float(item["longitude"])
                     break
 
+    if c_lat is None or c_lng is None:
+        cust_loc = get_customer_location_dict(current_customer)
+        if cust_loc and cust_loc.get("latitude") is not None and cust_loc.get("longitude") is not None:
+            c_lat = float(cust_loc["latitude"])
+            c_lng = float(cust_loc["longitude"])
+
     customer_loc = {
         "latitude": c_lat,
         "longitude": c_lng,
-        "address": record.address_line1 or record.address or "Sector 62, Noida",
-        "city": record.city or "Noida",
+        "address": record.address_line1 or record.address or "Service Location",
+        "city": record.city or "",
     }
 
     return {
@@ -2118,7 +2145,7 @@ def update_customer_booking_location(
             "latitude": float(payload.latitude),
             "longitude": float(payload.longitude),
             "address": record.address_line1 or record.address or "Service Location",
-            "city": record.city or "Noida",
+            "city": record.city or "",
         }
     }
 

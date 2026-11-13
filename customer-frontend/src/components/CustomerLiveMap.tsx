@@ -382,21 +382,25 @@ export const CustomerLiveMap: React.FC<CustomerLiveMapProps> = ({
       mapRef.current = null;
     }
 
-    let initialCenter: [number, number] = [28.6280, 77.3649];
-    if (providerLocation && customerLocation) {
+    let initialCenter: [number, number] = [20.5937, 78.9629];
+    let initialZoom = 5;
+    if (providerLocation && customerLocation && customerLocation.latitude && customerLocation.longitude) {
       initialCenter = [
         (customerLocation.latitude + providerLocation.latitude) / 2,
         (customerLocation.longitude + providerLocation.longitude) / 2,
       ];
-    } else if (providerLocation) {
+      initialZoom = 13;
+    } else if (providerLocation && providerLocation.latitude && providerLocation.longitude) {
       initialCenter = [providerLocation.latitude, providerLocation.longitude];
-    } else if (customerLocation) {
+      initialZoom = 14;
+    } else if (customerLocation && customerLocation.latitude && customerLocation.longitude) {
       initialCenter = [customerLocation.latitude, customerLocation.longitude];
+      initialZoom = 14;
     }
 
     const map = L.map(mapContainerRef.current, {
       center: initialCenter,
-      zoom: 14,
+      zoom: initialZoom,
       zoomControl: true,
       attributionControl: false,
     });

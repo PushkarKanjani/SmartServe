@@ -183,11 +183,12 @@ export const ProviderDashboardView: React.FC = () => {
   const [locationDiagnostic, setLocationDiagnostic] = useState<string | null>(null);
   const [showLocationInstructions, setShowLocationInstructions] = useState<boolean>(false);
   const [showManualLocationModal, setShowManualLocationModal] = useState<boolean>(false);
-  const [manualCustomLat, setManualCustomLat] = useState<string>('23.0225');
-  const [manualCustomLng, setManualCustomLng] = useState<string>('72.5714');
+  const [manualCustomLat, setManualCustomLat] = useState<string>('');
+  const [manualCustomLng, setManualCustomLng] = useState<string>('');
   const [gpsCoordinates, setGpsCoordinates] = useState<GpsCoordinates | null>(null);
   const [lastGpsSync, setLastGpsSync] = useState<string | null>(null);
   const [isBroadcastingGps, setIsBroadcastingGps] = useState<boolean>(false);
+  const [isGpsTrackingEnabled, setIsGpsTrackingEnabled] = useState<boolean>(true);
 
   const compressImage = (file: File, maxWidth = 800, quality = 0.65): Promise<string> => {
     return new Promise((resolve) => {
@@ -333,10 +334,10 @@ export const ProviderDashboardView: React.FC = () => {
       return;
     }
 
-    const pLat = gpsCoordinates?.latitude || 28.6280;
-    const pLng = gpsCoordinates?.longitude || 77.3649;
-    const cLat = 28.6360;
-    const cLng = 77.3750;
+    const cLat = booking.customer_location?.latitude || (gpsCoordinates ? gpsCoordinates.latitude + 0.008 : 28.6360);
+    const cLng = booking.customer_location?.longitude || (gpsCoordinates ? gpsCoordinates.longitude + 0.010 : 77.3750);
+    const pLat = gpsCoordinates?.latitude || (cLat - 0.008);
+    const pLng = gpsCoordinates?.longitude || (cLng - 0.010);
 
     setDevSimulatingBookingId(booking.id);
 
@@ -400,12 +401,11 @@ export const ProviderDashboardView: React.FC = () => {
     setIsBroadcastingGps(true);
     setShowManualLocationModal(false);
 
-    if (activeBooking) {
-      await sendLocation(activeBooking.id, coords as any, true);
-    }
+    const targetBookingId = activeBooking ? activeBooking.id : null;
+    await sendLocation(targetBookingId, coords as any, true);
   };
 
-  const sendLocation = async (bookingId: string, coords: any, force = false) => {
+  const sendLocation = async (bookingId?: string | null, coords: any = {}, force = false) => {
     const now = Date.now();
     const last = lastLocationSentRef.current;
     if (!force && last) {
@@ -422,12 +422,13 @@ export const ProviderDashboardView: React.FC = () => {
 
     try {
       await apiClient.post('/providers/me/location', {
-        booking_id: bookingId,
+        booking_id: bookingId || null,
         latitude: coords.latitude,
         longitude: coords.longitude,
         heading: coords.heading || null,
         speed: coords.speed || null,
         accuracy: coords.accuracy || null,
+        is_active: true,
         timestamp: new Date().toISOString(),
       });
       lastLocationSentRef.current = { lat: coords.latitude, lng: coords.longitude, time: now };
@@ -444,15 +445,29 @@ export const ProviderDashboardView: React.FC = () => {
       setIsBroadcastingGps(true);
     } catch (err: any) {
       console.warn('GPS location post error:', err);
-      // If backend returns 400 (job finished, cancelled, or not active), halt watcher immediately
-      if (err?.response?.status === 400) {
-        stopGpsTracking();
+      // If booking is no longer active or invalid, retry with null booking_id to update standby location
+      if (err?.response?.status === 400 && bookingId) {
+        try {
+          await apiClient.post('/providers/me/location', {
+            booking_id: null,
+            latitude: coords.latitude,
+            longitude: coords.longitude,
+            heading: coords.heading || null,
+            speed: coords.speed || null,
+            accuracy: coords.accuracy || null,
+            is_active: true,
+            timestamp: new Date().toISOString(),
+          });
+          lastLocationSentRef.current = { lat: coords.latitude, lng: coords.longitude, time: now };
+        } catch {
+          stopGpsTracking();
+        }
       }
     }
   };
 
   // Trigger GPS read from browser (non-blocking, never halts booking pipeline)
-  const triggerCurrentGps = (bookingId?: string, force = true) => {
+  const triggerCurrentGps = (bookingId?: string | null, force = true) => {
     try {
       const isSecure = checkIsSecureContext();
       if (!isSecure) {
@@ -483,10 +498,8 @@ export const ProviderDashboardView: React.FC = () => {
           setLocationDiagnostic(null);
           setLastGpsSync(new Date().toLocaleTimeString());
 
-          const targetBookingId = bookingId || activeBooking?.id;
-          if (targetBookingId) {
-            sendLocation(targetBookingId, coords as any, force).catch(() => {});
-          }
+          const targetBookingId = bookingId !== undefined ? bookingId : (activeBooking?.id || null);
+          sendLocation(targetBookingId, coords as any, force).catch(() => {});
         },
         (err) => {
           const mapped = mapGeolocationError(err, checkIsSecureContext());
@@ -501,9 +514,9 @@ export const ProviderDashboardView: React.FC = () => {
     }
   };
 
-  // Geolocation watch lifecycle while active booking exists
+  // Continuous GPS tracking lifecycle across standby and active booking modes
   useEffect(() => {
-    if (!activeBooking) {
+    if (!isGpsTrackingEnabled) {
       stopGpsTracking();
       return;
     }
@@ -512,7 +525,7 @@ export const ProviderDashboardView: React.FC = () => {
     if (!isSecure) {
       setLocationPermission('insecure');
       setLocationDiagnostic(
-        'Accessing over unencrypted LAN IP (http://172.20.10.2:5175). Browser blocks device GPS on insecure contexts.'
+        'Accessing over unencrypted LAN IP (http://172.20.10.2:5175). Modern browsers enforce W3C rules requiring HTTPS or localhost for GPS.'
       );
       return;
     }
@@ -531,18 +544,31 @@ export const ProviderDashboardView: React.FC = () => {
         return;
       }
       // Immediate initial sync
-      triggerCurrentGps(activeBooking.id, true);
+      triggerCurrentGps(activeBooking?.id || null, true);
     });
 
-    // Watch position as device moves
+    // Watch position as device moves (continuous tracking)
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        sendLocation(activeBooking.id, pos.coords as any);
+        const coords = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          heading: pos.coords.heading || undefined,
+          speed: pos.coords.speed || undefined,
+        };
+        setGpsCoordinates(coords);
+        setLocationPermission('granted');
+        setLocationDiagnostic(null);
+        setLastGpsSync(new Date().toLocaleTimeString());
+        setIsBroadcastingGps(true);
+        sendLocation(activeBooking?.id || null, coords as any);
       },
       (err) => {
         const mapped = mapGeolocationError(err, checkIsSecureContext());
         setLocationPermission(mapped.state);
         setLocationDiagnostic(mapped.diagnostic);
+        setIsBroadcastingGps(false);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 }
     );
@@ -550,14 +576,18 @@ export const ProviderDashboardView: React.FC = () => {
 
     // Regular interval sync every 6 seconds
     const interval = setInterval(() => {
-      triggerCurrentGps(activeBooking.id, false);
+      triggerCurrentGps(activeBooking?.id || null, false);
     }, 6000);
     gpsIntervalRef.current = interval;
 
+    const handleLogoutEvent = () => stopGpsTracking();
+    window.addEventListener('smartserve_provider_logout', handleLogoutEvent);
+
     return () => {
+      window.removeEventListener('smartserve_provider_logout', handleLogoutEvent);
       stopGpsTracking();
     };
-  }, [activeBooking?.id, activeBooking?.status]);
+  }, [isGpsTrackingEnabled, activeBooking?.id, activeBooking?.status]);
 
   useEffect(() => {
     fetchAll();
@@ -1321,6 +1351,82 @@ export const ProviderDashboardView: React.FC = () => {
             >
               <Compass className="w-4 h-4" />
               <span>Ping GPS Now</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 2d. STANDBY LIVE GPS TELEMETRY & DUTY DISPATCH STATUS */}
+      {!activeBooking && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-white border border-[#E5DEC9] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+              isBroadcastingGps ? 'bg-emerald-50 border border-emerald-200 text-emerald-600' : 'bg-[#F2EDE1] text-[#1F2A1E]/50'
+            }`}>
+              <Compass className={`w-5 h-5 ${isBroadcastingGps ? 'animate-spin-slow' : ''}`} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-bold text-[#1F2A1E]">Live Provider GPS (Standby Mode)</span>
+                <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  isBroadcastingGps
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${isBroadcastingGps ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  {isBroadcastingGps ? 'Broadcasting Live Coordinates' : 'Standby / Connecting...'}
+                </span>
+                {gpsCoordinates?.accuracy && (
+                  <span className="text-[10px] text-[#1F2A1E]/60 bg-[#F2EDE1] px-2 py-0.5 rounded-full">
+                    Accuracy: ±{Math.round(gpsCoordinates.accuracy)}m
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-[#1F2A1E]/60 mt-0.5">
+                Auto-dispatch uses your live coordinates to match nearby customers within your service radius.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 self-end md:self-center">
+            {gpsCoordinates ? (
+              <div className="font-mono text-xs text-right">
+                <span className="text-[10px] text-[#1F2A1E]/50 font-sans block uppercase font-bold">Current Coordinates</span>
+                <span className="font-bold text-[#2F5233]">
+                  {gpsCoordinates.latitude.toFixed(4)}, {gpsCoordinates.longitude.toFixed(4)}
+                </span>
+                {lastGpsSync && <span className="text-[10px] text-[#1F2A1E]/40 font-sans block">Synced {lastGpsSync}</span>}
+              </div>
+            ) : (
+              <span className="text-xs text-[#1F2A1E]/50">No coordinates acquired yet</span>
+            )}
+            <button
+              type="button"
+              onClick={() => setIsGpsTrackingEnabled((prev) => !prev)}
+              className={`flex items-center gap-1.5 px-3 py-2 font-bold text-xs rounded-xl border transition-all cursor-pointer ${
+                isGpsTrackingEnabled
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+              }`}
+            >
+              <Radio className={`w-3.5 h-3.5 ${isGpsTrackingEnabled ? 'text-emerald-600 animate-pulse' : 'text-gray-400'}`} />
+              <span>{isGpsTrackingEnabled ? 'Live GPS: ON' : 'Live GPS: OFF'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerCurrentGps(null, true)}
+              disabled={!isGpsTrackingEnabled}
+              className="flex items-center gap-1 px-3 py-2 bg-[#2F5233] hover:bg-[#1F2A1E] text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              <Navigation className="w-3.5 h-3.5 text-[#C9A15A]" />
+              <span>Ping GPS</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowManualLocationModal(true)}
+              className="px-3 py-2 bg-white hover:bg-[#F2EDE1] text-[#1F2A1E] font-bold text-xs rounded-xl border border-[#E5DEC9] transition-all cursor-pointer"
+            >
+              Pin Manually
             </button>
           </div>
         </div>

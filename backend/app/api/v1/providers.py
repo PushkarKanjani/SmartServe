@@ -1388,18 +1388,19 @@ def get_service_photos(
 from pydantic import BaseModel
 
 class ProviderLocationPayload(BaseModel):
-    booking_id: uuid.UUID
+    booking_id: Optional[uuid.UUID] = None
     latitude: float
     longitude: float
     heading: Optional[float] = None
     speed: Optional[float] = None
     accuracy: Optional[float] = None
     timestamp: Optional[str] = None
+    is_active: Optional[bool] = True
 
 
 @router.post(
     "/providers/me/location",
-    summary="Update real-time GPS location of provider for active booking",
+    summary="Update real-time GPS location of provider for active booking or standby duty",
 )
 def update_provider_location(
     payload: ProviderLocationPayload,
@@ -1432,28 +1433,32 @@ def update_provider_location(
             detail="Only approved, verified service providers can broadcast live GPS location.",
         )
 
-    # 3. Safety Check: Verify active booking ownership and state
-    booking = db.query(Booking).filter(
-        Booking.id == payload.booking_id,
-        Booking.provider_id == current_user.id
-    ).first()
+    # 3. Optional Booking Check: If booking_id provided, verify active booking ownership
+    booking = None
+    if payload.booking_id:
+        booking = db.query(Booking).filter(
+            Booking.id == payload.booking_id,
+            Booking.provider_id == current_user.id
+        ).first()
 
-    if not booking:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Active booking not found for this provider.",
-        )
+        if not booking:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Active booking not found for this provider.",
+            )
 
-    active_statuses = ["Accepted", "On The Way", "Arrived", "Started"]
-    if booking.status not in active_statuses:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Live location updates are only permitted during an active job. Current status: '{booking.status}'",
-        )
+        active_statuses = ["Accepted", "On The Way", "Arrived", "Started"]
+        if booking.status not in active_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Live location updates are only permitted during an active job. Current status: '{booking.status}'",
+            )
 
     # 4. Upsert latest location record in PostgreSQL
     loc = db.query(ProviderLocation).filter(ProviderLocation.provider_id == current_user.id).first()
     now_utc = datetime.utcnow()
+    is_active_flag = payload.is_active if payload.is_active is not None else True
+
     if not loc:
         loc = ProviderLocation(
             id=uuid.uuid4(),
@@ -1464,7 +1469,7 @@ def update_provider_location(
             heading=Decimal(str(payload.heading)) if payload.heading is not None else None,
             speed=Decimal(str(payload.speed)) if payload.speed is not None else None,
             accuracy=Decimal(str(payload.accuracy)) if payload.accuracy is not None else None,
-            is_active=True,
+            is_active=is_active_flag,
             updated_at=now_utc,
         )
         db.add(loc)
@@ -1478,42 +1483,63 @@ def update_provider_location(
             loc.speed = Decimal(str(payload.speed))
         if payload.accuracy is not None:
             loc.accuracy = Decimal(str(payload.accuracy))
-        loc.is_active = True
+        loc.is_active = is_active_flag
         loc.updated_at = now_utc
         db.add(loc)
 
     db.commit()
 
-    # 5. Direct WebSocket broadcast to customer, admin, and active booking channels
-    cust_id = str(booking.customer_id) if booking.customer_id else None
-    channels = ["dashboard", "bookings", "admin", f"booking_{booking.id}", f"admin_booking_{booking.id}"]
-    if cust_id:
-        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
-    if booking.customer and hasattr(booking.customer, "user_id") and booking.customer.user_id:
-        channels.extend([f"customer_{booking.customer.user_id}", f"user_{booking.customer.user_id}"])
-
+    # 5. Direct WebSocket broadcast to appropriate channels
     from app.core.websockets import to_utc_iso
     utc_ts = to_utc_iso(now_utc)
-    loc_msg = {
-        "type": "PROVIDER_LOCATION_UPDATED",
-        "event": "provider.location.updated",
-        "event_type": "provider.location.updated",
-        "booking_id": str(booking.id),
-        "provider_id": str(current_user.id),
-        "provider_name": provider.full_name,
-        "latitude": float(payload.latitude),
-        "longitude": float(payload.longitude),
-        "heading": float(payload.heading) if payload.heading is not None else None,
-        "speed": float(payload.speed) if payload.speed is not None else None,
-        "accuracy": float(payload.accuracy) if payload.accuracy is not None else None,
-        "status": booking.status,
-        "updated_at": utc_ts,
-    }
+
+    if booking:
+        cust_id = str(booking.customer_id) if booking.customer_id else None
+        channels = ["dashboard", "bookings", "admin", f"booking_{booking.id}", f"admin_booking_{booking.id}"]
+        if cust_id:
+            channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+        if booking.customer and hasattr(booking.customer, "user_id") and booking.customer.user_id:
+            channels.extend([f"customer_{booking.customer.user_id}", f"user_{booking.customer.user_id}"])
+
+        loc_msg = {
+            "type": "PROVIDER_LOCATION_UPDATED",
+            "event": "provider.location.updated",
+            "event_type": "provider.location.updated",
+            "booking_id": str(booking.id),
+            "provider_id": str(current_user.id),
+            "provider_name": provider.full_name,
+            "latitude": float(payload.latitude),
+            "longitude": float(payload.longitude),
+            "heading": float(payload.heading) if payload.heading is not None else None,
+            "speed": float(payload.speed) if payload.speed is not None else None,
+            "accuracy": float(payload.accuracy) if payload.accuracy is not None else None,
+            "status": booking.status,
+            "updated_at": utc_ts,
+        }
+    else:
+        channels = ["dashboard", "admin", f"provider_{current_user.id}", "providers_location"]
+        loc_msg = {
+            "type": "PROVIDER_LOCATION_UPDATED",
+            "event": "provider.location.updated",
+            "event_type": "provider.location.updated",
+            "booking_id": None,
+            "provider_id": str(current_user.id),
+            "provider_name": provider.full_name,
+            "latitude": float(payload.latitude),
+            "longitude": float(payload.longitude),
+            "heading": float(payload.heading) if payload.heading is not None else None,
+            "speed": float(payload.speed) if payload.speed is not None else None,
+            "accuracy": float(payload.accuracy) if payload.accuracy is not None else None,
+            "status": "Available",
+            "updated_at": utc_ts,
+        }
+
     broadcast_realtime(channels, loc_msg)
 
     return {
         "status": "success",
-        "booking_id": str(booking.id),
+        "booking_id": str(booking.id) if booking else None,
+        "provider_id": str(current_user.id),
         "latitude": float(payload.latitude),
         "longitude": float(payload.longitude),
         "updated_at": utc_ts,

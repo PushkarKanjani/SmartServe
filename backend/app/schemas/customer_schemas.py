@@ -230,6 +230,7 @@ class EligibleProviderResponse(BaseModel):
     acceptance_rate: float = 100.0
     service_area: Optional[str] = None
     distance_km: Optional[float] = None
+    is_location_fresh: Optional[bool] = False
     available_slots: List[str] = []
     structured_slots: List[ProviderSlotDetail] = []
     is_available: bool = True
@@ -249,6 +250,8 @@ class CreateBookingPayload(BaseModel):
     payment_method: str = "COD"
     provider_id: Optional[str] = None
     coupon_code: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class CancelBookingPayload(BaseModel):
@@ -361,8 +364,10 @@ class CombinedBookingCreatePayload(BaseModel):
     scheduled_date: str
     scheduled_time: str
     address_line1: str = Field(..., min_length=5)
-    city: str = "Noida"
-    pincode: str = "201301"
+    city: Optional[str] = None
+    pincode: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     customer_notes: Optional[str] = None
     coupon_code: Optional[str] = None
     coupon_discount: Optional[float] = 0.0

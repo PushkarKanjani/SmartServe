@@ -120,11 +120,11 @@ export const CustomerBookingDetail: React.FC = () => {
         address: booking?.address_line1 || booking?.address || customerLocationFromApi?.address || 'Service Location',
         city: booking?.city || customerLocationFromApi?.city || '',
       }
-    : (customerLocationFromApi || (booking ? {
-        latitude: 28.6280,
-        longitude: 77.3649,
-        address: booking.address_line1 || booking.address || 'Sector 62, Noida',
-        city: booking.city || 'Noida',
+    : (customerLocationFromApi?.latitude && customerLocationFromApi?.longitude ? customerLocationFromApi : (booking ? {
+        latitude: customerLocationFromApi?.latitude ?? 0,
+        longitude: customerLocationFromApi?.longitude ?? 0,
+        address: booking.address_line1 || booking.address || 'Service Location',
+        city: booking.city || '',
       } : null));
 
   // Chat state

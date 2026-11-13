@@ -999,21 +999,27 @@ def get_admin_booking_location(
         }
 
     # Customer location from booking
-    c_lat = 28.6280
-    c_lng = 77.3649
+    c_lat = None
+    c_lng = None
     if booking.timeline:
         for item in reversed(booking.timeline):
-            if isinstance(item, dict) and item.get("event") == "Customer Coordinates Updated":
+            if isinstance(item, dict) and item.get("event") in ["Customer Coordinates Updated", "Booking Requested", "Emergency Fast-Track Dispatch"]:
                 if item.get("latitude") is not None and item.get("longitude") is not None:
                     c_lat = float(item["latitude"])
                     c_lng = float(item["longitude"])
                     break
 
+    if (c_lat is None or c_lng is None) and booking.customer and isinstance(booking.customer.preferences, dict):
+        cust_loc = booking.customer.preferences.get("location")
+        if isinstance(cust_loc, dict) and cust_loc.get("latitude") is not None and cust_loc.get("longitude") is not None:
+            c_lat = float(cust_loc["latitude"])
+            c_lng = float(cust_loc["longitude"])
+
     customer_loc = {
         "latitude": c_lat,
         "longitude": c_lng,
-        "address": booking.address or "Sector 62, Noida",
-        "city": "Noida",
+        "address": booking.address_line1 or booking.address or "Service Location",
+        "city": booking.city or "",
     }
 
     return {

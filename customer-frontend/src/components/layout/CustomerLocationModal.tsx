@@ -31,6 +31,7 @@ export const CustomerLocationModal: React.FC = () => {
   const { t } = useTranslation();
   const {
     location,
+    locationStatus,
     isModalOpen,
     setIsModalOpen,
     detectGpsLocation,
@@ -140,7 +141,50 @@ export const CustomerLocationModal: React.FC = () => {
         {/* Modal Body */}
         <div className="p-6 space-y-5">
           {/* Status Banners */}
-          {error && (
+          {locationStatus === 'live' && location && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs font-semibold animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span>
+                  Live GPS Active: {location.city || 'Current Area'} ({location.latitude?.toFixed(4)}, {location.longitude?.toFixed(4)})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleGpsDetect}
+                disabled={isLoading}
+                className="text-[11px] font-bold text-emerald-700 underline hover:text-emerald-800 cursor-pointer disabled:opacity-50"
+              >
+                Refresh
+              </button>
+            </div>
+          )}
+
+          {locationStatus === 'insecure' && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Insecure Connection (HTTP LAN)</p>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Browsers require HTTPS to access device GPS over a local network IP. Please select a popular hub or enter your address manually below.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {locationStatus === 'denied' && (
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs leading-relaxed animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Location Permission Denied</p>
+                <p className="text-[11px] text-rose-800 mt-0.5">
+                  Browser location access was blocked. Please select your service area or enter your address below.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {error && locationStatus !== 'insecure' && locationStatus !== 'denied' && (
             <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed animate-in fade-in">
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <span>{error}</span>
@@ -159,7 +203,7 @@ export const CustomerLocationModal: React.FC = () => {
             <button
               type="button"
               onClick={handleGpsDetect}
-              disabled={isLoading}
+              disabled={isLoading || locationStatus === 'insecure'}
               className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl font-bold text-xs bg-[#2F5233] hover:bg-[#3D6B42] text-white shadow-xs transition-all cursor-pointer disabled:opacity-60"
             >
               {isLoading ? (
@@ -170,7 +214,11 @@ export const CustomerLocationModal: React.FC = () => {
               ) : (
                 <>
                   <Navigation className="w-4 h-4 text-[#C9A15A]" />
-                  <span>{t('location.use_gps', { defaultValue: 'Use Current GPS Location' })}</span>
+                  <span>
+                    {locationStatus === 'live'
+                      ? t('location.refresh_gps', { defaultValue: 'Refresh Live GPS Coordinates' })
+                      : t('location.use_gps', { defaultValue: 'Use Current Device GPS' })}
+                  </span>
                 </>
               )}
             </button>

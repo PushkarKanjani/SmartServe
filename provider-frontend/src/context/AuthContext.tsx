@@ -86,6 +86,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    try {
+      window.dispatchEvent(new Event('smartserve_provider_logout'));
+    } catch {}
     await providerLogout();
     localStorage.removeItem('smartserve_provider_token');
     localStorage.removeItem('smartserve_provider_user');

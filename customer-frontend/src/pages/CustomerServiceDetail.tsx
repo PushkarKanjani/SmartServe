@@ -61,20 +61,21 @@ export const CustomerServiceDetail: React.FC = () => {
   const [showBookingModal, setShowBookingModal] = useState<boolean>(false);
   const [bookingDate, setBookingDate] = useState<string>('');
   const [bookingTime, setBookingTime] = useState<string>('');
-  const [address, setAddress] = useState<string>('Flat 402, Sunshine Apartments, Sector 62');
-  const [city, setCity] = useState<string>('Noida');
-  const [pincode, setPincode] = useState<string>('201301');
+  const [address, setAddress] = useState<string>('');
+  const [city, setCity] = useState<string>('');
+  const [pincode, setPincode] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
   const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
   const [bookingLoading, setBookingLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    if (user?.location) {
-      if (user.location.address) setAddress(user.location.address);
-      if (user.location.city) setCity(user.location.city);
-      if (user.location.postal_code) setPincode(user.location.postal_code);
+    const loc = location || user?.location;
+    if (loc) {
+      if (loc.address) setAddress(loc.address);
+      if (loc.city) setCity(loc.city);
+      if (loc.postal_code) setPincode(loc.postal_code);
     }
-  }, [user]);
+  }, [location, user]);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -388,6 +389,8 @@ export const CustomerServiceDetail: React.FC = () => {
         city,
         pincode,
         payment_method: 'COD',
+        latitude: location?.latitude,
+        longitude: location?.longitude,
         notes: notes || (isEmergency ? t('booking.emergency_notes', { defaultValue: 'Emergency fast-track dispatch requested' }) : t('booking.standard_notes', { defaultValue: 'Standard booking requested via Customer Web' })),
         provider_id: isProviderSelectable && selectedProviderId ? selectedProviderId : undefined,
       });
@@ -1295,8 +1298,13 @@ export const CustomerServiceDetail: React.FC = () => {
                           }`}
                         >
                           <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="text-xs font-bold text-[#1F2A1E]">{prov.full_name}</p>
+                              {prov.distance_km !== null && prov.distance_km !== undefined && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                                  📍 {prov.distance_km.toFixed(1)} km away
+                                </span>
+                              )}
                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
                                 â­ {prov.reliability_score}% {t('provider.reliability_short', { defaultValue: 'Reliability' })}
                               </span>

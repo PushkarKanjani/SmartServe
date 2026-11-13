@@ -13,6 +13,8 @@ export interface CreateBookingPayload {
   payment_method?: string;
   notes?: string;
   provider_id?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface WarrantyInfo {
