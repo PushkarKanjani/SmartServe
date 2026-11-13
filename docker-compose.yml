@@ -82,6 +82,7 @@ services:
     container_name: smartserve-provider
     ports:
       - "5175:5175"
+      - "5176:5176"
     depends_on:
       backend:
         condition: service_healthy

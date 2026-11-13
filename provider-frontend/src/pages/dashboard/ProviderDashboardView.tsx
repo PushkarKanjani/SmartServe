@@ -14,6 +14,12 @@ import {
   Play,
   CheckCircle2,
   AlertCircle,
+  ShieldAlert,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  Square,
+  Check,
   IndianRupee,
   Zap,
   ChevronRight,
@@ -36,6 +42,14 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../../api/client';
 import { subscribeToRealtime } from '../../utils/realtime';
+import {
+  checkIsSecureContext,
+  checkGeolocationSupported,
+  queryGeolocationPermission,
+  mapGeolocationError,
+  LOCATION_PRESETS,
+} from '../../utils/geolocation';
+import type { LocationPermissionState, GpsCoordinates } from '../../utils/geolocation';
 
 interface DashboardStats {
   today_bookings_count: number;
@@ -165,14 +179,13 @@ export const ProviderDashboardView: React.FC = () => {
   const [collectionSuccess, setCollectionSuccess] = useState<string | null>(null);
 
   // Real Geolocation Tracking state
-  const [locationPermission, setLocationPermission] = useState<'prompt' | 'granted' | 'denied' | 'unsupported'>('prompt');
-  const [gpsCoordinates, setGpsCoordinates] = useState<{
-    latitude: number;
-    longitude: number;
-    accuracy?: number;
-    heading?: number;
-    speed?: number;
-  } | null>(null);
+  const [locationPermission, setLocationPermission] = useState<LocationPermissionState>('prompt');
+  const [locationDiagnostic, setLocationDiagnostic] = useState<string | null>(null);
+  const [showLocationInstructions, setShowLocationInstructions] = useState<boolean>(false);
+  const [showManualLocationModal, setShowManualLocationModal] = useState<boolean>(false);
+  const [manualCustomLat, setManualCustomLat] = useState<string>('23.0225');
+  const [manualCustomLng, setManualCustomLng] = useState<string>('72.5714');
+  const [gpsCoordinates, setGpsCoordinates] = useState<GpsCoordinates | null>(null);
   const [lastGpsSync, setLastGpsSync] = useState<string | null>(null);
   const [isBroadcastingGps, setIsBroadcastingGps] = useState<boolean>(false);
 
@@ -371,7 +384,28 @@ export const ProviderDashboardView: React.FC = () => {
     }
   };
 
-  const sendLocation = async (bookingId: string, coords: GeolocationCoordinates, force = false) => {
+  const handleSetManualLocation = async (lat: number, lng: number, _name?: string) => {
+    const coords: GpsCoordinates = {
+      latitude: lat,
+      longitude: lng,
+      accuracy: 5.0,
+      heading: 0,
+      speed: 0,
+      timestamp: Date.now(),
+    };
+    setGpsCoordinates(coords);
+    setLocationPermission('granted');
+    setLocationDiagnostic(null);
+    setLastGpsSync(new Date().toLocaleTimeString());
+    setIsBroadcastingGps(true);
+    setShowManualLocationModal(false);
+
+    if (activeBooking) {
+      await sendLocation(activeBooking.id, coords as any, true);
+    }
+  };
+
+  const sendLocation = async (bookingId: string, coords: any, force = false) => {
     const now = Date.now();
     const last = lastLocationSentRef.current;
     if (!force && last) {
@@ -405,6 +439,7 @@ export const ProviderDashboardView: React.FC = () => {
         speed: coords.speed || undefined,
       });
       setLocationPermission('granted');
+      setLocationDiagnostic(null);
       setLastGpsSync(new Date().toLocaleTimeString());
       setIsBroadcastingGps(true);
     } catch (err: any) {
@@ -417,25 +452,52 @@ export const ProviderDashboardView: React.FC = () => {
   };
 
   // Trigger GPS read from browser (non-blocking, never halts booking pipeline)
-  const triggerCurrentGps = (bookingId: string, force = true) => {
+  const triggerCurrentGps = (bookingId?: string, force = true) => {
     try {
-      if (!('geolocation' in navigator)) {
-        setLocationPermission('unsupported');
+      const isSecure = checkIsSecureContext();
+      if (!isSecure) {
+        setLocationPermission('insecure');
+        setLocationDiagnostic(
+          'Location API restricted on unencrypted HTTP (http://172.20.10.2:5175). Modern browsers enforce W3C rules requiring HTTPS or localhost for GPS.'
+        );
         return;
       }
+
+      if (!checkGeolocationSupported()) {
+        setLocationPermission('unsupported');
+        setLocationDiagnostic('Geolocation is not supported by your browser environment.');
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          sendLocation(bookingId, pos.coords, force).catch(() => {});
+          const coords = {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            heading: pos.coords.heading || undefined,
+            speed: pos.coords.speed || undefined,
+          };
+          setGpsCoordinates(coords);
+          setLocationPermission('granted');
+          setLocationDiagnostic(null);
+          setLastGpsSync(new Date().toLocaleTimeString());
+
+          const targetBookingId = bookingId || activeBooking?.id;
+          if (targetBookingId) {
+            sendLocation(targetBookingId, coords as any, force).catch(() => {});
+          }
         },
         (err) => {
-          if (err.code === err.PERMISSION_DENIED) {
-            setLocationPermission('denied');
-          }
+          const mapped = mapGeolocationError(err, checkIsSecureContext());
+          setLocationPermission(mapped.state);
+          setLocationDiagnostic(mapped.diagnostic);
         },
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
-    } catch (e) {
+    } catch (e: any) {
       console.warn('GPS trigger error ignored:', e);
+      setLocationDiagnostic(e?.message || 'Error triggering GPS.');
     }
   };
 
@@ -446,23 +508,41 @@ export const ProviderDashboardView: React.FC = () => {
       return;
     }
 
-    if (!('geolocation' in navigator)) {
-      setLocationPermission('unsupported');
+    const isSecure = checkIsSecureContext();
+    if (!isSecure) {
+      setLocationPermission('insecure');
+      setLocationDiagnostic(
+        'Accessing over unencrypted LAN IP (http://172.20.10.2:5175). Browser blocks device GPS on insecure contexts.'
+      );
       return;
     }
 
-    // Immediate initial sync
-    triggerCurrentGps(activeBooking.id, true);
+    if (!checkGeolocationSupported()) {
+      setLocationPermission('unsupported');
+      setLocationDiagnostic('Geolocation is not supported by your browser environment.');
+      return;
+    }
+
+    // Query permission state where supported (avoids unnecessary error callbacks if blocked)
+    queryGeolocationPermission().then((status) => {
+      if (status === 'denied') {
+        setLocationPermission('denied');
+        setLocationDiagnostic('Location access was denied in browser settings.');
+        return;
+      }
+      // Immediate initial sync
+      triggerCurrentGps(activeBooking.id, true);
+    });
 
     // Watch position as device moves
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        sendLocation(activeBooking.id, pos.coords);
+        sendLocation(activeBooking.id, pos.coords as any);
       },
       (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setLocationPermission('denied');
-        }
+        const mapped = mapGeolocationError(err, checkIsSecureContext());
+        setLocationPermission(mapped.state);
+        setLocationDiagnostic(mapped.diagnostic);
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 3000 }
     );
@@ -860,26 +940,248 @@ export const ProviderDashboardView: React.FC = () => {
         </div>
       )}
 
-      {/* 2b. LOCATION PERMISSION DENIED WARNING BANNER */}
-      {locationPermission === 'denied' && (
-        <div className="p-5 rounded-3xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-rose-900 shadow-xs">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-rose-100 flex items-center justify-center text-rose-700 shrink-0 mt-0.5">
-              <AlertCircle className="w-5 h-5" />
+      {/* 2b. SMART LOCATION / GPS DIAGNOSTIC & PERMISSION BANNER */}
+      {locationPermission !== 'granted' && (
+        <div className="rounded-3xl border transition-all duration-200 overflow-hidden shadow-xs">
+          {/* CASE 1: Insecure Context (HTTP over LAN IP) */}
+          {locationPermission === 'insecure' && (
+            <div className="p-5 bg-amber-50/90 border border-amber-200 text-amber-950">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300/60 flex items-center justify-center text-amber-800 shrink-0 mt-0.5">
+                    <ShieldAlert className="w-5 h-5 text-amber-800" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 border border-amber-300">
+                        Browser Security Policy (W3C)
+                      </span>
+                      <h4 className="text-sm font-bold text-amber-950">GPS Requires Secure Context (HTTPS or Localhost)</h4>
+                    </div>
+                    <p className="text-xs text-amber-800/90 mt-1 max-w-2xl leading-relaxed">
+                      You are accessing the portal over an unencrypted local IP (<code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[11px]">http://172.20.10.2:5175</code>). Modern mobile & desktop browsers strictly block device GPS hardware over non-localhost HTTP origins. <strong>Location was not denied by you</strong>—the browser blocked it before showing a prompt.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap shrink-0 self-end lg:self-center">
+                  {activeBooking && (
+                    <button
+                      type="button"
+                      onClick={() => handleDevSimulateRoute(activeBooking)}
+                      className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer ${
+                        devSimulatingBookingId === activeBooking.id
+                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                          : 'bg-emerald-700 hover:bg-emerald-800 text-white'
+                      }`}
+                    >
+                      {devSimulatingBookingId === activeBooking.id ? (
+                        <>
+                          <Square className="w-3.5 h-3.5 fill-current" />
+                          <span>Stop Simulation</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          <span>Simulate Live Route</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowManualLocationModal(true)}
+                    className="px-3.5 py-2 bg-white hover:bg-amber-100/80 text-amber-900 border border-amber-300 font-bold text-xs rounded-xl transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <MapPin className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Pin Coordinates</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationInstructions((prev) => !prev)}
+                    className="px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    <span>{showLocationInstructions ? 'Hide Setup' : 'How to Enable GPS'}</span>
+                    {showLocationInstructions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Expandable Setup Instructions */}
+              {showLocationInstructions && (
+                <div className="mt-4 pt-4 border-t border-amber-200/80 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3 bg-white/70 rounded-2xl border border-amber-200">
+                    <div className="font-bold text-amber-950 flex items-center gap-1.5 mb-1">
+                      <span className="w-5 h-5 rounded-full bg-amber-200 text-amber-900 font-mono text-[10px] flex items-center justify-center font-bold">1</span>
+                      <span>Laptop Testing (Zero Setup)</span>
+                    </div>
+                    <p className="text-[11px] text-amber-900/80">
+                      Open <code className="bg-amber-100 px-1 rounded font-mono font-bold">http://localhost:5175</code> on your laptop. Localhost is treated as a secure context, so your browser will immediately show the native location permission prompt!
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white/70 rounded-2xl border border-amber-200">
+                    <div className="font-bold text-amber-950 flex items-center gap-1.5 mb-1">
+                      <span className="w-5 h-5 rounded-full bg-amber-200 text-amber-900 font-mono text-[10px] flex items-center justify-center font-bold">2</span>
+                      <span>Instant Dispatch Simulation</span>
+                    </div>
+                    <p className="text-[11px] text-amber-900/80">
+                      Click <strong>"Simulate Live Route"</strong> above. It drives real OSRM turn-by-turn waypoints to the customer destination and streams live GPS telemetry to the backend without needing device hardware.
+                    </p>
+                  </div>
+                  <div className="p-3 bg-white/70 rounded-2xl border border-amber-200">
+                    <div className="font-bold text-amber-950 flex items-center gap-1.5 mb-1">
+                      <span className="w-5 h-5 rounded-full bg-amber-200 text-amber-900 font-mono text-[10px] flex items-center justify-center font-bold">3</span>
+                      <span>Mobile Testing via Flag / SSL</span>
+                    </div>
+                    <p className="text-[11px] text-amber-900/80">
+                      On Chrome mobile: open <code className="bg-amber-100 px-1 rounded font-mono text-[10px]">chrome://flags/#unsafely-treat-insecure-origin-as-secure</code> and add <code className="font-mono text-[10px]">http://172.20.10.2:5175</code>. Or use the HTTPS reverse proxy port.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-            <div>
-              <h4 className="text-sm font-bold">Location Permission Required</h4>
-              <p className="text-xs text-rose-700 mt-0.5 max-w-xl">
-                Browser location access was denied. Please click the site settings / lock icon in your address bar and allow location permission so customers can view real dispatch telemetry.
-              </p>
+          )}
+
+          {/* CASE 2: Truly Denied in Browser Site Settings (Secure Context) */}
+          {locationPermission === 'denied' && (
+            <div className="p-5 bg-rose-50 border border-rose-200 text-rose-950">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-rose-100 border border-rose-300 flex items-center justify-center text-rose-700 shrink-0 mt-0.5">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-200 text-rose-900 border border-rose-300">
+                        Permission Blocked
+                      </span>
+                      <h4 className="text-sm font-bold text-rose-950">Location Permission Blocked in Browser Settings</h4>
+                    </div>
+                    <p className="text-xs text-rose-800 mt-1 max-w-2xl leading-relaxed">
+                      Location access was previously denied for this site. Modern browsers will not pop up a new permission prompt automatically until you re-enable it in your address bar or site settings.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap shrink-0 self-end lg:self-center">
+                  <button
+                    type="button"
+                    onClick={() => triggerCurrentGps(activeBooking?.id, true)}
+                    className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Retry GPS Permission</span>
+                  </button>
+                  {activeBooking && (
+                    <button
+                      type="button"
+                      onClick={() => handleDevSimulateRoute(activeBooking)}
+                      className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Use Simulated Route</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setShowLocationInstructions((prev) => !prev)}
+                    className="px-3 py-2 bg-rose-100 hover:bg-rose-200 text-rose-900 font-bold text-xs rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    <span>{showLocationInstructions ? 'Hide Instructions' : 'How to Unblock'}</span>
+                    {showLocationInstructions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Browser-specific Unblock Instructions */}
+              {showLocationInstructions && (
+                <div className="mt-4 pt-4 border-t border-rose-200 grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 bg-white/80 rounded-2xl border border-rose-200">
+                    <div className="font-bold text-rose-950 mb-1">Desktop Chrome / Edge / Brave / Firefox</div>
+                    <ol className="list-decimal list-inside space-y-1 text-rose-900/90 text-[11px]">
+                      <li>Click the <strong>lock 🔒 or tune icon</strong> at the far left of your address bar.</li>
+                      <li>Toggle <strong>Location</strong> to <strong>"Allow"</strong>.</li>
+                      <li>Click <strong>Retry GPS Permission</strong> or reload the page.</li>
+                    </ol>
+                  </div>
+                  <div className="p-3 bg-white/80 rounded-2xl border border-rose-200">
+                    <div className="font-bold text-rose-950 mb-1">iPhone (Safari) & Android (Chrome)</div>
+                    <ol className="list-decimal list-inside space-y-1 text-rose-900/90 text-[11px]">
+                      <li>On iOS Safari: Tap <strong>"aA"</strong> in address bar → <strong>Website Settings</strong> → <strong>Location</strong> → <strong>Allow</strong>.</li>
+                      <li>On Android Chrome: Tap <strong>⋮</strong> → <strong>Settings</strong> → <strong>Site settings</strong> → <strong>Location</strong> → <strong>Allow</strong>.</li>
+                      <li>Return to this page and tap <strong>Retry GPS Permission</strong>.</li>
+                    </ol>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-          <button
-            onClick={() => activeBooking && triggerCurrentGps(activeBooking.id)}
-            className="px-4 py-2 bg-rose-700 hover:bg-rose-800 text-white font-bold text-xs rounded-xl transition-colors shrink-0"
-          >
-            Retry GPS Permission
-          </button>
+          )}
+
+          {/* CASE 3: Position Unavailable or Timeout */}
+          {(locationPermission === 'unavailable' || locationPermission === 'timeout') && (
+            <div className="p-5 bg-amber-50 border border-amber-200 text-amber-950 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-100 border border-amber-300 flex items-center justify-center text-amber-800 shrink-0 mt-0.5">
+                  <AlertCircle className="w-5 h-5 text-amber-700" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-amber-950">
+                    {locationPermission === 'timeout' ? 'GPS Request Timed Out' : 'Device GPS Signal Unavailable'}
+                  </h4>
+                  <p className="text-xs text-amber-800 mt-1 max-w-2xl leading-relaxed">
+                    {locationDiagnostic || 'Unable to retrieve satellite GPS fix. Please ensure location services are turned on in your device settings.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end lg:self-center">
+                <button
+                  type="button"
+                  onClick={() => triggerCurrentGps(activeBooking?.id, true)}
+                  className="px-4 py-2 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs rounded-xl transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Retry Fix</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowManualLocationModal(true)}
+                  className="px-3.5 py-2 bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold text-xs rounded-xl transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-amber-700" />
+                  <span>Pin Coordinates</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* CASE 4: Unsupported Environment */}
+          {locationPermission === 'unsupported' && (
+            <div className="p-5 bg-gray-50 border border-gray-200 text-gray-900 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-gray-200 flex items-center justify-center text-gray-700 shrink-0 mt-0.5">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900">Geolocation Not Supported</h4>
+                  <p className="text-xs text-gray-600 mt-1 max-w-2xl leading-relaxed">
+                    This browser environment does not support the W3C Geolocation API. Use the route simulator or coordinate pinning to broadcast provider location.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0 self-end lg:self-center">
+                <button
+                  type="button"
+                  onClick={() => setShowManualLocationModal(true)}
+                  className="px-4 py-2 bg-[#2F5233] hover:bg-[#1F2A1E] text-white font-bold text-xs rounded-xl transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Pin Coordinates</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -984,8 +1286,38 @@ export const ProviderDashboardView: React.FC = () => {
               return null;
             })()}
             <button
-              onClick={() => triggerCurrentGps(activeBooking.id)}
-              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0"
+              type="button"
+              onClick={() => handleDevSimulateRoute(activeBooking)}
+              className={`flex items-center justify-center gap-1.5 px-3.5 py-2.5 font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer ${
+                devSimulatingBookingId === activeBooking.id
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                  : 'bg-white/15 hover:bg-white/25 text-white border border-white/20'
+              }`}
+            >
+              {devSimulatingBookingId === activeBooking.id ? (
+                <>
+                  <Square className="w-3.5 h-3.5 fill-current text-white" />
+                  <span>Stop Route</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-current text-emerald-300" />
+                  <span>Simulate Route</span>
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowManualLocationModal(true)}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
+            >
+              <MapPin className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Pin Location</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerCurrentGps(activeBooking.id, true)}
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors shrink-0 cursor-pointer"
             >
               <Compass className="w-4 h-4" />
               <span>Ping GPS Now</span>
@@ -2060,6 +2392,99 @@ export const ProviderDashboardView: React.FC = () => {
               </button>
             </div>
           </form>
+        </div>
+      )}
+      {/* 2d. MANUAL LOCATION / PIN COORDINATES MODAL */}
+      {showManualLocationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-[#FAF7F0] rounded-3xl border border-[#E5DEC9] max-w-lg w-full p-6 shadow-2xl relative text-[#1F2A1E]">
+            <div className="flex items-center justify-between pb-4 border-b border-[#E5DEC9]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-emerald-700" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1F2A1E]">Set Provider Location</h3>
+                  <p className="text-xs text-[#1F2A1E]/70">Pick a preset hub or enter custom GPS coordinates</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowManualLocationModal(false)}
+                className="p-2 text-[#1F2A1E]/50 hover:text-[#1F2A1E] rounded-xl hover:bg-black/5 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Hub Presets */}
+            <div className="my-4">
+              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#1F2A1E]/70 mb-2">
+                Quick Hub Presets
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {LOCATION_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleSetManualLocation(preset.latitude, preset.longitude, preset.name)}
+                    className="p-2.5 rounded-xl border border-[#E5DEC9] bg-white hover:bg-emerald-50 hover:border-emerald-300 text-left transition-colors flex items-center justify-between group cursor-pointer"
+                  >
+                    <div>
+                      <div className="text-xs font-bold text-[#1F2A1E] group-hover:text-emerald-900">{preset.name}</div>
+                      <div className="text-[10px] text-[#1F2A1E]/60">{preset.region} • {preset.latitude.toFixed(2)}, {preset.longitude.toFixed(2)}</div>
+                    </div>
+                    <span className="text-xs font-bold text-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity">Select →</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Coordinates Input */}
+            <div className="p-3.5 bg-white rounded-2xl border border-[#E5DEC9] space-y-3">
+              <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#1F2A1E]/70">
+                Custom Coordinates
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <span className="text-[10px] text-[#1F2A1E]/60 block mb-1">Latitude</span>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={manualCustomLat}
+                    onChange={(e) => setManualCustomLat(e.target.value)}
+                    placeholder="23.0225"
+                    className="w-full px-3 py-2 rounded-xl border border-[#E5DEC9] bg-[#FAF7F0] text-xs font-mono font-bold text-[#1F2A1E] focus:outline-emerald-600"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] text-[#1F2A1E]/60 block mb-1">Longitude</span>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    value={manualCustomLng}
+                    onChange={(e) => setManualCustomLng(e.target.value)}
+                    placeholder="72.5714"
+                    className="w-full px-3 py-2 rounded-xl border border-[#E5DEC9] bg-[#FAF7F0] text-xs font-mono font-bold text-[#1F2A1E] focus:outline-emerald-600"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const lat = parseFloat(manualCustomLat);
+                  const lng = parseFloat(manualCustomLng);
+                  if (!isNaN(lat) && !isNaN(lng)) {
+                    handleSetManualLocation(lat, lng, 'Custom Location');
+                  }
+                }}
+                className="w-full py-2.5 bg-[#2F5233] hover:bg-[#1F2A1E] text-white font-bold text-xs rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Check className="w-4 h-4" />
+                <span>Apply & Broadcast Telemetry</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

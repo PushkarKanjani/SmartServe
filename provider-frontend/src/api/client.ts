@@ -8,6 +8,10 @@ export function getApiBaseUrl(): string {
     if (hostname.includes('vercel.app')) {
       return 'https://smartserve-api-de3f.onrender.com/api/v1';
     }
+    // HTTPS local/LAN access (e.g. port 5176 SSL reverse proxy) - use same origin to prevent mixed content
+    if (window.location.protocol === 'https:') {
+      return `${window.location.origin}/api/v1`;
+    }
     // Mobile / Local network (172.x, 192.168.x, 10.x, etc.)
     if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
       return `http://${hostname}:8000/api/v1`;
