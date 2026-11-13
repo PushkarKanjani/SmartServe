@@ -131,6 +131,7 @@ def _serialize_admin_booking(b: Booking) -> BookingDetailResponse:
         created_at=b.created_at.isoformat() if b.created_at else ""
     )
 
+@router.get("", response_model=List[BookingDetailResponse])
 @router.get("/", response_model=List[BookingDetailResponse])
 def list_admin_bookings(
     status_filter: Optional[str] = None,
@@ -142,15 +143,17 @@ def list_admin_bookings(
     admin: User = Depends(require_admin)
 ):
     """Retrieve filterable bookings list for admin operations with fast eager loading."""
-    from sqlalchemy.orm import joinedload
+    from sqlalchemy.orm import joinedload, selectinload
     from sqlalchemy import desc
+    from app.models.service import Service
     query = (
         db.query(Booking)
         .options(
             joinedload(Booking.customer),
             joinedload(Booking.provider),
-            joinedload(Booking.service),
+            joinedload(Booking.service).load_only(Service.id, Service.name),
             joinedload(Booking.warranty),
+            selectinload(Booking.otps),
         )
     )
     if status_filter:
@@ -577,14 +580,16 @@ def get_admin_booking_detail(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid booking ID format")
 
-    from sqlalchemy.orm import joinedload
+    from sqlalchemy.orm import joinedload, selectinload
+    from app.models.service import Service
     b = (
         db.query(Booking)
         .options(
             joinedload(Booking.customer),
             joinedload(Booking.provider),
-            joinedload(Booking.service),
+            joinedload(Booking.service).load_only(Service.id, Service.name),
             joinedload(Booking.warranty),
+            selectinload(Booking.otps),
         )
         .filter(Booking.id == b_uuid)
         .first()

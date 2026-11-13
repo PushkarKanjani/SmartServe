@@ -22,20 +22,18 @@ export const checkBackendHealth = async (): Promise<HealthCheckResult> => {
     if (configuredApi && typeof configuredApi === 'string' && configuredApi.trim() !== '') {
       backendBase = configuredApi.trim().replace(/\/api\/v1\/?$/, '').replace(/\/$/, '');
     } else {
-      // 3. Production & Vercel fallback
-      if (import.meta.env.PROD || (typeof window !== 'undefined' && window.location && window.location.hostname.includes('vercel.app'))) {
-        backendBase = 'https://smartserve-api-de3f.onrender.com';
+      // 3. Browser runtime host detection (Mobile / LAN / Cloud):
+      if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+        const host = window.location.hostname;
+        if (host.includes('vercel.app')) {
+          backendBase = 'https://smartserve-api-de3f.onrender.com';
+        } else if (host === 'localhost' || host === '127.0.0.1') {
+          backendBase = 'http://127.0.0.1:8000';
+        } else {
+          backendBase = `http://${host}:8000`;
+        }
       } else {
-        // 4. Local-development fallback: match local LAN host IP
-        if (typeof window !== 'undefined' && window.location && window.location.hostname) {
-          const host = window.location.hostname;
-          if (host !== 'localhost' && host !== '127.0.0.1') {
-            backendBase = `http://${host}:8000`;
-          }
-        }
-        if (!backendBase) {
-          backendBase = 'http://localhost:8000';
-        }
+        backendBase = 'http://127.0.0.1:8000';
       }
     }
   }
@@ -46,7 +44,7 @@ export const checkBackendHealth = async (): Promise<HealthCheckResult> => {
   let apiReachable = false;
   let environment = 'dev';
 
-  // 1. Check Root Health Endpoint: GET http://localhost:8000/health
+  // 1. Check Root Health Endpoint: GET http://<host>:8000/health
   try {
     const rootRes = await axios.get(`${backendBase}/health`, { timeout: 12000 });
     if (rootRes.status === 200) {

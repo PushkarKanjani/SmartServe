@@ -45,7 +45,7 @@ def get_kafka_status(admin: User = Depends(require_admin)):
     is_cons_conn = kafka_consumer.is_running()
 
     return {
-        "status": "healthy" if is_prod_conn else "degraded",
+        "status": "healthy" if is_prod_conn else ("disabled" if not settings.KAFKA_ENABLED else "degraded"),
         "kafka_enabled": settings.KAFKA_ENABLED,
         "enabled": settings.KAFKA_ENABLED,
         "security_protocol": settings.KAFKA_SECURITY_PROTOCOL,

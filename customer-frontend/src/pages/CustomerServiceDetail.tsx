@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getServiceDetail, getServiceEligibleProviders, ServiceItem, EligibleProvider, ProviderSlotDetail } from '../api/catalog';
 import { createBooking } from '../api/bookings';
 import { useAuth } from '../auth/useAuth';
+import { useCustomerLocation } from '../context/LocationContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
@@ -42,6 +43,7 @@ export const CustomerServiceDetail: React.FC = () => {
   const { serviceId } = useParams<{ serviceId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { location } = useCustomerLocation();
   const { showToast } = useToast();
 
   const [service, setService] = useState<ServiceItem | null>(null);
@@ -84,7 +86,7 @@ export const CustomerServiceDetail: React.FC = () => {
         if (data) {
           document.title = data.seo_title || `${data.name} | SmartServe`;
           setProvidersLoading(true);
-          getServiceEligibleProviders(serviceId)
+          getServiceEligibleProviders(serviceId, { latitude: location?.latitude, longitude: location?.longitude, city: location?.city })
             .then((provs) => setEligibleProviders(provs))
             .catch((err) => console.error('Error fetching eligible providers', err))
             .finally(() => setProvidersLoading(false));
@@ -372,7 +374,7 @@ export const CustomerServiceDetail: React.FC = () => {
       showToast(typeof detail === 'string' ? detail : (detail?.message || t('booking.err_create_failed', { defaultValue: 'Failed to create booking. Please try again.' })), 'error');
       // Refresh provider availability in case slots changed or were booked
       if (serviceId) {
-        getServiceEligibleProviders(serviceId)
+        getServiceEligibleProviders(serviceId, { latitude: location?.latitude, longitude: location?.longitude, city: location?.city })
           .then((provs) => setEligibleProviders(provs))
           .catch(() => {});
       }

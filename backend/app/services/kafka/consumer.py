@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.websockets import ws_manager
 from app.services.kafka.topics import KafkaTopics
 from app.services.kafka.store import kafka_event_store
-from app.services.kafka.transport import build_kafka_kwargs
+from app.services.kafka.transport import build_kafka_kwargs, validate_kafka_config
 
 logger = logging.getLogger("smartserve.kafka.consumer")
 
@@ -28,8 +28,10 @@ class KafkaConsumerService:
 
     async def start(self):
         """Start the background consumer task."""
-        if not settings.KAFKA_ENABLED:
-            logger.info("[Kafka Consumer] KAFKA_ENABLED is false; skipping consumer startup.")
+        is_valid, reason = validate_kafka_config()
+        if not is_valid:
+            self._is_running = False
+            logger.info("[Kafka Consumer] Inactive: %s Skipping background consumer.", reason)
             return
 
         if self._task and not self._task.done():
@@ -62,21 +64,28 @@ class KafkaConsumerService:
         logger.info("[Kafka Consumer] Background consumer stopped.")
 
     async def _run_consumer_loop(self):
-        """Main resilient consumer loop with exponential retry backoff."""
+        """Main resilient consumer loop with exponential retry backoff and circuit breaker."""
         retry_delay = 2.0
+        consecutive_failures = 0
+        max_failures_before_circuit_break = 5
 
         while self._is_running:
             try:
+                is_valid, reason = validate_kafka_config()
+                if not is_valid:
+                    logger.info("[Kafka Consumer] Configuration no longer valid: %s. Stopping loop.", reason)
+                    break
+
                 logger.info(
                     "[Kafka Consumer] Connecting to %s... as group '%s' for topics %s",
-                    settings.KAFKA_BOOTSTRAP_SERVERS[:16],
+                    settings.KAFKA_BOOTSTRAP_SERVERS[:16] if settings.KAFKA_BOOTSTRAP_SERVERS else "??",
                     settings.KAFKA_CONSUMER_GROUP,
                     KafkaTopics.ALL_TOPICS,
                 )
 
                 consumer_kwargs = build_kafka_kwargs()
                 consumer_kwargs.update({
-                    "group_id": settings.KAFKA_CONSUMER_GROUP,  # fixed — no random suffix
+                    "group_id": settings.KAFKA_CONSUMER_GROUP,
                     "auto_offset_reset": "latest",
                     "enable_auto_commit": True,
                     "value_deserializer": lambda v: json.loads(v.decode("utf-8")),
@@ -88,6 +97,7 @@ class KafkaConsumerService:
                 )
                 await self._consumer.start()
                 retry_delay = 2.0
+                consecutive_failures = 0
                 logger.info("[Kafka Consumer] Connected and actively listening to topics.")
 
                 async for msg in self._consumer:
@@ -99,11 +109,8 @@ class KafkaConsumerService:
                 logger.info("[Kafka Consumer] Consumer loop cancelled.")
                 break
             except Exception as exc:
+                consecutive_failures += 1
                 safe_exc = str(exc).replace(settings.KAFKA_SASL_PASSWORD or "", "***")
-                logger.warning(
-                    "[Kafka Consumer] Consumer error: %s. Retrying in %.1fs...",
-                    safe_exc, retry_delay,
-                )
                 kafka_event_store.record_error(safe_exc)
                 if self._consumer:
                     try:
@@ -112,8 +119,20 @@ class KafkaConsumerService:
                         pass
                     self._consumer = None
 
-                await asyncio.sleep(retry_delay)
-                retry_delay = min(retry_delay * 1.5, 30.0)
+                if consecutive_failures >= max_failures_before_circuit_break:
+                    logger.warning(
+                        "[Kafka Consumer] %d consecutive connection failures (%s). "
+                        "Circuit breaker open: backoff extended to 60s. Fallback relay active.",
+                        consecutive_failures, safe_exc,
+                    )
+                    await asyncio.sleep(60.0)
+                else:
+                    logger.warning(
+                        "[Kafka Consumer] Attempt %d failed: %s. Retrying in %.1fs...",
+                        consecutive_failures, safe_exc, retry_delay,
+                    )
+                    await asyncio.sleep(retry_delay)
+                    retry_delay = min(retry_delay * 1.5, 30.0)
 
     async def _process_message(self, topic: str, data: Dict[str, Any]):
         """

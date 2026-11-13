@@ -7,9 +7,15 @@ export function getApiBaseUrl(): string {
     return configuredUrl.trim().replace(/\/$/, '');
   }
 
-  // 2. Production fallback
-  if (import.meta.env.PROD || (typeof window !== 'undefined' && window.location && window.location.hostname.includes('vercel.app'))) {
-    return 'https://smartserve-api-de3f.onrender.com/api/v1';
+  // 2. Browser runtime host detection (Mobile / LAN / Cloud):
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const hostname = window.location.hostname;
+    // Production cloud deployment on Vercel
+    if (hostname.includes('vercel.app')) {
+      return 'https://smartserve-api-de3f.onrender.com/api/v1';
+    }
+    // Mobile / Local network (172.x, 192.168.x, 10.x, localhost):
+    return `http://${hostname}:8000/api/v1`;
   }
 
   return 'http://127.0.0.1:8000/api/v1';
@@ -25,9 +31,10 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
-// Request interceptor: attach bearer token
+// Request interceptor: attach bearer token and ensure dynamic baseURL
 apiClient.interceptors.request.use(
   (config) => {
+    config.baseURL = getApiBaseUrl();
     const token = localStorage.getItem('smartserve_customer_token');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -64,4 +71,3 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-

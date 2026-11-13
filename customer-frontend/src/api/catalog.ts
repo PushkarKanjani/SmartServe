@@ -130,6 +130,10 @@ export const getCatalogServices = async (params?: {
   subcategory?: string;
   q?: string;
   emergency_only?: boolean;
+  city?: string;
+  latitude?: number;
+  longitude?: number;
+  radius_km?: number;
   skip?: number;
   limit?: number;
 }): Promise<ServiceItem[]> => {
@@ -142,7 +146,15 @@ export const getServiceDetail = async (serviceId: string): Promise<ServiceItem> 
   return res.data;
 };
 
-export const getServiceEligibleProviders = async (serviceId: string): Promise<EligibleProvider[]> => {
-  const res = await apiClient.get<EligibleProvider[]>(`/customer/catalog/services/${serviceId}/eligible-providers`);
+export const getServiceEligibleProviders = async (
+  serviceId: string,
+  params?: {
+    latitude?: number;
+    longitude?: number;
+    city?: string;
+    max_radius_km?: number;
+  }
+): Promise<EligibleProvider[]> => {
+  const res = await apiClient.get<EligibleProvider[]>(`/customer/catalog/services/${serviceId}/eligible-providers`, { params });
   return res.data;
 };

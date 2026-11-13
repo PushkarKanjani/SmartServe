@@ -1,6 +1,7 @@
 import uuid
 import re
 import secrets
+import time
 import logging
 import urllib.parse
 from datetime import datetime, timedelta, timezone
@@ -20,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.dependencies import get_db
+from app.core.dependencies import get_db, get_current_user, AuthUser
 from app.core.security import hash_password, create_access_token
 from app.models.user import User, UserSession
 from app.models.customer import Customer
@@ -131,6 +132,119 @@ def verify_and_consume_oauth_state(state: str, expected_provider: str, db: Sessi
     except Exception as e:
         logger.warning(f"[OAuth] Invalid state token: {e}")
         return None
+
+
+_google_jwks_cache: Dict[str, Any] = {"keys": [], "expires_at": 0.0}
+
+
+def get_google_jwks() -> list:
+    """Fetch and cache Google's public JWKS certificates with a 1-hour TTL."""
+    global _google_jwks_cache
+    now = time.time()
+    if _google_jwks_cache.get("keys") and now < _google_jwks_cache.get("expires_at", 0):
+        return _google_jwks_cache["keys"]
+    try:
+        resp = requests.get("https://www.googleapis.com/oauth2/v3/certs", timeout=5)
+        if resp.ok:
+            data = resp.json()
+            keys = data.get("keys", [])
+            _google_jwks_cache = {
+                "keys": keys,
+                "expires_at": now + 3600.0,
+            }
+            return keys
+    except Exception as e:
+        logger.warning(f"[Google OAuth] Failed to fetch JWKS keys: {e}")
+    return _google_jwks_cache.get("keys", [])
+
+
+def verify_google_id_token(id_token: str, expected_client_id: str) -> Dict[str, Any]:
+    """
+    Cryptographically validate a Google ID token:
+    1. Validates RS256 signature using Google's public JWKS keys.
+    2. Validates standard claims:
+       - Issuer must be 'accounts.google.com' or 'https://accounts.google.com'
+       - Audience must match expected_client_id
+       - Token must not be expired (exp > now)
+       - Email must be verified (email_verified == True)
+    3. Falls back to Google tokeninfo endpoint if matching key is not found (e.g. key rotation).
+    """
+    if not id_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing Google ID token in OAuth response."
+        )
+
+    keys = get_google_jwks()
+    claims = None
+    verification_err = None
+
+    if keys:
+        try:
+            unverified_header = jwt.get_unverified_header(id_token)
+            kid = unverified_header.get("kid")
+            matching_key = next((k for k in keys if k.get("kid") == kid), None)
+            if matching_key:
+                claims = jwt.decode(
+                    id_token,
+                    matching_key,
+                    algorithms=["RS256"],
+                    audience=expected_client_id if expected_client_id else None,
+                    issuer=["https://accounts.google.com", "accounts.google.com"],
+                    options={"verify_exp": True, "verify_aud": bool(expected_client_id)},
+                )
+        except Exception as e:
+            verification_err = str(e)
+            logger.warning(f"[Google OAuth] Local JWKS verification failed, trying tokeninfo fallback: {e}")
+
+    # Fallback to Google tokeninfo endpoint
+    if claims is None:
+        try:
+            ti_res = requests.get(
+                f"https://oauth2.googleapis.com/tokeninfo?id_token={id_token}",
+                timeout=8
+            )
+            if ti_res.ok:
+                ti_data = ti_res.json()
+                aud = ti_data.get("aud")
+                iss = ti_data.get("iss")
+                if expected_client_id and aud != expected_client_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Google ID token audience mismatch: expected '{expected_client_id}', got '{aud}'."
+                    )
+                if iss not in ("accounts.google.com", "https://accounts.google.com"):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Google ID token issuer invalid: '{iss}'."
+                    )
+                exp = ti_data.get("exp")
+                if exp and int(exp) < time.time():
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Google ID token has expired."
+                    )
+                claims = ti_data
+            else:
+                err_detail = ti_res.text
+                logger.error(f"[Google OAuth] Tokeninfo validation failed: {err_detail}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"[Google OAuth] Network error calling tokeninfo: {e}")
+
+    if not claims:
+        msg = f"Failed to cryptographically validate Google ID token. {verification_err or ''}".strip()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=msg)
+
+    email_verified = claims.get("email_verified")
+    if email_verified is False or str(email_verified).lower() == "false":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google account email is not verified. Please verify your email with Google or use standard sign in."
+        )
+
+    return claims
 
 
 def is_provider_configured(provider: str) -> bool:
@@ -313,24 +427,37 @@ def oauth_callback(
                 )
             tokens = res.json()
             access_tok = tokens.get("access_token")
+            id_tok = tokens.get("id_token")
 
-            # Fetch Google user profile
-            prof_res = requests.get(
-                "https://www.googleapis.com/oauth2/v3/userinfo",
-                headers={"Authorization": f"Bearer {access_tok}"},
-                timeout=10,
-            )
-            if not prof_res.ok:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to fetch Google user profile.")
-            profile = prof_res.json()
-            if profile.get("email_verified") is False:
+            if id_tok:
+                # Cryptographically validate Google ID token (signature, aud, iss, exp, email_verified)
+                id_claims = verify_google_id_token(id_tok, settings.GOOGLE_CLIENT_ID)
+                provider_user_id = str(id_claims.get("sub", ""))
+                email = id_claims.get("email")
+                full_name = id_claims.get("name")
+            elif access_tok:
+                # Fetch Google user profile using access token
+                prof_res = requests.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {access_tok}"},
+                    timeout=10,
+                )
+                if not prof_res.ok:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to fetch Google user profile.")
+                profile = prof_res.json()
+                if profile.get("email_verified") is False:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Google account email is not verified. Please verify your email with Google or use standard sign in."
+                    )
+                provider_user_id = str(profile.get("sub", ""))
+                email = profile.get("email")
+                full_name = profile.get("name")
+            else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Google account email is not verified. Please verify your email with Google or use standard sign in."
+                    detail="Google OAuth response did not contain an access_token or id_token."
                 )
-            provider_user_id = str(profile.get("sub", ""))
-            email = profile.get("email")
-            full_name = profile.get("name")
         except requests.RequestException as e:
             logger.error(f"[Google OAuth] Network error: {e}")
             raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unable to reach Google OAuth services.")
@@ -554,3 +681,171 @@ def oauth_callback(
         is_new_user=is_new_user,
         location=loc,
     )
+
+
+
+@router.post("/{provider}/link")
+def link_oauth_account(
+    provider: str,
+    payload: OAuthCallbackPayload,
+    current_auth_user: AuthUser = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Safely link an external social identity (e.g. Google) to an existing authenticated customer account.
+    Prevents account takeover by requiring active session authorization before linking.
+    """
+    p = provider.lower()
+    if p not in ("google", "apple", "github"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported OAuth provider '{provider}'."
+        )
+
+    if current_auth_user.role != "customer":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Social authentication accounts can only be linked to customer accounts."
+        )
+
+    if not is_provider_configured(p):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"{p.capitalize()} OAuth is not configured on this server."
+        )
+
+    state_payload = verify_and_consume_oauth_state(payload.state, p, db)
+    if not state_payload:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired OAuth state parameter. Please try linking again."
+        )
+
+    bound_redirect_uri = state_payload.get("redirect_uri")
+    code_verifier = state_payload.get("code_verifier")
+
+    provider_user_id = None
+    email = None
+
+    if p == "google":
+        token_endpoint = "https://oauth2.googleapis.com/token"
+        token_data = {
+            "code": payload.code,
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": bound_redirect_uri or payload.redirect_uri or settings.GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code",
+        }
+        if code_verifier:
+            token_data["code_verifier"] = code_verifier
+        try:
+            res = requests.post(token_endpoint, data=token_data, timeout=10)
+            if not res.ok:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to authenticate with Google. Authorization code may be invalid or expired."
+                )
+            tokens = res.json()
+            id_tok = tokens.get("id_token")
+            access_tok = tokens.get("access_token")
+            if id_tok:
+                id_claims = verify_google_id_token(id_tok, settings.GOOGLE_CLIENT_ID)
+                provider_user_id = str(id_claims.get("sub", ""))
+                email = id_claims.get("email")
+            elif access_tok:
+                prof_res = requests.get(
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                    headers={"Authorization": f"Bearer {access_tok}"},
+                    timeout=10,
+                )
+                if not prof_res.ok:
+                    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to fetch Google profile.")
+                profile = prof_res.json()
+                provider_user_id = str(profile.get("sub", ""))
+                email = profile.get("email")
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"[Google OAuth Link] Error: {e}")
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unable to reach Google OAuth services.")
+
+    elif p == "github":
+        token_endpoint = "https://github.com/login/oauth/access_token"
+        token_data = {
+            "code": payload.code,
+            "client_id": settings.GITHUB_CLIENT_ID,
+            "client_secret": settings.GITHUB_CLIENT_SECRET,
+            "redirect_uri": bound_redirect_uri or payload.redirect_uri or settings.GITHUB_REDIRECT_URI,
+        }
+        try:
+            res = requests.post(token_endpoint, json=token_data, headers={"Accept": "application/json"}, timeout=10)
+            if not res.ok:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="GitHub authentication failed.")
+            tokens = res.json()
+            access_tok = tokens.get("access_token")
+            if not access_tok:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing GitHub access token.")
+            prof_res = requests.get("https://api.github.com/user", headers={"Authorization": f"Bearer {access_tok}", "Accept": "application/json"}, timeout=10)
+            if not prof_res.ok:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Failed to fetch GitHub profile.")
+            profile = prof_res.json()
+            provider_user_id = str(profile.get("id", ""))
+            email = profile.get("email")
+        except HTTPException:
+            raise
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"GitHub link error: {e}")
+
+    if not provider_user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unable to retrieve identity from provider.")
+
+    # Guard: ensure this OAuth identity is not already linked to a DIFFERENT user
+    existing_link = (
+        db.query(OAuthAccount)
+        .filter(
+            OAuthAccount.provider == p,
+            OAuthAccount.provider_user_id == provider_user_id,
+        )
+        .first()
+    )
+    if existing_link:
+        if existing_link.user_id != current_auth_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"This {p.capitalize()} account is already linked to another SmartServe account."
+            )
+        return {
+            "status": "ok",
+            "message": f"This {p.capitalize()} account is already linked to your account.",
+            "provider": p,
+        }
+
+    # If current user already had this provider linked, update the provider_user_id; otherwise create new
+    user_existing_prov = (
+        db.query(OAuthAccount)
+        .filter(
+            OAuthAccount.user_id == current_auth_user.id,
+            OAuthAccount.provider == p,
+        )
+        .first()
+    )
+    if user_existing_prov:
+        user_existing_prov.provider_user_id = provider_user_id
+        user_existing_prov.email = (email or current_auth_user.email).strip().lower()
+        db.commit()
+    else:
+        new_oauth = OAuthAccount(
+            id=uuid.uuid4(),
+            user_id=current_auth_user.id,
+            provider=p,
+            provider_user_id=provider_user_id,
+            email=(email or current_auth_user.email).strip().lower(),
+        )
+        db.add(new_oauth)
+        db.commit()
+
+    return {
+        "status": "ok",
+        "message": f"{p.capitalize()} account linked successfully.",
+        "provider": p,
+    }

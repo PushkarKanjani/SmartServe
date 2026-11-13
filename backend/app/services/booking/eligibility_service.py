@@ -1,11 +1,28 @@
 import uuid
+import math
 from datetime import datetime, date, time, timedelta
 from typing import Optional, List, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from app.models.provider import Provider, ProviderService, Availability
+from app.models.provider import Provider, ProviderService, Availability, ProviderLocation
 from app.models.customer import Booking
 from app.models.user import User
+
+
+def calculate_haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the great circle distance in kilometers between two GPS coordinates
+    using the Haversine formula.
+    """
+    R = 6371.0  # Earth's radius in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dlat / 2.0) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2.0) ** 2
+    )
+    c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    return round(R * c, 2)
 
 
 def parse_scheduled_datetime(scheduled_date: str, scheduled_time: str) -> datetime:
@@ -225,11 +242,15 @@ def find_eligible_provider(
 def get_eligible_providers(
     db: Session,
     service_id: uuid.UUID,
+    customer_lat: Optional[float] = None,
+    customer_lng: Optional[float] = None,
+    customer_city: Optional[str] = None,
+    max_radius_km: Optional[float] = 50.0,
 ) -> List[dict]:
     """
-    Retrieve all verified providers offering this service with their skills,
-    metrics, and genuine upcoming non-conflicting availability slots.
-    Never exposes past, reserved, or conflicting slots.
+    Retrieve verified providers offering this service with their skills,
+    metrics, upcoming availability slots, and location-aware distance filtering.
+    Filters providers by coverage radius (Haversine formula) and service area.
     """
     active_services = (
         db.query(ProviderService)
@@ -257,6 +278,39 @@ def get_eligible_providers(
     today = date.today()
     results = []
     for p in verified_providers:
+        # Location & Coverage Radius Check
+        prov_loc = db.query(ProviderLocation).filter(
+            ProviderLocation.provider_id == p.user_id,
+            ProviderLocation.is_active == True,
+        ).first()
+
+        distance_km: Optional[float] = None
+        has_gps_coords = (
+            customer_lat is not None and
+            customer_lng is not None and
+            prov_loc is not None and
+            prov_loc.latitude is not None and
+            prov_loc.longitude is not None
+        )
+
+        if has_gps_coords:
+            distance_km = calculate_haversine_distance(
+                customer_lat,
+                customer_lng,
+                float(prov_loc.latitude),
+                float(prov_loc.longitude),
+            )
+            if max_radius_km is not None and distance_km > max_radius_km:
+                # Exclude provider outside serviceable radius
+                continue
+        elif customer_city:
+            area = (p.service_area or "").strip().lower()
+            city_norm = customer_city.strip().lower()
+            if area and area not in ["citywide", "all", "all areas", "pan-india", "national"]:
+                if city_norm not in area and area not in city_norm:
+                    # Exclude provider not servicing customer city
+                    continue
+
         # Get active bookings for conflict checking
         active_bookings = (
             db.query(Booking)
@@ -309,14 +363,27 @@ def get_eligible_providers(
             "reliability_score": float(p.reliability_score or 100.0),
             "acceptance_rate": float(p.acceptance_rate or 100.0),
             "service_area": p.service_area or "Citywide",
+            "distance_km": distance_km,
             "available_slots": slot_list,
             "structured_slots": structured_slots,
             "is_available": len(structured_slots) > 0,
         })
 
-    results.sort(
-        key=lambda x: (x["reliability_score"], x["acceptance_rate"], x["experience_years"]),
-        reverse=True
-    )
+    if customer_lat is not None and customer_lng is not None:
+        results.sort(
+            key=lambda x: (
+                x["distance_km"] if x["distance_km"] is not None else 9999.0,
+                -x["reliability_score"],
+                -x["acceptance_rate"],
+            )
+        )
+    else:
+        results.sort(
+            key=lambda x: (
+                -x["reliability_score"],
+                -x["acceptance_rate"],
+                -x["experience_years"],
+            )
+        )
     return results
 

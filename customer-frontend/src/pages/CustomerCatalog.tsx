@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useCustomerLocation } from '../context/LocationContext';
 import { useTranslation } from 'react-i18next';
 import { 
   getCatalogCategories, 
@@ -32,6 +33,7 @@ export const CustomerCatalog: React.FC = () => {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { location } = useCustomerLocation();
 
   const activeCategoryParam = searchParams.get('category') || '';
   const activeSubcategoryParam = searchParams.get('subcategory') || '';
@@ -167,7 +169,7 @@ export const CustomerCatalog: React.FC = () => {
 
       setServicesLoading(true);
       try {
-        const params: { category?: string; subcategory?: string; q?: string; limit?: number } = {};
+        const params: { category?: string; subcategory?: string; q?: string; limit?: number; city?: string; latitude?: number; longitude?: number } = {};
         if (selectedCategory) {
           params.category = currentCategoryObj ? currentCategoryObj.name : selectedCategory;
         }
@@ -180,6 +182,13 @@ export const CustomerCatalog: React.FC = () => {
         if (viewAllServices && !selectedCategory && !searchQuery.trim()) {
           params.limit = 100;
         }
+        if (location?.city) {
+          params.city = location.city;
+        }
+        if (location?.latitude !== undefined && location?.longitude !== undefined) {
+          params.latitude = location.latitude;
+          params.longitude = location.longitude;
+        }
         const srvRes = await getCatalogServices(params);
         setAllServices(srvRes);
       } catch (err: any) {
@@ -190,7 +199,7 @@ export const CustomerCatalog: React.FC = () => {
     };
 
     fetchTargetServices();
-  }, [selectedCategory, selectedSubcategory, searchQuery, viewAllServices, currentCategoryObj]);
+  }, [selectedCategory, selectedSubcategory, searchQuery, viewAllServices, currentCategoryObj, location?.city, location?.latitude, location?.longitude]);
 
   // Filtered & Sorted Services
   const displayedServices = useMemo(() => {

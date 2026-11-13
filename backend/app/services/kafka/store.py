@@ -49,6 +49,7 @@ class KafkaEventStore:
             "started_at": self.started_at,
             "total_published": self.total_published,
             "total_consumed": self.total_consumed,
+            "total_duplicates": self.total_duplicates_skipped,
             "total_duplicates_skipped": self.total_duplicates_skipped,
             "errors_count": self.errors_count,
             "topic_published_counts": self.topic_published_counts,

@@ -51,7 +51,7 @@ def _is_authorized_for_channel(auth_payload: Optional[Dict[str, Any]], channel: 
     cust_id = str(auth_payload.get("customer_id") or "").lower() if auth_payload else ""
 
     # 1. Admin & Operational Super-Channels (Strictly require Admin / Super Admin)
-    admin_channels = {"dashboard", "emergency", "admin"}
+    admin_channels = {"dashboard", "emergency", "admin", "system"}
     if clean_channel in admin_channels or clean_channel.startswith("admin_"):
         return role in ["admin", "super_admin"]
 
@@ -163,6 +163,7 @@ async def websocket_unified_stream(
             return
 
     await websocket.accept()
+    ws_manager.get_main_loop()
 
     # Authenticate caller
     auth_payload = _authenticate_ws_token(token)

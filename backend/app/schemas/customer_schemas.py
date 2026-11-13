@@ -229,6 +229,7 @@ class EligibleProviderResponse(BaseModel):
     reliability_score: float = 100.0
     acceptance_rate: float = 100.0
     service_area: Optional[str] = None
+    distance_km: Optional[float] = None
     available_slots: List[str] = []
     structured_slots: List[ProviderSlotDetail] = []
     is_available: bool = True

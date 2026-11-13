@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { getApiBaseUrl } from '../../api/client';
 import {
   Clock,
   ShieldCheck,
@@ -91,9 +92,7 @@ const resolvePhotoUrl = (url?: string | null) => {
   if (!url) return 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=400&q=80';
   if (url.startsWith('data:image')) return url;
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const apiBase = (import.meta.env.VITE_API_URL || 'https://smartserve-api-de3f.onrender.com')
-    .replace(/\/+$/, '')
-    .replace(/\/api\/v1\/?$/, '');
+  const apiBase = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
   return `${apiBase}/${url.replace(/^\/+/, '')}`;
 };
 

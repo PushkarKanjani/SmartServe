@@ -16,9 +16,24 @@ from app.api.v1.router import api_v1_router
 from app.api.v1.customer import router as customer_router
 from app.api.v1.ai_support import router as ai_support_router
 from app.api.v1.ws import router as ws_router
+from app.core.websockets import ws_manager
 from app.services.kafka import kafka_producer, kafka_consumer
 
 logger = logging.getLogger("smartserve.api")
+
+# Sensitive Query Param Filter (Prevents token leaks in Uvicorn access logs)
+class SensitiveQueryParamFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            import re
+            args_list = list(record.args)
+            for i, arg in enumerate(args_list):
+                if isinstance(arg, str) and ("token=" in arg or "secret=" in arg):
+                    args_list[i] = re.sub(r"(token|secret|password)=[^&\s]+", r"\1=[REDACTED]", arg)
+            record.args = tuple(args_list)
+        return True
+
+logging.getLogger("uvicorn.access").addFilter(SensitiveQueryParamFilter())
 
 # Auto-create tables and initial seeders only in non-production development mode
 if settings.ENVIRONMENT != "production":
@@ -62,6 +77,9 @@ async def keep_render_alive():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Register the main Uvicorn event loop with ws_manager for thread-safe cross-thread dispatch
+    main_loop = asyncio.get_running_loop()
+    ws_manager.set_main_loop(main_loop)
     # Startup: Spawn Kafka producer & consumer non-blockingly as background tasks.
     # This ensures Uvicorn immediately begins accepting HTTP connections and serving
     # the /health endpoint without waiting for broker connections on cold boot.
@@ -70,6 +88,7 @@ async def lifespan(app: FastAPI):
     keepalive_task = asyncio.create_task(keep_render_alive())
     yield
     # Shutdown: Cleanly cancel pending connection attempts and stop services
+    ws_manager.clear_main_loop()
     try:
         if not keepalive_task.done():
             keepalive_task.cancel()

@@ -64,7 +64,9 @@ export const getBookingsList = async (params?: {
   if (params?.skip !== undefined) query.append('skip', String(params.skip));
   if (params?.limit !== undefined) query.append('limit', String(params.limit));
 
-  const response = await apiClient.get<BookingItem[]>(`/admin/bookings/?${query.toString()}`);
+  const qStr = query.toString();
+  const endpoint = qStr ? `/admin/bookings?${qStr}` : '/admin/bookings';
+  const response = await apiClient.get<BookingItem[]>(endpoint);
   return response.data;
 };
 

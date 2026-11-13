@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Camera, Eye, X } from 'lucide-react';
+import { getApiBaseUrl } from '../../api/client';
 
 interface PhotoGalleryProps {
   title: string;
@@ -31,9 +32,7 @@ export const PhotoGallery: React.FC<PhotoGalleryProps> = ({
     if (!url) return '';
     if (url.startsWith('data:image')) return url;
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const apiBase = (import.meta.env.VITE_API_URL || 'https://smartserve-api-de3f.onrender.com')
-      .replace(/\/+$/, '')
-      .replace(/\/api\/v1\/?$/, '');
+    const apiBase = getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
     return `${apiBase}/${url.replace(/^\/+/, '')}`;
   };
 

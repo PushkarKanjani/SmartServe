@@ -1,14 +1,32 @@
 import axios from 'axios';
 
-const configuredUrl = import.meta.env.VITE_API_BASE_URL;
-const API_BASE_URL = configuredUrl && configuredUrl.trim() !== ''
-  ? configuredUrl.trim().replace(/\/$/, '')
-  : (import.meta.env.PROD || (typeof window !== 'undefined' && window.location && window.location.hostname.includes('vercel.app')))
-    ? 'https://smartserve-api-de3f.onrender.com/api/v1'
-    : 'http://127.0.0.1:8000/api/v1';
+export function getApiBaseUrl(): string {
+  // 1. Browser runtime host detection (Mobile / LAN / Cloud):
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const hostname = window.location.hostname;
+    // Production cloud deployment on Vercel
+    if (hostname.includes('vercel.app')) {
+      return 'https://smartserve-api-de3f.onrender.com/api/v1';
+    }
+    // Mobile / Local network (172.x, 192.168.x, 10.x, etc.)
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return `http://${hostname}:8000/api/v1`;
+    }
+  }
+
+  // 2. Explicit configured URL (for localhost development)
+  const configuredUrl = import.meta.env.VITE_API_BASE_URL;
+  if (configuredUrl && typeof configuredUrl === 'string' && configuredUrl.trim() !== '') {
+    return configuredUrl.trim().replace(/\/$/, '');
+  }
+
+  return 'http://127.0.0.1:8000/api/v1';
+}
+
+export const baseURL = getApiBaseUrl();
 
 export const apiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -16,8 +34,9 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
+  config.baseURL = getApiBaseUrl();
   const token = localStorage.getItem('smartserve_provider_token');
-  if (token) {
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -44,4 +63,3 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
-

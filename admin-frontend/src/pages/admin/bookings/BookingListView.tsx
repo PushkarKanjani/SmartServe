@@ -11,7 +11,9 @@ import {
   ChevronRight,
   CheckCircle2,
   X,
-  MapPin
+  MapPin,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import { getBookingsList, createEmergencyDispatchBooking } from '../../../api/bookings';
 import type { BookingItem } from '../../../api/bookings';
@@ -29,6 +31,7 @@ export const BookingListView: React.FC = () => {
   const { t } = useTranslation();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -54,7 +57,14 @@ export const BookingListView: React.FC = () => {
   const [wsAlert, setWsAlert] = useState<{ title: string; body: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null);
 
-  const [adminSession, setAdminSession] = useState<SessionAdminInfo | null>(null);
+  const [adminSession, setAdminSession] = useState<SessionAdminInfo | null>(() => {
+    try {
+      const stored = localStorage.getItem('smartserve_user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const canManageBookings = hasPermission(adminSession, 'bookings:manage');
 
@@ -65,11 +75,19 @@ export const BookingListView: React.FC = () => {
 
   const fetchBookingsData = async (isInitial = false) => {
     if (isInitial) setLoading(true);
+    setError(null);
     try {
       const data = await getBookingsList();
       setBookings(data);
     } catch (err: any) {
       console.error('Failed to load bookings directory.', err);
+      if (err.response) {
+        setError(err.response.data?.detail || `API Error (${err.response.status}): Failed to load bookings.`);
+      } else if (err.request) {
+        setError('Unable to connect to SmartServe API. Please verify backend server availability.');
+      } else {
+        setError(err.message || 'An unexpected error occurred while loading bookings.');
+      }
     } finally {
       if (isInitial) setLoading(false);
     }
@@ -370,7 +388,24 @@ export const BookingListView: React.FC = () => {
       </div>
 
       {/* Directory Render */}
-      {filteredBookings.length === 0 ? (
+      {error ? (
+        <div className="py-12 p-6 text-center bg-white rounded-2xl border border-rose-200 shadow-sm space-y-4">
+          <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-full flex items-center justify-center mx-auto border border-rose-200">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h3 className="text-base font-bold text-slate-900">Unable to Load Bookings</h3>
+            <p className="text-xs text-slate-500 font-medium">{error}</p>
+          </div>
+          <button
+            onClick={() => fetchBookingsData(true)}
+            className="px-4 py-2 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold rounded-xl text-xs transition-colors inline-flex items-center gap-2 cursor-pointer shadow-xs"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Connection</span>
+          </button>
+        </div>
+      ) : filteredBookings.length === 0 ? (
         <div className="py-12 p-6 text-center bg-white rounded-2xl border border-[#E5DEC9] shadow-sm space-y-2">
           <CalendarCheck className="w-8 h-8 text-slate-400 mx-auto" />
           <h3 className="text-base font-bold text-slate-800">No bookings found.</h3>

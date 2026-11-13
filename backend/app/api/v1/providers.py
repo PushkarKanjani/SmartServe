@@ -1340,8 +1340,15 @@ def update_provider_location(
     from app.models.provider import Provider, ProviderLocation
     from app.core.websockets import broadcast_realtime
 
-    # 1. Coordinate Validity Check
-    if not (-90.0 <= payload.latitude <= 90.0 and -180.0 <= payload.longitude <= 180.0):
+    # 1. Coordinate Validity Check (finite float & boundary validation)
+    import math
+    if (
+        math.isnan(payload.latitude) or
+        math.isnan(payload.longitude) or
+        math.isinf(payload.latitude) or
+        math.isinf(payload.longitude) or
+        not (-90.0 <= payload.latitude <= 90.0 and -180.0 <= payload.longitude <= 180.0)
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid GPS coordinates: latitude must be in [-90, 90] and longitude in [-180, 180].",
@@ -1460,7 +1467,14 @@ def dev_simulate_provider_location(
             detail="DEV GPS simulation endpoint is disabled in production.",
         )
 
-    if not (-90.0 <= payload.latitude <= 90.0 and -180.0 <= payload.longitude <= 180.0):
+    import math
+    if (
+        math.isnan(payload.latitude) or
+        math.isnan(payload.longitude) or
+        math.isinf(payload.latitude) or
+        math.isinf(payload.longitude) or
+        not (-90.0 <= payload.latitude <= 90.0 and -180.0 <= payload.longitude <= 180.0)
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid GPS coordinates.",

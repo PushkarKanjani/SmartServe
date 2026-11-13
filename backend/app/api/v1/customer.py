@@ -1193,12 +1193,16 @@ def get_catalog_services(
     subcategory: Optional[str] = None,
     emergency_only: Optional[bool] = False,
     q: Optional[str] = None,
+    city: Optional[str] = None,
+    latitude: Optional[float] = Query(None, ge=-90.0, le=90.0),
+    longitude: Optional[float] = Query(None, ge=-180.0, le=180.0),
+    radius_km: Optional[float] = Query(None, ge=1.0, le=500.0),
     skip: int = Query(0, ge=0),
     limit: Optional[int] = Query(None, ge=1, le=500),
     db: Session = Depends(get_db),
 ):
     cache = get_cache()
-    cache_key = f"customer:catalog:services:{category}:{subcategory}:{emergency_only}:{q}:{skip}:{limit}"
+    cache_key = f"customer:catalog:services:{category}:{subcategory}:{emergency_only}:{q}:{city}:{latitude}:{longitude}:{radius_km}:{skip}:{limit}"
     cached_res = cache.get(cache_key)
     if cached_res is not None:
         return cached_res
@@ -1270,14 +1274,28 @@ def get_catalog_service_by_id(service_id: str, db: Session = Depends(get_db)):
 
 # 13b. GET /customer/catalog/services/{service_id}/eligible-providers
 @router.get("/catalog/services/{service_id}/eligible-providers", response_model=List[EligibleProviderResponse])
-def get_service_eligible_providers(service_id: str, db: Session = Depends(get_db)):
+def get_service_eligible_providers(
+    service_id: str,
+    latitude: Optional[float] = Query(None, ge=-90.0, le=90.0),
+    longitude: Optional[float] = Query(None, ge=-180.0, le=180.0),
+    city: Optional[str] = Query(None),
+    max_radius_km: Optional[float] = Query(50.0, ge=1.0, le=500.0),
+    db: Session = Depends(get_db),
+):
     from app.services.booking.eligibility_service import get_eligible_providers
     try:
         s_uuid = uuid.UUID(service_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid service ID format")
 
-    providers_data = get_eligible_providers(db, s_uuid)
+    providers_data = get_eligible_providers(
+        db,
+        s_uuid,
+        customer_lat=latitude,
+        customer_lng=longitude,
+        customer_city=city,
+        max_radius_km=max_radius_km,
+    )
     return [EligibleProviderResponse(**p) for p in providers_data]
 
 

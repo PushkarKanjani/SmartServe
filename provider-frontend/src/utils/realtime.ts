@@ -1,37 +1,72 @@
 /**
- * SmartServe Real-Time WebSocket Bridge
- * Connects Kafka event consumer updates to frontend React components without polling.
+ * SmartServe Real-Time WebSocket Bridge (Provider Frontend)
+ * Connects backend event updates to Provider React components without polling.
  *
  * Architecture:
- *   - Per-subscription event_id deduplication (prevents duplicate React state updates
- *     while allowing multiple independent component subscriptions on the same page).
+ *   - Authenticated WebSocket handshake using JWT access token in URL query parameter and runtime auth frame.
+ *   - Graceful token expiration handling: checks JWT expiration before attaching; handles missing/expired tokens cleanly.
+ *   - Never exposes tokens in console or error logs.
+ *   - Per-subscription event_id deduplication (prevents duplicate React state updates).
  *   - Race-safe connection lifecycle (gracefully handles React StrictMode / unmount).
  *   - Exponential backoff reconnection with jitter.
  *   - Periodic heartbeat ping keeps the stream active.
  */
 
+import { getApiBaseUrl } from '../api/client';
+
 type MessageHandler = (data: any) => void;
 
+/**
+ * Safely extracts a valid, unexpired JWT token from localStorage.
+ * Validates expiration timestamp and structure without throwing. Never logs token contents.
+ */
+function getValidToken(storageKey: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const token = localStorage.getItem(storageKey);
+    if (!token || typeof token !== 'string') return null;
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payloadPart = parts[1];
+    if (!payloadPart) return null;
+    const payload = JSON.parse(atob(payloadPart.replace(/-/g, '+').replace(/_/g, '/')));
+    if (payload.exp && typeof payload.exp === 'number') {
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      if (payload.exp <= nowSeconds) {
+        // Token has expired
+        return null;
+      }
+    }
+    return token;
+  } catch {
+    return null;
+  }
+}
+
 export function getWebSocketUrl(channels: string[] = []): string {
-  const rawApiUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
+  const rawApiUrl = getApiBaseUrl();
   const isHttps = rawApiUrl.startsWith('https:') || (typeof window !== 'undefined' && window.location.protocol === 'https:');
   const wsProtocol = isHttps ? 'wss:' : 'ws:';
   const hostDomain = rawApiUrl.replace(/^https?:\/\//, '').replace(/\/api\/v1\/?$/, '');
-  const token = typeof window !== 'undefined' ? localStorage.getItem('smartserve_provider_token') : null;
+
   const params = new URLSearchParams();
   if (channels.length > 0) {
     params.set('channels', channels.join(','));
   }
+
+  const token = getValidToken('smartserve_provider_token');
   if (token) {
     params.set('token', token);
   }
+
   const queryString = params.toString() ? `?${params.toString()}` : '';
   return `${wsProtocol}//${hostDomain}/ws/stream${queryString}`;
 }
 
 export function subscribeToRealtime(
   channels: string[],
-  onMessage: MessageHandler
+  onMessage: MessageHandler,
+  onStatusChange?: (status: 'connecting' | 'connected' | 'disconnected') => void
 ): () => void {
   let ws: WebSocket | null = null;
   let disposed = false;
@@ -67,7 +102,9 @@ export function subscribeToRealtime(
     const base = Math.min(1000 * Math.pow(1.5, retryCount), 8000);
     const jitter = Math.random() * 500;
     retryCount++;
-    reconnectTimer = setTimeout(connect, base + jitter);
+    reconnectTimer = setTimeout(() => {
+      if (!disposed) connect();
+    }, base + jitter);
   }
 
   function connect() {
@@ -87,30 +124,53 @@ export function subscribeToRealtime(
 
     const gen = ++generation;
     try {
+      onStatusChange?.('connecting');
       const url = getWebSocketUrl(channels);
       const socket = new WebSocket(url);
       ws = socket;
 
-        socket.onopen = () => {
-          if (gen !== generation || disposed) { socket.close(); return; }
-          retryCount = 0;
-          const token = typeof window !== 'undefined' ? localStorage.getItem('smartserve_provider_token') : null;
-          if (token && socket.readyState === WebSocket.OPEN) {
-            try { socket.send(JSON.stringify({ action: 'auth', token })); } catch (_) {}
+      socket.onopen = () => {
+        if (gen !== generation || disposed) { socket.close(); return; }
+        retryCount = 0;
+        onStatusChange?.('connected');
+
+        // Optional runtime auth frame in addition to URL token parameter
+        const token = getValidToken('smartserve_provider_token');
+        if (token && socket.readyState === WebSocket.OPEN) {
+          try { socket.send(JSON.stringify({ action: 'auth', token })); } catch (_) {}
+        }
+
+        pingInterval = setInterval(() => {
+          if (socket.readyState === WebSocket.OPEN) {
+            try { socket.send(JSON.stringify({ action: 'ping' })); } catch (_) {}
           }
-          pingInterval = setInterval(() => {
-            if (socket.readyState === WebSocket.OPEN) {
-              try { socket.send(JSON.stringify({ action: 'ping' })); } catch (_) {}
-            }
-          }, 25000);
-        };
+        }, 25000);
+      };
 
       socket.onmessage = (event) => {
         if (gen !== generation || disposed) return;
         try {
           const data = JSON.parse(event.data);
           // Skip control frames
-          if (data.type === 'pong' || data.type === 'CONNECTION_ESTABLISHED' || data.type === 'SUBSCRIBED' || data.type === 'UNSUBSCRIBED') return;
+          if (
+            data.type === 'pong' ||
+            data.type === 'CONNECTION_ESTABLISHED' ||
+            data.type === 'SUBSCRIBED' ||
+            data.type === 'UNSUBSCRIBED' ||
+            data.type === 'AUTH_SUCCESS'
+          ) {
+            return;
+          }
+
+          if (data.type === 'AUTH_FAILED') {
+            console.warn('[WebSocket] Authentication rejected by server.');
+            return;
+          }
+
+          if (data.type === 'UNAUTHORIZED') {
+            console.warn(`[WebSocket] Unauthorized for requested stream: ${data.channel || 'unknown'}`);
+            return;
+          }
 
           // Event deduplication per subscription using event_id
           const eventId = data.event_id;
@@ -125,6 +185,7 @@ export function subscribeToRealtime(
       socket.onclose = () => {
         if (gen !== generation) return;
         clearTimers();
+        onStatusChange?.('disconnected');
         if (!disposed) scheduleReconnect();
       };
 
@@ -132,6 +193,7 @@ export function subscribeToRealtime(
         // let onclose handle cleanup
       };
     } catch (_) {
+      onStatusChange?.('disconnected');
       if (!disposed) scheduleReconnect();
     }
   }

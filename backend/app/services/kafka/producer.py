@@ -8,7 +8,7 @@ from aiokafka import AIOKafkaProducer
 from app.core.config import settings
 from app.services.kafka.events import KafkaEvent
 from app.services.kafka.store import kafka_event_store
-from app.services.kafka.transport import build_kafka_kwargs
+from app.services.kafka.transport import build_kafka_kwargs, validate_kafka_config
 
 logger = logging.getLogger("smartserve.kafka.producer")
 
@@ -27,14 +27,22 @@ class KafkaProducerService:
     def last_error(self) -> Optional[str]:
         return self._last_error
 
+    def is_running(self) -> bool:
+        return self._is_running
+
     async def start(self):
         """
-        Initialize and start the Kafka producer with a 5-attempt retry loop.
-        On final failure, logs CRITICAL and continues in degraded mode —
-        the app never crashes because Kafka is unavailable.
+        Initialize and start the Kafka producer.
+        Validates configuration upfront. If Kafka is disabled or invalid,
+        exits immediately without attempting network connections.
+        If configured, attempts connection up to _STARTUP_ATTEMPTS times.
+        On failure, continues in degraded mode (in-process fallback relay active).
         """
-        if not settings.KAFKA_ENABLED:
-            logger.info("[Kafka Producer] KAFKA_ENABLED is false; skipping producer startup.")
+        is_valid, reason = validate_kafka_config()
+        if not is_valid:
+            self._is_running = False
+            self._last_error = reason
+            logger.info("[Kafka Producer] Inactive: %s Operating in in-process fallback mode.", reason)
             return
 
         self._loop = asyncio.get_running_loop()
@@ -56,7 +64,7 @@ class KafkaProducerService:
                     "[Kafka Producer] Connected (attempt %d/%d) to %s...",
                     attempt,
                     _STARTUP_ATTEMPTS,
-                    settings.KAFKA_BOOTSTRAP_SERVERS[:16],
+                    settings.KAFKA_BOOTSTRAP_SERVERS[:16] if settings.KAFKA_BOOTSTRAP_SERVERS else "??",
                 )
                 return  # success — exit retry loop
 
@@ -74,10 +82,10 @@ class KafkaProducerService:
                     )
                     await asyncio.sleep(_STARTUP_BACKOFF_S)
                 else:
-                    logger.critical(
-                        "[Kafka Producer] Kafka unavailable after %d attempts — "
-                        "starting in degraded mode (REST & DB operations unaffected). "
-                        "Last error: %s",
+                    logger.warning(
+                        "[Kafka Producer] Kafka broker unavailable after %d attempts — "
+                        "continuing in degraded mode with in-process fallback relay. "
+                        "Error: %s",
                         _STARTUP_ATTEMPTS, safe_exc,
                     )
                     kafka_event_store.record_error(safe_exc)
@@ -127,7 +135,9 @@ class KafkaProducerService:
         """
         Publish an event to a Kafka topic.
         Safe for use from synchronous FastAPI endpoint threads, background workers,
-        or coroutines.  Kafka failure NEVER breaks the calling REST/PostgreSQL transaction.
+        or coroutines. Kafka failure NEVER breaks the calling REST/PostgreSQL transaction.
+        When Kafka is inactive or unavailable, returns False gracefully while
+        recording event in kafka_event_store for audit.
         """
         if isinstance(event, KafkaEvent):
             event_dict = event.to_dict()
@@ -140,7 +150,7 @@ class KafkaProducerService:
         kafka_event_store.record_published(topic, event_dict)
 
         if not self._is_running or not self._producer:
-            logger.info(
+            logger.debug(
                 "[Kafka Event Recorded] (Producer inactive) Topic: %s | Type: %s | ID: %s",
                 topic, event_dict.get("event_type"), event_dict.get("event_id"),
             )
