@@ -1,7 +1,19 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import List, Dict, Set, Optional
 from fastapi import WebSocket
+
+
+def to_utc_iso(dt: Optional[datetime]) -> Optional[str]:
+    """Serialize a naive-UTC or tz-aware datetime into strict UTC ISO-8601 ('...Z')."""
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    else:
+        dt = dt.astimezone(timezone.utc)
+    return dt.isoformat().replace("+00:00", "Z")
 
 logger = logging.getLogger("smartserve.websockets")
 
@@ -17,24 +29,33 @@ class WebSocketConnectionManager:
         self.channel_subscribers: Dict[str, Set[WebSocket]] = {}
         # Maps WebSocket -> Set[channel_name]
         self.socket_channels: Dict[WebSocket, Set[str]] = {}
-        # Maps WebSocket -> asyncio.Lock (prevents concurrent frame interleaving)
+        # Maps WebSocket -> asyncio.Lock (prevents concurrent write collisions)
         self._socket_locks: Dict[WebSocket, asyncio.Lock] = {}
         # Primary Uvicorn event loop running ASGI / WebSockets
         self._main_loop: Optional[asyncio.AbstractEventLoop] = None
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     def set_main_loop(self, loop: asyncio.AbstractEventLoop):
         """Register the primary Uvicorn event loop."""
         self._main_loop = loop
+        self._loop = loop
         logger.info("[WebSocket] Main event loop registered with WebSocketConnectionManager")
+
+    def set_event_loop(self, loop: asyncio.AbstractEventLoop) -> None:
+        """Bind the server's main asyncio event loop for cross-thread broadcasts (alias)."""
+        self.set_main_loop(loop)
 
     def get_main_loop(self) -> Optional[asyncio.AbstractEventLoop]:
         """Return the registered main loop, or active running loop if currently on it."""
         if self._main_loop and self._main_loop.is_running() and not self._main_loop.is_closed():
             return self._main_loop
+        if self._loop and self._loop.is_running() and not self._loop.is_closed():
+            return self._loop
         try:
             running = asyncio.get_running_loop()
             if running and running.is_running() and not running.is_closed():
                 self._main_loop = running
+                self._loop = running
                 return running
         except RuntimeError:
             pass
@@ -43,6 +64,7 @@ class WebSocketConnectionManager:
     def clear_main_loop(self):
         """Clear event loop reference on shutdown."""
         self._main_loop = None
+        self._loop = None
 
     @property
     def active_connections(self) -> Dict[str, List[WebSocket]]:
@@ -52,6 +74,10 @@ class WebSocketConnectionManager:
     async def connect(self, websocket: WebSocket, channel: str):
         """Accept the socket connection and subscribe to the initial channel."""
         self.get_main_loop()  # Auto-capture running loop if not yet registered
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            pass
         try:
             await websocket.accept()
         except Exception:
@@ -63,6 +89,11 @@ class WebSocketConnectionManager:
         """Subscribe an accepted socket to a channel."""
         if not channel:
             return
+        if self._loop is None:
+            try:
+                self._loop = asyncio.get_running_loop()
+            except RuntimeError:
+                pass
         if channel not in self.channel_subscribers:
             self.channel_subscribers[channel] = set()
         self.channel_subscribers[channel].add(websocket)
@@ -115,7 +146,6 @@ class WebSocketConnectionManager:
         dead_connections = []
         for connection in target_sockets:
             try:
-                # Per-socket lock to prevent concurrent write collisions on the same connection
                 lock = self._socket_locks.get(connection)
                 if lock is None:
                     lock = asyncio.Lock()
@@ -123,7 +153,7 @@ class WebSocketConnectionManager:
                 async with lock:
                     await connection.send_json(message)
             except Exception as exc:
-                logger.debug(f"[WebSocket] Failed to send message to socket, marking dead: {exc}")
+                logger.debug(f"[WebSocket Broadcast] Removing dead connection after send failure: {exc}")
                 dead_connections.append(connection)
 
         for dead in dead_connections:
@@ -139,39 +169,43 @@ ws_manager = WebSocketConnectionManager()
 
 def broadcast_realtime(channels: List[str], message: dict):
     """
-    Thread-safe synchronous helper that dispatches WebSocket broadcasts to the
-    primary Uvicorn event loop from ANY execution context:
-      - Worker threads in Starlette/FastAPI synchronous endpoint threadpools
-      - Background tasks & celery/thread workers
-      - Coroutines on the main loop
-    Never instantiates a new event loop. Prevents cross-thread socket corruption.
+    Fire-and-forget helper that dispatches WebSocket broadcasts onto the server's
+    main asyncio event loop cleanly, even when invoked from synchronous FastAPI worker threads.
     """
     if not channels or not message:
         return
 
     main_loop = ws_manager.get_main_loop()
 
-    # Case 1: Caller is already executing on the active event loop
     try:
-        current_loop = asyncio.get_running_loop()
+        running_loop = asyncio.get_running_loop()
     except RuntimeError:
-        current_loop = None
+        running_loop = None
 
-    if current_loop and current_loop == main_loop and current_loop.is_running():
-        current_loop.create_task(ws_manager.broadcast_to_channels(channels, message))
+    if running_loop and running_loop.is_running() and (main_loop is None or main_loop is running_loop):
+        if main_loop is None:
+            ws_manager.set_main_loop(running_loop)
+        running_loop.create_task(ws_manager.broadcast_to_channels(channels, message))
         return
 
-    # Case 2: Caller is in a worker thread (synchronous endpoint) or external thread
     if main_loop and main_loop.is_running() and not main_loop.is_closed():
-        try:
-            asyncio.run_coroutine_threadsafe(
-                ws_manager.broadcast_to_channels(channels, message),
-                main_loop
-            )
-        except Exception as exc:
-            logger.warning(f"[WebSocket] Failed to dispatch coroutine to main loop: {exc}")
-    else:
-        logger.warning("[WebSocket] broadcast_realtime skipped: No running main event loop registered.")
+        future = asyncio.run_coroutine_threadsafe(
+            ws_manager.broadcast_to_channels(channels, message),
+            main_loop,
+        )
+
+        def _log_future_error(fut):
+            try:
+                fut.result()
+            except Exception as exc:
+                logger.warning(f"[WebSocket] broadcast_realtime async error: {exc}")
+
+        future.add_done_callback(_log_future_error)
+        return
+
+    logger.debug(
+        f"[WebSocket] broadcast_realtime skipped {message.get('type')}: no active main event loop bound yet."
+    )
 
 
 async def broadcast_realtime_async(channels: List[str], message: dict):

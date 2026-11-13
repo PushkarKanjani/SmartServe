@@ -7,7 +7,8 @@ import { useCustomerLocation } from '../context/LocationContext';
 import { useToast } from '../hooks/useToast';
 import { formatCurrencyINR } from '../utils/formatters';
 import { getServiceImage } from '../utils/serviceImages';
-import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription } from '../utils/localizedNames';
+import { subscribeToRealtime } from '../utils/realtime';
+import { getLocalizedCategory, getLocalizedSubcategory, getLocalizedServiceName, getLocalizedFeature, getLocalizedDescription, getLocalizedStepDescription, getLocalizedWarrantyText, getLocalizedFAQQuestion, getLocalizedFAQAnswer, getLocalizedSurgeText, getLocalizedDiscountText, getLocalizedExcluded, getLocalizedDo, getLocalizedDont } from '../utils/localizedNames';
 import { 
   Clock, 
   Star, 
@@ -98,6 +99,31 @@ export const CustomerServiceDetail: React.FC = () => {
       }
     };
     fetchDetail();
+
+    const refreshCatalogLive = () => {
+      if (!serviceId) return;
+      getServiceDetail(serviceId)
+        .then((data) => setService(data))
+        .catch(() => {});
+      getServiceEligibleProviders(serviceId)
+        .then((provs) => setEligibleProviders(provs))
+        .catch(() => {});
+    };
+
+    const unsubscribeCatalogWs = subscribeToRealtime(['catalog_updates'], (payload) => {
+      const type = payload.type || payload.event_type || payload.event;
+      if (type === 'PROVIDER_CATALOG_UPDATED' || type === 'provider.catalog.updated') {
+        refreshCatalogLive();
+      }
+    });
+
+    const handleWindowFocus = () => refreshCatalogLive();
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      unsubscribeCatalogWs();
+      window.removeEventListener('focus', handleWindowFocus);
+    };
   }, [serviceId]);
 
   useEffect(() => {
@@ -193,16 +219,29 @@ export const CustomerServiceDetail: React.FC = () => {
       return h * 60 + m;
     };
 
+    const currentNow = new Date();
+    const currentNowMinutes = currentNow.getHours() * 60 + currentNow.getMinutes();
+    // 30 minute minimum operational lead time for same-day bookings
+    const minLeadTimeMinutes = currentNowMinutes + 30;
+
     // Combine across slots by date, strictly filtering out past dates
     const map = new Map<string, ProviderSlotDetail>();
     targetSlots.forEach((slot) => {
       if (slot.slot_date < todayStr) return; // Prevent past dates
+
+      // Strictly filter out past or elapsed times if slot date is today
+      let filteredTimes = slot.available_times || [];
+      if (slot.slot_date === todayStr) {
+        filteredTimes = filteredTimes.filter((timeStr) => parseTimeMinutes(timeStr) > minLeadTimeMinutes);
+      }
+      if (filteredTimes.length === 0) return;
+
       if (!map.has(slot.slot_date)) {
-        const sortedTimes = Array.from(new Set(slot.available_times || [])).sort((a, b) => parseTimeMinutes(a) - parseTimeMinutes(b));
+        const sortedTimes = Array.from(new Set(filteredTimes)).sort((a, b) => parseTimeMinutes(a) - parseTimeMinutes(b));
         map.set(slot.slot_date, { ...slot, available_times: sortedTimes });
       } else {
         const existing = map.get(slot.slot_date)!;
-        const combined = Array.from(new Set([...existing.available_times, ...(slot.available_times || [])])).sort((a, b) => parseTimeMinutes(a) - parseTimeMinutes(b));
+        const combined = Array.from(new Set([...existing.available_times, ...filteredTimes])).sort((a, b) => parseTimeMinutes(a) - parseTimeMinutes(b));
         map.set(slot.slot_date, { ...existing, available_times: combined });
       }
     });
@@ -518,7 +557,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {t('service_detail.overview', { defaultValue: 'Service Overview' })}
               </h3>
               <p className="text-sm text-[#1F2A1E]/80 leading-relaxed font-sans">
-                {getLocalizedDescription(service.description)}
+                {getLocalizedDescription(service.description, service.name)}
               </p>
               {service.keywords && service.keywords.length > 0 && (
                 <div className="pt-2 flex items-center gap-1.5 flex-wrap border-t border-[#E5DEC9]/60">
@@ -612,7 +651,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="w-5 h-5 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <XCircle className="w-3.5 h-3.5 text-rose-500" />
                     </div>
-                    <span className="text-xs sm:text-sm text-[#1F2A1E]/75">{getLocalizedFeature(item)}</span>
+                    <span className="text-xs sm:text-sm text-[#1F2A1E]/75">{getLocalizedExcluded(item)}</span>
                   </div>
                 ))}
               </div>
@@ -654,7 +693,7 @@ export const CustomerServiceDetail: React.FC = () => {
                         )}
                       </div>
                       {step.description && (
-                        <p className="text-xs text-[#1F2A1E]/70 leading-relaxed">{getLocalizedDescription(step.description)}</p>
+                        <p className="text-xs text-[#1F2A1E]/70 leading-relaxed">{getLocalizedStepDescription(step.description)}</p>
                       )}
                     </div>
                   </div>
@@ -802,7 +841,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 </h3>
               </div>
               <p className="text-sm text-[#FAF7F0]/85 font-medium leading-relaxed">
-                {service.warranty}
+                {getLocalizedWarrantyText(service.warranty)}
               </p>
             </div>
           )}
@@ -817,8 +856,8 @@ export const CustomerServiceDetail: React.FC = () => {
               <div className="space-y-3">
                 {service.faqs.map((faq, idx) => (
                   <div key={idx} className="p-4 rounded-2xl bg-[#FAF7F0] border border-[#E5DEC9]/70 space-y-1.5">
-                    <h4 className="text-sm font-bold text-[#1F2A1E]">{faq.question}</h4>
-                    <p className="text-xs text-[#1F2A1E]/70 leading-relaxed font-sans">{faq.answer}</p>
+                    <h4 className="text-sm font-bold text-[#1F2A1E]">{getLocalizedFAQQuestion(faq.question)}</h4>
+                    <p className="text-xs text-[#1F2A1E]/70 leading-relaxed font-sans">{getLocalizedFAQAnswer(faq.answer)}</p>
                   </div>
                 ))}
               </div>
@@ -860,7 +899,7 @@ export const CustomerServiceDetail: React.FC = () => {
                       {service.dos.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-[#1F2A1E] bg-[#FAF7F0] p-3 rounded-xl border border-[#10B981]/20">
                           <CheckCircle className="w-3.5 h-3.5 text-[#10B981] flex-shrink-0 mt-0.5" />
-                          <span>{getLocalizedFeature(item)}</span>
+                          <span>{getLocalizedDo(item)}</span>
                         </div>
                       ))}
                     </div>
@@ -876,7 +915,7 @@ export const CustomerServiceDetail: React.FC = () => {
                       {service.donts.map((item, idx) => (
                         <div key={idx} className="flex items-start gap-2 text-xs sm:text-sm text-rose-950 bg-[#FDFCF7] p-3 rounded-xl border border-rose-200">
                           <span className="text-rose-600 font-bold flex-shrink-0">✕</span>
-                          <span>{getLocalizedFeature(item)}</span>
+                          <span>{getLocalizedDont(item)}</span>
                         </div>
                       ))}
                     </div>
@@ -971,7 +1010,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{t('service_detail.surge_protection_cap', { defaultValue: 'Surge Protection Cap' })}</span>
                   <span className="font-bold text-[#C9A15A] bg-[#FAF7F0] px-2 py-0.5 rounded-md border border-[#C9A15A]/30">
-                    Max +{Math.round(service.max_demand_increase * 100)}%
+                    {getLocalizedSurgeText(service.max_demand_increase)}
                   </span>
                 </div>
               )}
@@ -979,7 +1018,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{t('service_detail.max_discount', { defaultValue: 'Max Promotional Discount' })}</span>
                   <span className="font-bold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded-md border border-[#10B981]/20">
-                    Up to {Math.round(service.max_discount * 100)}%
+                    {getLocalizedDiscountText(service.max_discount)}
                   </span>
                 </div>
               )}
@@ -1024,7 +1063,7 @@ export const CustomerServiceDetail: React.FC = () => {
                   <Layers className="w-4 h-4 text-[#C9A15A]" />
                   <span>
                     {inBundle
-                      ? t('booking.in_bundle', { defaultValue: 'Added to Bundle ✓ (View Bundle)' })
+                      ? t('booking.in_bundle', { defaultValue: 'Added to Bundle âœ“ (View Bundle)' })
                       : t('booking.add_to_bundle', { defaultValue: '+ Add to Service Bundle' })}
                   </span>
                 </button>
@@ -1095,7 +1134,7 @@ export const CustomerServiceDetail: React.FC = () => {
                 {/* Direct Native Date Picker allowing any future booking date */}
                 <input
                   type="date"
-                  min={todayStr}
+                  min={availableDates[0] || todayStr}
                   value={bookingDate}
                   onChange={(e) => setBookingDate(e.target.value)}
                   className="w-full h-12 bg-white border border-[#E5DEC9] rounded-xl px-4 text-sm font-medium text-[#1F2A1E] focus:outline-none focus:ring-2 focus:ring-[#2F5233]"
@@ -1199,7 +1238,7 @@ export const CustomerServiceDetail: React.FC = () => {
                     <div className="pt-2 border-t border-amber-200/80 flex items-center justify-between text-xs">
                       <span className="text-amber-900 font-medium">{t('booking.earliest_dispatch_window', { defaultValue: 'Earliest Dispatch Window:' })}</span>
                       <span className="font-bold text-amber-950 bg-white px-2.5 py-1 rounded-lg border border-amber-300 shadow-xs">
-                        📅 {earliestEmergencySlot.date} at ⏰ {earliestEmergencySlot.time}
+                        ðŸ“… {earliestEmergencySlot.date} at â° {earliestEmergencySlot.time}
                       </span>
                     </div>
                   )}
@@ -1259,7 +1298,7 @@ export const CustomerServiceDetail: React.FC = () => {
                             <div className="flex items-center gap-2">
                               <p className="text-xs font-bold text-[#1F2A1E]">{prov.full_name}</p>
                               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                ⭐ {prov.reliability_score}% {t('provider.reliability_short', { defaultValue: 'Reliability' })}
+                                â­ {prov.reliability_score}% {t('provider.reliability_short', { defaultValue: 'Reliability' })}
                               </span>
                               <span className="text-[10px] text-[#1F2A1E]/50 font-medium">
                                 {prov.experience_years} {t('provider.years_exp', { defaultValue: 'yrs exp' })}

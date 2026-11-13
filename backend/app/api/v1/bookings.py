@@ -987,6 +987,7 @@ def get_admin_booking_location(
 
     provider_loc_data = None
     if loc:
+        from app.core.websockets import to_utc_iso
         provider_loc_data = {
             "latitude": float(loc.latitude),
             "longitude": float(loc.longitude),
@@ -994,7 +995,7 @@ def get_admin_booking_location(
             "speed": float(loc.speed) if loc.speed is not None else None,
             "accuracy": float(loc.accuracy) if loc.accuracy is not None else None,
             "is_active": loc.is_active,
-            "updated_at": loc.updated_at.isoformat() if loc.updated_at else None,
+            "updated_at": to_utc_iso(loc.updated_at),
         }
 
     # Customer location from booking

@@ -38,7 +38,7 @@ import {
   Mail,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { subscribeToRealtime } from '../utils/realtime';
+import { subscribeToRealtime, getCustomerRealtimeChannels } from '../utils/realtime';
 import { CustomerLiveMap } from '../components/CustomerLiveMap';
 import { CustomerProviderCard, BookingTimeline } from '../components/CustomerProviderCard';
 import { WarrantyCard } from '../components/common/WarrantyCard';
@@ -78,30 +78,39 @@ export const CustomerBookingDetail: React.FC = () => {
   const [customerCoords, setCustomerCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [wsStatus, setWsStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
-  // Request actual customer browser geolocation (Requirement 8)
+  // Only silently read browser geolocation if permission was ALREADY granted by user;
+  // Never trigger an abrupt permission prompt automatically on page mount.
   useEffect(() => {
     if (!('geolocation' in navigator)) {
       setCustomerGeoPermission('unsupported');
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCustomerGeoPermission('granted');
-        setCustomerCoords({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
+
+    if ('permissions' in navigator && navigator.permissions?.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' as PermissionName })
+        .then((result) => {
+          setCustomerGeoPermission(result.state);
+          if (result.state === 'granted') {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                setCustomerCoords({
+                  latitude: pos.coords.latitude,
+                  longitude: pos.coords.longitude,
+                });
+                if (bookingId) {
+                  updateCustomerLocation(bookingId, pos.coords.latitude, pos.coords.longitude);
+                }
+              },
+              () => {},
+              { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+            );
+          }
+        })
+        .catch(() => {
+          // If query fails or is unsupported, do not pop up on mount
         });
-        if (bookingId) {
-          updateCustomerLocation(bookingId, pos.coords.latitude, pos.coords.longitude);
-        }
-      },
-      (err) => {
-        if (err.code === err.PERMISSION_DENIED) {
-          setCustomerGeoPermission('denied');
-        }
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
+    }
   }, [bookingId]);
 
   const effectiveCustomerLocation: CustomerLocationInfo | null = customerCoords
@@ -171,9 +180,11 @@ export const CustomerBookingDetail: React.FC = () => {
     fetchDetail();
     if (!bookingId) return;
 
-    // Real-Time WebSocket Subscription for booking status & live GPS tracking (No Polling Required)
+    const channels = getCustomerRealtimeChannels([`booking_${bookingId}`]);
+
+    // Real-Time WebSocket Subscription for booking status & live GPS tracking
     const unsubscribeWs = subscribeToRealtime(
-      [`booking_${bookingId}`, 'bookings', 'dashboard'],
+      channels,
       (payload) => {
         const targetId = String(payload.booking_id || payload.booking?.id || '').toLowerCase();
         if (targetId && targetId === String(bookingId).toLowerCase()) {
@@ -238,8 +249,27 @@ export const CustomerBookingDetail: React.FC = () => {
       (status) => setWsStatus(status)
     );
 
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        getBookingDetail(bookingId)
+          .then((data) => setBooking(data))
+          .catch(() => {});
+      }
+    };
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+
+    const fallbackPoll = setInterval(() => {
+      getBookingDetail(bookingId)
+        .then((data) => setBooking(data))
+        .catch(() => {});
+    }, 8000);
+
     return () => {
       unsubscribeWs();
+      clearInterval(fallbackPoll);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
     };
   }, [bookingId]);
 
@@ -269,7 +299,7 @@ export const CustomerBookingDetail: React.FC = () => {
 
     fetchChat();
 
-    const channels = [`booking_${bookingId}`, `booking_chat_${bookingId}`, 'support', 'support_tickets'];
+    const channels = [`booking_${bookingId}`, `booking_chat_${bookingId}`];
     if (chatTicket?.id) {
       channels.push(`ticket_${chatTicket.id}`);
     }
@@ -708,6 +738,8 @@ export const CustomerBookingDetail: React.FC = () => {
           bookingId={booking.id}
           serviceName={booking.service_name}
           warranty={booking.warranty}
+          isEligible={booking.is_warranty_eligible}
+          exclusionReason={booking.warranty_exclusion_reason}
           onClaimRaised={() => {
             getBookingDetail(booking.id).then(setBooking).catch(() => {});
           }}

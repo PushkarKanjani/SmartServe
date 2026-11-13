@@ -43,22 +43,38 @@ function getValidToken(storageKey: string): string | null {
   }
 }
 
+export function getCustomerRealtimeChannels(extraChannels: string[] = []): string[] {
+  const channels = new Set<string>(extraChannels.filter(Boolean));
+  if (typeof window !== 'undefined') {
+    try {
+      const rawUser = localStorage.getItem('smartserve_customer_user');
+      if (rawUser) {
+        const parsed = JSON.parse(rawUser);
+        if (parsed.customer_id) channels.add(`customer_${parsed.customer_id}`);
+        if (parsed.user_id) {
+          channels.add(`customer_${parsed.user_id}`);
+          channels.add(`user_${parsed.user_id}`);
+        }
+      }
+    } catch (_) {}
+  }
+  return Array.from(channels);
+}
+}
+
 export function getWebSocketUrl(channels: string[] = []): string {
   const rawApiUrl = getApiBaseUrl();
   const isHttps = rawApiUrl.startsWith('https:') || (typeof window !== 'undefined' && window.location.protocol === 'https:');
   const wsProtocol = isHttps ? 'wss:' : 'ws:';
   const hostDomain = rawApiUrl.replace(/^https?:\/\//, '').replace(/\/api\/v1\/?$/, '');
-
   const params = new URLSearchParams();
   if (channels.length > 0) {
     params.set('channels', channels.join(','));
   }
-
   const token = getValidToken('smartserve_customer_token');
   if (token) {
     params.set('token', token);
   }
-
   const queryString = params.toString() ? `?${params.toString()}` : '';
   return `${wsProtocol}//${hostDomain}/ws/stream${queryString}`;
 }
@@ -131,13 +147,11 @@ export function subscribeToRealtime(
         if (gen !== generation || disposed) { socket.close(); return; }
         retryCount = 0;
         onStatusChange?.('connected');
-
         // Optional runtime auth frame in addition to URL token parameter
         const token = getValidToken('smartserve_customer_token');
         if (token && socket.readyState === WebSocket.OPEN) {
           try { socket.send(JSON.stringify({ action: 'auth', token })); } catch (_) {}
         }
-
         pingInterval = setInterval(() => {
           if (socket.readyState === WebSocket.OPEN) {
             try { socket.send(JSON.stringify({ action: 'ping' })); } catch (_) {}
@@ -159,7 +173,6 @@ export function subscribeToRealtime(
           ) {
             return;
           }
-
           if (data.type === 'AUTH_FAILED') {
             console.warn('[WebSocket] Authentication rejected by server.');
             return;

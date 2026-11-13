@@ -202,7 +202,15 @@ export const CustomerCombinedBooking: React.FC = () => {
       showToast(t('booking.booking_success', { defaultValue: 'Combined booking confirmed successfully!' }), 'success');
       navigate(`/bookings`);
     } catch (err: any) {
-      const msg = err.response?.data?.detail || 'Failed to create combined booking. Please try again.';
+      let msg = 'Failed to create combined booking. Please try again.';
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'string') {
+        msg = detail;
+      } else if (Array.isArray(detail) && detail.length > 0) {
+        msg = detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ');
+      } else if (err.message) {
+        msg = err.message;
+      }
       showToast(msg, 'error');
     } finally {
       setSubmitting(false);

@@ -287,6 +287,8 @@ class BookingDetail(BaseModel):
     before_photos: Optional[List[str]] = None
     after_photos: Optional[List[str]] = None
     warranty: Optional[Dict[str, Any]] = None
+    is_warranty_eligible: bool = True
+    warranty_exclusion_reason: Optional[str] = None
     provider_id: Optional[str] = None
     provider_name: Optional[str] = None
     provider: Optional[Dict[str, Any]] = None

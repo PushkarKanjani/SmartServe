@@ -314,28 +314,270 @@ export function getLocalizedFeature(featureText?: string | null): string {
   const lower = trimmed.toLowerCase();
 
   // 1. Direct dictionary match
-  const direct = FEATURE_TRANSLATIONS[lower];
+  const direct = FEATURE_TRANSLATIONS[lower] || WORD_TRANSLATIONS[lower];
   if (direct) {
     if (lang === 'hi' && direct.hi) return direct.hi;
     if (lang === 'gu' && direct.gu) return direct.gu;
   }
 
+  const strippedPeriod = lower.replace(/[.\s]+$/, '');
+  const directNoPeriod = FEATURE_TRANSLATIONS[strippedPeriod] || WORD_TRANSLATIONS[strippedPeriod];
+  if (directNoPeriod) {
+    if (lang === 'hi' && directNoPeriod.hi) return directNoPeriod.hi;
+    if (lang === 'gu' && directNoPeriod.gu) return directNoPeriod.gu;
+  }
+
   const norm = normalizeKey(trimmed);
-  const normDirect = FEATURE_TRANSLATIONS[norm];
+  const normDirect = FEATURE_TRANSLATIONS[norm] || WORD_TRANSLATIONS[norm];
   if (normDirect) {
     if (lang === 'hi' && normDirect.hi) return normDirect.hi;
     if (lang === 'gu' && normDirect.gu) return normDirect.gu;
   }
 
-  // 2. Pattern: "Complete [Service Name] procedure"
+  // 2a. Pattern: "Complete [Service Name] procedure"
   const procMatch = trimmed.match(/^Complete (.*?) procedure$/i);
   if (procMatch && procMatch[1]) {
     const svcLoc = getLocalizedServiceName(procMatch[1].trim());
     return lang === 'hi' ? `पूर्ण ${svcLoc} प्रक्रिया` : `સંપૂર્ણ ${svcLoc} પ્રક્રિયા`;
   }
 
+  // 2b. Pattern: "Professional [Service Name] procedure"
+  const procMatch2 = trimmed.match(/^Professional (.*?) procedure$/i);
+  if (procMatch2 && procMatch2[1]) {
+    const svcLoc = getLocalizedServiceName(procMatch2[1].trim());
+    return lang === 'hi' ? `व्यावसायिक ${svcLoc} प्रक्रिया` : `વ્યાવસાયિક ${svcLoc} પ્રક્રિયા`;
+  }
+
+  // 2c. Pattern: "Standard [Service Name] procedure"
+  const procMatch3 = trimmed.match(/^Standard (.*?) procedure$/i);
+  if (procMatch3 && procMatch3[1]) {
+    const svcLoc = getLocalizedServiceName(procMatch3[1].trim());
+    return lang === 'hi' ? `मानक ${svcLoc} प्रक्रिया` : `પ્રમાણભૂત ${svcLoc} પ્રક્રિયા`;
+  }
+
+  // 2d. Pattern: "High quality [X] completed successfully"
+  const qualMatch = trimmed.match(/^High quality (.*?) completed successfully$/i);
+  if (qualMatch && qualMatch[1]) {
+    const rawDomain = qualMatch[1].trim();
+    let svcLoc = getLocalizedServiceName(rawDomain);
+    if (svcLoc === rawDomain || hasLatin(svcLoc)) {
+      const subLoc = getLocalizedSubcategory(rawDomain);
+      if (subLoc !== rawDomain && !hasLatin(subLoc)) svcLoc = subLoc;
+      else {
+        const catLoc = getLocalizedCategory(rawDomain);
+        if (catLoc !== rawDomain && !hasLatin(catLoc)) svcLoc = catLoc;
+      }
+    }
+    return lang === 'hi' ? `उच्च गुणवत्ता वाली ${svcLoc} सफलतापूर्वक पूर्ण` : `ઉચ્ચ ગુણવત્તાવાળી ${svcLoc} સફળતાપૂર્વક પૂર્ણ`;
+  }
+
+  // 2e. Pattern: "High quality [X] Service Variation [N] completed successfully"
+  const qualVarMatch = trimmed.match(/^High quality (.*?) Service Variation \d+ completed successfully$/i);
+  if (qualVarMatch && qualVarMatch[1]) {
+    const rawDomain = qualVarMatch[1].trim();
+    let svcLoc = getLocalizedServiceName(rawDomain);
+    if (svcLoc === rawDomain || hasLatin(svcLoc)) {
+      const subLoc = getLocalizedSubcategory(rawDomain);
+      if (subLoc !== rawDomain && !hasLatin(subLoc)) svcLoc = subLoc;
+      else {
+        const catLoc = getLocalizedCategory(rawDomain);
+        if (catLoc !== rawDomain && !hasLatin(catLoc)) svcLoc = catLoc;
+      }
+    }
+    return lang === 'hi' ? `उच्च गुणवत्ता वाली ${svcLoc} सर्विस सफलतापूर्वक पूर्ण` : `ઉચ્ચ ગુણવત્તાવાળી ${svcLoc} સેવા સફળતાપૂર્વક પૂર્ણ`;
+  }
+
+  // 2f. Pattern: "[N]-day service warranty on workmanship"
+  const warrantyDayMatch = trimmed.match(/^(\d+)[- ]day service warranty on workmanship$/i);
+  if (warrantyDayMatch && warrantyDayMatch[1]) {
+    const n = warrantyDayMatch[1];
+    return lang === 'hi' ? `कारीगरी पर ${n} दिन की सर्विस वारंटी` : `કારીગરી પર ${n} દિવસની સર્વિસ વૉરંટી`;
+  }
+
+  // 2g. Pattern: "[N]-day service warranty"
+  const warrantyMatch = trimmed.match(/^(\d+)[- ]day service warranty$/i);
+  if (warrantyMatch && warrantyMatch[1]) {
+    const n = warrantyMatch[1];
+    return lang === 'hi' ? `${n} दिन की सर्विस वारंटी` : `${n} દિવસની સર્વિસ વૉરંટી`;
+  }
+
+  // 2h. Pattern: "How long does [X] take?"
+  const howLongMatch = trimmed.match(/^How long does (.*?) take\?$/i);
+  if (howLongMatch && howLongMatch[1]) {
+    const svcLoc = getLocalizedServiceName(howLongMatch[1].trim());
+    return lang === 'hi' ? `${svcLoc} में कितना समय लगता है?` : `${svcLoc} માટે કેટલો સમય લાગે છે?`;
+  }
+
+  // 2i. Pattern: "The session typically takes around [N] minutes."
+  const sessionMatch = trimmed.match(/^The session typically takes around (\d+) minutes\.?$/i);
+  if (sessionMatch && sessionMatch[1]) {
+    const n = sessionMatch[1];
+    return lang === 'hi' ? `सत्र में आमतौर पर लगभग ${n} मिनट लगते हैं।` : `સત્ર સામાન્ય રીતે આશરે ${n} મિનિટ લે છે.`;
+  }
+
+  // 2j. Pattern: "Typically takes around [N] minutes."
+  const sessionMatch2 = trimmed.match(/^Typically takes around (\d+) minutes\.?$/i);
+  if (sessionMatch2 && sessionMatch2[1]) {
+    const n = sessionMatch2[1];
+    return lang === 'hi' ? `आमतौर पर लगभग ${n} मिनट लगते हैं।` : `સામાન્ય રીતે આશરે ${n} મિનિટ લે છે.`;
+  }
+
   // 3. Fallback: Return original cleanly without partial character corruption
   return featureText;
+}
+
+/**
+ * Localize warranty coverage text.
+ * Handles patterns like "7-day service warranty on workmanship", "10-day service warranty", etc.
+ */
+export function getLocalizedWarrantyText(text?: string | null): string {
+  if (!text) return '';
+  return getLocalizedFeature(text);
+}
+
+/**
+ * Localize FAQ question text.
+ */
+export function getLocalizedFAQQuestion(q?: string | null): string {
+  if (!q) return '';
+  return getLocalizedFeature(q);
+}
+
+/**
+ * Localize FAQ answer text.
+ */
+export function getLocalizedFAQAnswer(a?: string | null): string {
+  if (!a) return '';
+  return getLocalizedFeature(a);
+}
+
+/**
+ * Intelligent Step Description Localizer
+ */
+export function getLocalizedStepDescription(description?: string | null): string {
+  if (!description) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return description;
+
+  const trimmed = description.trim();
+  const lower = trimmed.toLowerCase();
+
+  // 1. Direct dictionary lookup
+  const direct = FEATURE_TRANSLATIONS[lower];
+  if (direct) {
+    if (lang === 'hi' && direct.hi) return direct.hi;
+    if (lang === 'gu' && direct.gu) return direct.gu;
+  }
+
+  // 2. Pattern: "Performing the main [X] Service Variation [N] tasks with precision."
+  const perfVarMatch = trimmed.match(/^Performing the main (.*?) Service Variation \d+ tasks with precision\.?$/i);
+  if (perfVarMatch && perfVarMatch[1]) {
+    const rawCategory = perfVarMatch[1].trim();
+    let loc = getLocalizedSubcategory(rawCategory);
+    if (loc === rawCategory || hasLatin(loc)) {
+      const catLoc = getLocalizedCategory(rawCategory);
+      if (catLoc !== rawCategory && !hasLatin(catLoc)) loc = catLoc;
+      else {
+        const svcLoc = getLocalizedServiceName(rawCategory);
+        if (svcLoc !== rawCategory && !hasLatin(svcLoc)) loc = svcLoc;
+      }
+    }
+    return lang === 'hi'
+      ? `सटीकता के साथ मुख्य ${loc} कार्य निष्पादित करना।`
+      : `ચોકસાઈ સાથે મુખ્ય ${loc} કામગીરી અમલમાં મૂકવી.`;
+  }
+
+  // 3. Pattern: "Performing the main [X] tasks with precision."
+  const perfMatch = trimmed.match(/^Performing the main (.*?) tasks with precision\.?$/i);
+  if (perfMatch && perfMatch[1]) {
+    const rawCategory = perfMatch[1].trim();
+    let loc = getLocalizedSubcategory(rawCategory);
+    if (loc === rawCategory || hasLatin(loc)) {
+      const catLoc = getLocalizedCategory(rawCategory);
+      if (catLoc !== rawCategory && !hasLatin(catLoc)) loc = catLoc;
+      else {
+        const svcLoc = getLocalizedServiceName(rawCategory);
+        if (svcLoc !== rawCategory && !hasLatin(svcLoc)) loc = svcLoc;
+      }
+    }
+    return lang === 'hi'
+      ? `सटीकता के साथ मुख्य ${loc} कार्य निष्पादित करना।`
+      : `ચોકસાઈ સાથે મુખ્ય ${loc} કામગીરી અમલમાં મૂકવી.`;
+  }
+
+  // 4. Standard common step descriptions
+  if (lower.includes('examines the requirements and plans the service delivery')) {
+    return lang === 'hi'
+      ? 'पेशेवर आवश्यकताओं की जांच करता है और सेवा निष्पादन की योजना बनाता है।'
+      : 'નિષ્ણાત જરૂરિયાતોની તપાસ કરે છે અને સેવા પ્રદાન કરવાની યોજના બનાવે છે.';
+  }
+  if (lower.includes('setting up the necessary tools, materials, and safety measures')) {
+    return lang === 'hi'
+      ? 'आवश्यक उपकरण, सामग्री और सुरक्षा उपायों की व्यवस्था करना।'
+      : 'જરૂરી સાધનો, સામગ્રી અને સુરક્ષા પગલાંની વ્યવસ્થા કરવી.';
+  }
+  if (lower.includes('applying final finishing touches to ensure perfect results')) {
+    return lang === 'hi'
+      ? 'उत्कृष्ट परिणाम सुनिश्चित करने के लिए अंतिम फिनिशिंग टच देना।'
+      : 'ઉત્કૃષ્ટ પરિણામો સુનિશ્ચિત કરવા માટે આખરી ફિનિશિંગ ટચ આપવો.';
+  }
+  if (lower.includes('cleaning the work area and handing over to the customer for approval')) {
+    return lang === 'hi'
+      ? 'कार्य क्षेत्र की सफाई करना और ग्राहक के अनुमोदन के लिए सौंपना।'
+      : 'કાર્ય વિસ્તારની સફાઈ કરવી અને ગ્રાહકની મંજૂરી માટે સોંપણી કરવી.';
+  }
+
+  // 5. Category-specific step mappings
+  const stepMap: Record<string, { hi: string; gu: string }> = {
+    'site inspection for optimal placement': { hi: 'उचित स्थान के लिए साइट का निरीक्षण', gu: 'યોગ્ય સ્થાન માટે સાઇટનું નિરીક્ષણ' },
+    'mounting and wiring of the device': { hi: 'उपकरण की फिटिंग और वायरिंग', gu: 'ઉપકરણનું ફિટિંગ અને વાયરિંગ' },
+    'connecting the device to the smart network': { hi: 'उपकरण को स्मार्ट नेटवर्क से जोड़ना', gu: 'ઉપકરણને સ્માર્ટ નેટવર્ક સાથે જોડવું' },
+    'functional testing and system verification': { hi: 'सिस्टम का परीक्षण और सत्यापन', gu: 'સિસ્ટમનું ટેસ્ટિંગ અને ચકાસણી' },
+    'demonstrating usage and safety guidelines to the customer': { hi: 'ग्राहक को उपयोग और सुरक्षा दिशानिर्देश समझाना', gu: 'ગ્રાહકને ઉપયોગ અને સુરક્ષા માર્ગદર્શિકા સમજાવવી' },
+    'understanding specific household needs': { hi: 'घर की विशिष्ट आवश्यकताओं को समझना', gu: 'ઘરની ચોક્કસ જરૂરિયાતો સમજવી' },
+    'assigning the right professional for the task': { hi: 'कार्य के लिए उपयुक्त पेशेवर नियुक्त करना', gu: 'કામ માટે યોગ્ય નિષ્ણાતની નિમણૂક કરવી' },
+    'carrying out the requested domestic duties': { hi: 'अनुरोधित घरेलू कार्य निष्पादित करना', gu: 'વિનંતી કરેલ ઘરેલું કાર્યો કરવા' },
+    'ensuring the service meets smartserve standards': { hi: 'सेवा स्मार्टसर्व मानकों के अनुरूप सुनिश्चित करना', gu: 'સેવા સ્માર્ટસર્વ ધોરણો મુજબ છે તેની ખાતરી કરવી' },
+    'collecting customer feedback for continuous improvement': { hi: 'निरंतर सुधार के लिए ग्राहक से प्रतिक्रिया लेना', gu: 'સતત સુધારા માટે ગ્રાહકનો પ્રતિસાદ મેળવવો' },
+    "evaluating the student's current level and learning goals": { hi: 'छात्र के वर्तमान स्तर और सीखने के लक्ष्यों का मूल्यांकन', gu: 'વિદ્યાર્થીના વર્તમાન સ્તર અને શીખવાના લક્ષ્યોનું મૂલ્યાંકન' },
+    'customising a structured study plan': { hi: 'एक संरचित अध्ययन योजना तैयार करना', gu: 'એક સુવ્યવસ્થિત અભ્યાસ યોજના તૈયાર કરવી' },
+    'conducting focused, interactive lessons': { hi: 'इंटरैक्टिव और केंद्रित कक्षाएं संचालित करना', gu: 'ઇન્ટરેક્ટિવ અને ધ્યાન કેન્દ્રિત સત્રો યોજવા' },
+    'providing exercises to reinforce concepts': { hi: 'अवधारणाओं को मजबूत करने के लिए अभ्यास प्रदान करना', gu: 'સંકલ્પનાઓને મજબૂત કરવા માટે સ્વાધ્યાય આપવા' },
+    'reviewing progress and adjusting the plan as needed': { hi: 'प्रगति की समीक्षा करना और योजना में आवश्यकतानुसार बदलाव करना', gu: 'પ્રગતિની સમીક્ષા કરવી અને જરૂર મુજબ યોજનામાં સુધારો કરવો' },
+    'assessing health goals, medical history, and current fitness level': { hi: 'स्वास्थ्य लक्ष्यों और वर्तमान फिटनेस स्तर का मूल्यांकन', gu: 'આરોગ્ય લક્ષ્યો અને વર્તમાન ફિટનેસ સ્તરનું મૂલ્યાંકન' },
+    'creating a customised programme tailored to specific needs': { hi: 'विशिष्ट आवश्यकताओं के अनुसार अनुकूलित कार्यक्रम तैयार करना', gu: 'ચોક્કસ જરૂરિયાતો મુજબ કસ્ટમાઇઝ્ડ કાર્યક્રમ બનાવવો' },
+    'conducting guided sessions with professional supervision': { hi: 'पेशेवर मार्गदर्शन में सत्र आयोजित करना', gu: 'નિષ્ણાતના માર્ગદર્શન હેઠળ સત્રો યોજવા' },
+    'tracking improvements and adjusting the programme': { hi: 'सुधार को ट्रैक करना और कार्यक्रम में समायोजन करना', gu: 'સુધારા પર નજર રાખવી અને કાર્યક્રમમાં ફેરફાર કરવા' },
+    'reviewing outcomes and setting next phase goals': { hi: 'परिणामों की समीक्षा करना और अगले चरण के लक्ष्य निर्धारित करना', gu: 'પરિણામોની સમીક્ષા કરવી અને આગામી તબક્કાના લક્ષ્યો નક્કી કરવા' },
+    'understanding event theme, scale, and budget': { hi: 'इवेंट की थीम, स्तर और बजट को समझना', gu: 'ઇવેન્ટની થીમ, વ્યાપ અને બજેટને સમજવું' },
+    'presenting a tailored event concept and plan': { hi: 'अनुकूलित इवेंट कॉन्सेप्ट और योजना प्रस्तुत करना', gu: 'કસ્ટમાઇઝ્ડ ઇવેન્ટ કન્સેપ્ટ અને પ્લાન રજૂ કરવો' },
+    'arranging all required vendors and logistics': { hi: 'सभी आवश्यक विक्रेताओं और लॉजिस्टिक्स की व्यवस्था करना', gu: 'તમામ જરૂરી વેન્ડર્સ અને લોજિસ્ટિક્સની વ્યવસ્થા કરવી' },
+    'on-ground management and execution on the event day': { hi: 'इवेंट के दिन ग्राउंड मैनेजमेंट और सुचारू संचालन', gu: 'ઇવેન્ટના દિવસે સ્થળ પર સંચાલન અને અમલીકરણ' },
+    'clearing up and delivering any media or documentation': { hi: 'सफाई और सभी मीडिया या दस्तावेज़ सौंपना', gu: 'સફાઈ અને તમામ મીડિયા કે દસ્તાવેજો સોંપવા' },
+    'identifying the root cause of the technical issue': { hi: 'तकनीकी समस्या के मूल कारण की पहचान करना', gu: 'તકનીકી સમસ્યાના મૂળ કારણની ઓળખ કરવી' },
+    'outlining the fix or upgrade path': { hi: 'मरम्मत या अपग्रेड समाधान की रूपरेखा तैयार करना', gu: 'રિપેરિંગ અથવા અપગ્રેડના પગલાં નક્કી કરવા' },
+    'carrying out repairs, setup, or development work': { hi: 'मरम्मत, सेटअप या विकास कार्य निष्पादित करना', gu: 'રિપેરિંગ, સેટઅપ અથવા ડેવલપમેન્ટ કાર્ય પૂર્ણ કરવું' },
+    'confirming the solution works correctly': { hi: 'समाधान के सही ढंग से काम करने की पुष्टि करना', gu: 'ઉકેલ યોગ્ય રીતે કામ કરે છે તેની ખાતરી કરવી' },
+    'demonstrating the fix and advising on best practices': { hi: 'समाधान प्रदर्शित करना और सर्वोत्तम प्रथाओं की सलाह देना', gu: 'ઉકેલ બતાવવો અને શ્રેષ્ઠ પદ્ધતિઓની સલાહ આપવી' },
+    'assessing volume, fragile items, and special requirements': { hi: 'सामान की मात्रा, नाजुक वस्तुओं और आवश्यकताओं का मूल्यांकन', gu: 'સામાનનો જથ્થો, નાજુક વસ્તુઓ અને જરૂરિયાતોનું મૂલ્યાંકન' },
+    'carefully packing all items with appropriate materials': { hi: 'उचित सामग्री के साथ सभी वस्तुओं को सुरक्षित रूप से पैक करना', gu: 'યોગ્ય સામગ્રી સાથે તમામ વસ્તુઓનું સુરક્ષિત પેકિંગ કરવું' },
+    'safely loading and transporting to the destination': { hi: 'गंतव्य तक सुरक्षित लोडिंग और परिवहन', gu: 'ગંતવ્ય સુધી સુરક્ષિત લોડિંગ અને પરિવહન' },
+    'unloading and placing items as per customer instructions': { hi: 'ग्राहक के निर्देशानुसार सामान उतारना और व्यवस्थित करना', gu: 'ગ્રાહકની સૂચના મુજબ સામાન ઉતારવો અને ગોઠવવો' },
+    'verifying all items are delivered and removing packing waste': { hi: 'सभी वस्तुओं के वितरण की पुष्टि और पैकिंग कचरे का निपटान', gu: 'તમામ સામાન પહોંચ્યાની ચકાસણી અને કચરાનો નિકાલ' },
+    "evaluating the pet's breed, temperament, and specific needs": { hi: 'पालतू जानवर की नस्ल, स्वभाव और आवश्यकताओं का मूल्यांकन', gu: 'પાલતુ પ્રાણીની જાતિ, સ્વભાવ અને જરૂરિયાતોનું મૂલ્યાંકન' },
+    'preparing equipment and a safe environment': { hi: 'उपकरण और एक सुरक्षित वातावरण तैयार करना', gu: 'સાધનો અને સુરક્ષિત વાતાવરણ તૈયાર કરવું' },
+    'delivering the requested pet care service': { hi: 'अनुरोधित पेट केयर सेवा प्रदान करना', gu: 'વિનંતી કરેલ પેટ કેર સેવા પૂરી પાડવી' },
+    'ensuring the pet is comfortable and healthy post-service': { hi: 'सेवा के बाद पालतू जानवर के आराम और स्वास्थ्य की पुष्टि', gu: 'સેવા પછી પાલતુ પ્રાણીના આરામ અને સુખાકારીની ખાતરી' },
+    'briefing the owner on aftercare and next steps': { hi: 'मालिक को देखभाल और अगले कदमों की जानकारी देना', gu: 'માલિકને પછીની સંભાળ અને આગામી પગલાં વિશે માહિતી આપવી' }
+  };
+
+  const mapped = stepMap[lower];
+  if (mapped) {
+    return lang === 'hi' ? mapped.hi : mapped.gu;
+  }
+
+  // 6. Final fallback: getLocalizedFeature
+  return getLocalizedFeature(description);
 }
 
 /**
@@ -395,14 +637,68 @@ export function getLocalizedSupportCategory(cat?: string | null): string {
   return cat;
 }
 
-// 5. Intelligent Service Description Localizer
-export function getLocalizedDescription(description?: string | null): string {
-  if (!description) return '';
+/**
+ * Localize Surge Protection Cap Percentage
+ */
+export function getLocalizedSurgeText(val?: number): string {
+  if (val === undefined || val === null) return '';
+  const pct = val > 1 ? Math.round(val) : Math.round(val * 100);
   const lang = (i18n.language || 'en').slice(0, 2);
-  if (lang === 'en') return description;
+  if (lang === 'gu') return `મહત્તમ +${pct}%`;
+  if (lang === 'hi') return `अधिकतम +${pct}%`;
+  return `Max +${pct}%`;
+}
 
-  const lower = description.toLowerCase();
+/**
+ * Localize Promotional Discount Percentage
+ */
+export function getLocalizedDiscountText(val?: number): string {
+  if (val === undefined || val === null) return '';
+  const pct = val > 1 ? Math.round(val) : Math.round(val * 100);
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'gu') return `${pct}% સુધી`;
+  if (lang === 'hi') return `${pct}% तक`;
+  return `Up to ${pct}%`;
+}
 
+// 5. Intelligent Service Description Localizer
+export function getLocalizedDescription(description?: string | null, serviceName?: string | null): string {
+  if (!description && !serviceName) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return description || '';
+
+  const lower = (description || '').toLowerCase();
+
+  if (lower.includes('dining table') || lower.includes('dining area')) {
+    return lang === 'hi'
+      ? 'डाइनिंग टेबल की डीप क्लीनिंग, कुर्सियों की पोंछाई, फर्श के दाग हटाना और झूमर की सफाई।'
+      : 'ડાઇનિંગ ટેબલની ડીપ ક્લીનિંગ, ખુરશીઓની સફાઈ, ફ્લોરના ડાઘ દૂર કરવા અને ઝુમ્મરની સફાઈ.';
+  }
+  if (lower.includes('gold-foil') || lower.includes('24k gold')) {
+    return lang === 'hi'
+      ? 'विशेष आयोजनों के लिए त्वचा को तुरंत चमकदार निखार, कसाव और रेशमी चिकनाई देने वाला शानदार गोल्ड-फॉइल मसाज फेशियल।'
+      : 'ખાસ પ્રસંગો માટે ત્વચાને તાત્કાલિક તેજસ્વી ચમક, મજબૂતાઈ અને રેશમી મુલાયમતા આપતો વૈભવી ગોલ્ડ-ફોઇલ મસાજ ફેશિયલ.';
+  }
+  if (lower.includes('tightening peptide') || lower.includes('collagen facial')) {
+    return lang === 'hi'
+      ? 'झुर्रियों को कम करने और चेहरे की बनावट को निखारने के लिए आइस ग्लोब्स से मसाज किया जाने वाला टाइटनिंग पेप्टाइड और कोलेजन फेशियल।'
+      : 'કરચલીઓ ઘટાડવા અને ચહેરાના આકારને સુધારવા માટે આઇસ ગ્લોબ્સ વડે મસાજ કરાતો ટાઇટનિંગ પેપ્ટાઇડ અને કોલેજન ફેશિયલ.';
+  }
+  if (lower.includes('charcoal vacuum cleanup') || lower.includes('blackheads')) {
+    return lang === 'hi'
+      ? 'जिद्दी ब्लैकहेड्स, अतिरिक्त सीबम और सक्रिय मुहांसों को लक्षित करने वाला एक्टिवेटेड बैम्बू चारकोल वैक्यूम क्लीनअप।'
+      : 'હઠીલા બ્લેકહેડ્સ, વધારાનું સીબમ અને સક્રિય ખીલને દૂર કરવા માટે એક્ટિવેટેડ વાંસ ચારકોલ વેક્યુમ ક્લીનઅપ.';
+  }
+  if (lower.includes('diamond-tip exfoliation')) {
+    return lang === 'hi'
+      ? 'युवा त्वचा की बनावट के लिए मुंहासों के निशान, महीन रेखाओं और हाइपर-पिग्मेंटेशन को कम करने वाला सटीक डायमंड-टिप एक्सफोलिएशन।'
+      : 'યુવાન ત્વચા માટે ખીલના ડાઘ, ઝીણી રેખાઓ અને પિગ્મેન્ટેશન ઘટાડવા માટે સચોટ ડાયમંડ-ટિપ એક્સફોલિએશન.';
+  }
+  if (lower.includes('organic fruit extract')) {
+    return lang === 'hi'
+      ? 'त्वचा को गहराई से हाइड्रेट करने, एक्सफोलिएट करने और प्राकृतिक चमक बहाल करने के लिए डिज़ाइन किया गया पौष्टिक जैविक फल अर्क फेशियल।'
+      : 'ત્વચાને ઊંડાણપૂર્વક હાઇડ્રેટ કરવા અને કુદરતી ચમક પુનઃસ્થાપિત કરવા માટે તૈયાર કરાયેલ પૌષ્ટિક ઓર્ગેનિક ફ્રૂટ એક્સટ્રેક્ટ ફેશિયલ.';
+  }
   if (lower.includes('rapid facial brightening treatment')) {
     return lang === 'hi'
       ? 'त्वचा की प्राकृतिक चमक बढ़ाने और चेहरे के रोमछिद्रों को साफ करने के लिए एक त्वरित व प्रभावी फेशियल ट्रीटमेंट।'
@@ -459,7 +755,115 @@ export function getLocalizedDescription(description?: string | null): string {
       : 'પ્રશિક્ષિત વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ ગેરંટી સાથે પૂરી પાડવામાં આવતી પ્રમાણિત સેવા.';
   }
 
+  // Dynamic context-aware overview based on service name
+  if (serviceName) {
+    const locName = getLocalizedServiceName(serviceName);
+    return lang === 'hi'
+      ? `${locName} के लिए प्रशिक्षित और बैकग्राउंड-सत्यापित पेशेवरों द्वारा 100% संतुष्टि और सुरक्षा गारंटी के साथ प्रदान की जाने वाली प्रीमियम होम सेवा।`
+      : `${locName} માટે પ્રશિક્ષિત અને બેકગ્રાઉન્ડ-ચકાસાયેલ નિષ્ણાતો દ્વારા ૧૦૦% સંતોષ અને સુરક્ષા ગેરંટી સાથે પૂરી પાડવામાં આવતી ઉત્તમ સેવા.`;
+  }
+
   return lang === 'hi'
     ? 'प्रशिक्षित और बैकग्राउंड-सत्यापित पेशेवरों द्वारा 7-दिवसीय स्मार्टसर्व वारंटी के साथ पूरी की जाने वाली सुरक्षित होम सेवा।'
-    : 'પ્રશિક્ષિત અને બેકગ્રાઉન્ડ-ચકાસાયેલ વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ વોરંટી સાથે પૂરી પાડવામાં આવતી સુરક્ષિત સેવા.';
+    : 'પ્રશિક્ષિત અને બેકગ્રાઉન્ડ-ચકાસાયેલ વ્યાવસાયિકો દ્વારા 7-દિવસીય સ્માર્ટસર્વ વૉરંટી સાથે પૂરી પાડવામાં આવતી સુરક્ષિત સેવા.';
+}
+
+
+/**
+ * Localize Catalog Exclusions
+ */
+export function getLocalizedExcluded(text?: string | null): string {
+  if (!text) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return text;
+
+  const loc = getLocalizedFeature(text);
+  if (loc && loc !== text && !hasLatin(loc)) return loc;
+
+  const lower = text.toLowerCase().trim();
+  if (lower.includes('structural') || lower.includes('heavy modification')) {
+    return lang === 'hi' ? 'संरचनात्मक भारी संशोधन या तोड़फोड़' : 'માળખાકીય મોટા ફેરફારો અથવા તોડફોડ';
+  }
+  if (lower.includes('spare hardware') || lower.includes('unless explicitly')) {
+    return lang === 'hi' ? 'अतिरिक्त हार्डवेयर (जब तक स्पष्ट रूप से अनुरोध न किया गया हो)' : 'સ્પેર હાર્ડવેર (જ્યાં સુધી સ્પષ્ટ વિનંતી ન કરવામાં આવી હોય)';
+  }
+  if (lower.includes('refrigerant') || lower.includes('gas leak') || lower.includes('gas charging')) {
+    return lang === 'hi' ? 'रेफ्रिजरेंट गैस रिसाव मरम्मत और रीफिल (अलग से देय)' : 'રેફ્રિજન્ટ ગેસ લીકેજ રિપેરિંગ અને ટોપ-અપ (અલગથી ચૂકવવાપાત્ર)';
+  }
+  if (lower.includes('wiring') || lower.includes('socket installation')) {
+    return lang === 'hi' ? 'विद्युत वायरिंग विस्तार या नए स्विच बोर्ड की स्थापना' : 'ઇલેક્ટ્રિકલ વાયરિંગ વિસ્તરણ અથવા નવા સ્વીચ બોર્ડ ઇન્સ્ટોલેશન';
+  }
+  if (lower.includes('civil') || lower.includes('plaster') || lower.includes('masonry')) {
+    return lang === 'hi' ? 'सिविल निर्माण, दीवार प्लास्टर या टाइल तोड़फोड़ कार्य' : 'સિવિલ બાંધકામ, દિવાલ પ્લાસ્ટર અથવા ટાઇલ્સ તોડફોડ કામગીરી';
+  }
+  if (lower.includes('repainting') || lower.includes('re-lamination') || lower.includes('polishing')) {
+    return lang === 'hi' ? 'कैबिनेट की पूरी पेंटिंग या नया लेमिनेशन लगाना' : 'કેબિનેટનું સંપૂર્ણ રી-પેઇન્ટિંગ અથવા નવું લેમિનેશન કરવું';
+  }
+  if (lower.includes('cost of') || lower.includes('parts')) {
+    return lang === 'hi' ? 'नए स्पेयर पार्ट्स या एक्सेसरीज़ की अतिरिक्त लागत' : 'નવા સ્પેરપાર્ટ્સ અથવા એસેસરીઝનો વધારાનો ખર્ચ';
+  }
+
+  return loc;
+}
+
+/**
+ * Localize Catalog Recommended Dos
+ */
+export function getLocalizedDo(text?: string | null): string {
+  if (!text) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return text;
+
+  const loc = getLocalizedFeature(text);
+  if (loc && loc !== text && !hasLatin(loc)) return loc;
+
+  const lower = text.toLowerCase().trim();
+  if (lower.includes('clear instructions') || lower.includes('before the service begins')) {
+    return lang === 'hi' ? 'सेवा शुरू होने से पहले तकनीशियन को स्पष्ट निर्देश अवश्य दें' : 'સેવા શરૂ કરતા પહેલા ટેકનિશિયનને સ્પષ્ટ સૂચનાઓ ચોક્કસ આપો';
+  }
+  if (lower.includes('final handover') || lower.includes('inspect the work')) {
+    return lang === 'hi' ? 'अंतिम हैंडओवर के दौरान पूरे कार्य का बारीकी से निरीक्षण करें' : 'અંતિમ હેન્ડઓવર દરમિયાન સમગ્ર કામનું બારીકાઈથી નિરીક્ષણ કરો';
+  }
+  if (lower.includes('ventilated') || lower.includes('ventilation')) {
+    return lang === 'hi' ? 'कार्य क्षेत्र में उचित वेंटिलेशन और खिड़कियां खुली रखें' : 'કાર્ય વિસ્તારમાં યોગ્ય વેન્ટિલેશન અને બારીઓ ખુલ્લી રાખો';
+  }
+  if (lower.includes('turn off') || lower.includes('switch off')) {
+    return lang === 'hi' ? 'सर्विसिंग से पहले मुख्य पावर सप्लाई या वाल्व बंद कर दें' : 'સર્વિસિંગ પહેલાં મુખ્ય પાવર સપ્લાય અથવા વાલ્વ બંધ કરો';
+  }
+  if (lower.includes('clean') && lower.includes('filter')) {
+    return lang === 'hi' ? 'फिल्टर को नियमित रूप से साफ करें ताकि बेहतर कार्यक्षमता बनी रहे' : 'ફિલ્ટરને નિયમિતપણે સાફ કરો જેથી ઉત્તમ કાર્યક્ષમતા જળવાઈ રહે';
+  }
+
+  return loc;
+}
+
+/**
+ * Localize Catalog Recommended Don'ts
+ */
+export function getLocalizedDont(text?: string | null): string {
+  if (!text) return '';
+  const lang = (i18n.language || 'en').slice(0, 2);
+  if (lang === 'en') return text;
+
+  const loc = getLocalizedFeature(text);
+  if (loc && loc !== text && !hasLatin(loc)) return loc;
+
+  const lower = text.toLowerCase().trim();
+  if (lower.includes('interrupt') || lower.includes('core procedure')) {
+    return lang === 'hi' ? 'मुख्य सेवा प्रक्रिया के दौरान बीच में बाधा डालने का प्रयास न करें' : 'મુખ્ય પ્રક્રિયા દરમિયાન વચ્ચે ખલેલ પહોંચાડવાનો પ્રયાસ ન કરો';
+  }
+  if (lower.includes('harsh chemicals') || lower.includes('treated area')) {
+    return lang === 'hi' ? 'सेवा के तुरंत बाद उपचारित क्षेत्र पर कठोर रासायनिक क्लीनर का उपयोग न करें' : 'સેવા પછી તરત જ તે વિસ્તાર પર તીવ્ર રાસાયણિક ક્લીનર્સનો ઉપયોગ ન કરો';
+  }
+  if (lower.includes('drag') || lower.includes('floor')) {
+    return lang === 'hi' ? 'फर्श पर भारी फर्नीचर या मशीन को बिना उठाए न घसीटें' : 'ફ્લોર પર ભારે ફર્નિચર કે મશીનને ઊંચક્યા વગર ખેંચશો નહીં';
+  }
+  if (lower.includes('force open') || lower.includes('brute force')) {
+    return lang === 'hi' ? 'जाम हुए दरवाजों या उपकरणों को जबरदस्ती खोलने का प्रयास न करें' : 'જામ થયેલા દરવાજા કે સાધનોને બળપૂર્વક ખોલવાનો પ્રયાસ ન કરો';
+  }
+  if (lower.includes('diy') || lower.includes('before the technician')) {
+    return lang === 'hi' ? 'तकनीशियन के आने से पहले स्वयं मरम्मत का प्रयास न करें (वारंटी शून्य हो सकती है)' : 'ટેકનિશિયન આવે તે પહેલાં જાતે રિપેરિંગનો પ્રયાસ ન કરો (વોરંટી રદ થઈ શકે છે)';
+  }
+
+  return loc;
 }

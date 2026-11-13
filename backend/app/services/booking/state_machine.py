@@ -36,10 +36,11 @@ ALLOWED_TRANSITIONS: Dict[str, set] = {
     },
     BookingStatus.STARTED.value: {
         BookingStatus.COMPLETED.value,
+    },
+    BookingStatus.COMPLETED.value: {
         BookingStatus.PAID.value,
     },
     # Terminal states: strictly read-only, no further transitions allowed
-    BookingStatus.COMPLETED.value: set(),
     BookingStatus.PAID.value: set(),
     BookingStatus.CANCELLED.value: set(),
     BookingStatus.REJECTED.value: set(),
@@ -167,7 +168,7 @@ def transition_booking_status(
             if not is_valid:
                 tl_fail = {
                     "event": "Failed Service Start OTP Verification Attempt",
-                    "actor": user.full_name or user.email,
+                    "actor": getattr(user, "full_name", None) or user.email,
                     "role": user.role,
                     "error": msg,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -184,7 +185,7 @@ def transition_booking_status(
 
             tl_otp = {
                 "event": "Service Start OTP Verified",
-                "actor": user.full_name or user.email,
+                "actor": getattr(user, "full_name", None) or user.email,
                 "role": user.role,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
@@ -210,7 +211,7 @@ def transition_booking_status(
             if not is_valid:
                 tl_fail = {
                     "event": "Failed Service Completion OTP Verification Attempt",
-                    "actor": user.full_name or user.email,
+                    "actor": getattr(user, "full_name", None) or user.email,
                     "role": user.role,
                     "error": msg,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -227,7 +228,7 @@ def transition_booking_status(
 
             tl_otp = {
                 "event": "Service Completion OTP Verified",
-                "actor": user.full_name or user.email,
+                "actor": getattr(user, "full_name", None) or user.email,
                 "role": user.role,
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
@@ -288,7 +289,7 @@ def transition_booking_status(
         "event": f"Job status updated to {next_status}",
         "previous_status": curr_status,
         "status": next_status,
-        "actor": user.full_name or user.email,
+        "actor": getattr(user, "full_name", None) or user.email,
         "role": user.role,
         "reason": reason or "",
         "timestamp": now_iso,

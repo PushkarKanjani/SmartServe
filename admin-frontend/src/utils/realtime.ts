@@ -48,17 +48,14 @@ export function getWebSocketUrl(channels: string[] = []): string {
   const isHttps = rawApiUrl.startsWith('https:') || (typeof window !== 'undefined' && window.location.protocol === 'https:');
   const wsProtocol = isHttps ? 'wss:' : 'ws:';
   const hostDomain = rawApiUrl.replace(/^https?:\/\//, '').replace(/\/api\/v1\/?$/, '');
-
   const params = new URLSearchParams();
   if (channels.length > 0) {
     params.set('channels', channels.join(','));
   }
-
   const token = getValidToken('smartserve_token');
   if (token) {
     params.set('token', token);
   }
-
   const queryString = params.toString() ? `?${params.toString()}` : '';
   return `${wsProtocol}//${hostDomain}/ws/stream${queryString}`;
 }
@@ -131,13 +128,11 @@ export function subscribeToRealtime(
         if (gen !== generation || disposed) { socket.close(); return; }
         retryCount = 0;
         onStatusChange?.('connected');
-
         // Optional runtime auth frame in addition to URL token parameter
         const token = getValidToken('smartserve_token');
         if (token && socket.readyState === WebSocket.OPEN) {
           try { socket.send(JSON.stringify({ action: 'auth', token })); } catch (_) {}
         }
-
         pingInterval = setInterval(() => {
           if (socket.readyState === WebSocket.OPEN) {
             try { socket.send(JSON.stringify({ action: 'ping' })); } catch (_) {}
@@ -159,9 +154,7 @@ export function subscribeToRealtime(
           ) {
             return;
           }
-
           if (data.type === 'AUTH_FAILED') {
-            // Authentication was rejected; log sanitized warning without token
             console.warn('[WebSocket] Authentication rejected by server.');
             return;
           }

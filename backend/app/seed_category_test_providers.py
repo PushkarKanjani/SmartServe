@@ -21,20 +21,11 @@ CATEGORIES_PROVIDER_MAP = [
         "base_price": Decimal("599.00"),
     },
     {
-        "category": "2. Cleaning & Home Cleaning",
+        "category": "2. Cleaning & Pest Control",
         "name": "Sanjay Kumar",
         "email": "sanjay.cleaning@smartserve.com",
         "phone": "+91 98765 11002",
-        "skills": "Full Home Deep Cleaning, Kitchen Sanitization, Sofa Cleaning",
-        "experience": 5,
-        "base_price": Decimal("699.00"),
-    },
-    {
-        "category": "2. Cleaning & Pest Control",
-        "name": "Ramesh Chandra",
-        "email": "ramesh.pest@smartserve.com",
-        "phone": "+91 98765 11003",
-        "skills": "Pest Control, Balcony Washing, Window Track Cleaning, Tile Scrubbing",
+        "skills": "Full Home Deep Cleaning, Kitchen Sanitization, Sofa Cleaning, Pest Control",
         "experience": 7,
         "base_price": Decimal("499.00"),
     },
@@ -155,7 +146,7 @@ def seed_category_providers():
         today = date.today()
         password_hash = hash_password("ProviderPass123!")
 
-        print(f"[{now.isoformat()}] Starting Seeding of Test Providers for all 15 SmartServe Categories...")
+        print(f"[{now.isoformat()}] Starting Seeding of Test Providers for all SmartServe Categories...")
 
         for item in CATEGORIES_PROVIDER_MAP:
             cat_name = item["category"]
@@ -229,8 +220,9 @@ def seed_category_providers():
             # 4. Link Provider to Catalog Services in this Category
             services = db.query(Service).filter(Service.category == cat_name, Service.is_active == True).all()
             if not services:
-                # If exact string didn't match, try like match
-                services = db.query(Service).filter(Service.category.ilike(f"%{cat_name[3:].strip()}%")).all()
+                # Try prefix-stripped match
+                clean_cat = cat_name.split(". ", 1)[-1].strip() if ". " in cat_name else cat_name
+                services = db.query(Service).filter(Service.category.ilike(f"%{clean_cat}%")).all()
 
             for srv in services:
                 ps = db.query(ProviderService).filter(
@@ -253,7 +245,6 @@ def seed_category_providers():
                     db.add(ps)
 
             # 5. Seed Real Future Availability Slots
-            # Remove any past slots to keep table clean
             db.query(Availability).filter(
                 Availability.provider_id == provider.user_id,
                 Availability.slot_date < today
@@ -261,8 +252,9 @@ def seed_category_providers():
 
             # Define slot schedules for future days
             slot_schedules = [
-                # (day_offset, start_time, end_time)
-                (0, time(max(now.hour + 1, 10), 0), time(min(max(now.hour + 3, 12), 21), 0)) if now.hour < 19 else None,
+                # Same day slot if daytime
+                (0, time(max(now.hour + 1, 9), 0), time(min(max(now.hour + 3, 12), 21), 0)) if now.hour < 19 else None,
+                # Upcoming days
                 (1, time(9, 0), time(12, 0)),
                 (1, time(13, 0), time(16, 0)),
                 (1, time(16, 30), time(19, 30)),
@@ -274,6 +266,7 @@ def seed_category_providers():
                 (4, time(15, 0), time(19, 0)),
                 (5, time(9, 30), time(12, 30)),
                 (5, time(14, 0), time(18, 0)),
+                (6, time(10, 0), time(13, 0)),
                 (7, time(9, 0), time(12, 0)),
                 (7, time(14, 0), time(18, 0)),
             ]
@@ -306,8 +299,52 @@ def seed_category_providers():
                     existing_slot.status = "FREE"
                     db.add(existing_slot)
 
+        # 6. Also link existing verified providers (Demo Partner, Rajesh Sharma, COD Test Provider)
+        extra_providers = db.query(Provider).filter(Provider.is_verified == True).all()
+        for ep in extra_providers:
+            ep_services = db.query(Service).filter(Service.category == ep.category, Service.is_active == True).all()
+            for srv in ep_services:
+                ps = db.query(ProviderService).filter(
+                    ProviderService.provider_id == ep.user_id,
+                    ProviderService.service_id == srv.id
+                ).first()
+                if not ps:
+                    ps = ProviderService(
+                        id=uuid.uuid4(),
+                        provider_id=ep.user_id,
+                        service_id=srv.id,
+                        price=srv.base_price,
+                        duration_minutes=60,
+                        active=True,
+                        created_at=datetime.utcnow()
+                    )
+                    db.add(ps)
+                else:
+                    ps.active = True
+                    db.add(ps)
+
+            # Ensure extra provider has upcoming slots
+            for day_offset in [1, 2, 3, 4, 5, 7]:
+                s_date = today + timedelta(days=day_offset)
+                for s_time, e_time in [(time(9, 0), time(12, 0)), (time(13, 0), time(16, 0)), (time(16, 30), time(19, 30))]:
+                    has_slot = db.query(Availability).filter(
+                        Availability.provider_id == ep.user_id,
+                        Availability.slot_date == s_date,
+                        Availability.start_time == s_time
+                    ).first()
+                    if not has_slot:
+                        db.add(Availability(
+                            id=uuid.uuid4(),
+                            provider_id=ep.user_id,
+                            slot_date=s_date,
+                            start_time=s_time,
+                            end_time=e_time,
+                            status="FREE",
+                            created_at=datetime.utcnow(),
+                        ))
+
         db.commit()
-        print("\nAll 15 category providers successfully seeded and verified with active availability!")
+        print("\nAll category providers successfully seeded and verified with active availability!")
 
     except Exception as e:
         db.rollback()

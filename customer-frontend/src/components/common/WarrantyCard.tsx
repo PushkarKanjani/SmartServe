@@ -29,6 +29,8 @@ interface WarrantyCardProps {
   bookingId: string;
   serviceName: string;
   warranty?: WarrantyData | null;
+  isEligible?: boolean;
+  exclusionReason?: string;
   onClaimRaised?: () => void;
 }
 
@@ -36,6 +38,8 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
   bookingId,
   serviceName,
   warranty,
+  isEligible: isEligibleProp,
+  exclusionReason,
   onClaimRaised,
 }) => {
   const { t } = useTranslation();
@@ -43,6 +47,7 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const isEligible = isEligibleProp !== undefined ? isEligibleProp : (warranty?.is_eligible !== false);
   const [localClaimStatus, setLocalClaimStatus] = useState<string | null>(
     warranty?.claim_status && warranty.claim_status !== 'None' ? warranty.claim_status : null
   );
@@ -104,10 +109,14 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm font-bold text-[#1F2A1E]">
-                {warranty?.badge_label || (warranty?.duration_days ? `${warranty.duration_days}-Day Digital Warranty` : t('warranty.title', { defaultValue: 'SmartServe Quality Guarantee' }))}
+                {!isEligible
+                  ? t('warranty.not_applicable_title', { defaultValue: 'Warranty Not Applicable' })
+                  : (warranty?.badge_label || (warranty?.duration_days ? `${warranty.duration_days}-Day Digital Warranty` : t('warranty.title', { defaultValue: 'SmartServe Quality Guarantee' })))}
               </h3>
               <span className={`px-2 py-0.5 text-[11px] font-extrabold rounded-full ${
-                localClaimStatus === 'Pending'
+                !isEligible
+                  ? 'bg-stone-200 text-stone-700'
+                  : localClaimStatus === 'Pending'
                   ? 'bg-amber-100 text-amber-800 border border-amber-300'
                   : localClaimStatus === 'Resolved'
                   ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
@@ -117,7 +126,9 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
                   ? 'bg-stone-200 text-stone-700'
                   : 'bg-[#2F5233]/15 text-[#2F5233] border border-[#2F5233]/30'
               }`}>
-                {localClaimStatus === 'Pending'
+                {!isEligible
+                  ? t('warranty.exempt', { defaultValue: 'Exempt' })
+                  : localClaimStatus === 'Pending'
                   ? t('warranty.claim_pending', { defaultValue: 'Claim Pending' })
                   : localClaimStatus === 'Resolved'
                   ? t('warranty.claim_resolved', { defaultValue: 'Claim Resolved' })
@@ -129,10 +140,12 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
               </span>
             </div>
             <p className="text-xs text-[#1F2A1E]/70 mt-1 max-w-xl leading-relaxed">
-              {warranty?.terms || t('warranty.description', {
-                defaultValue:
-                  'This service is covered by our home maintenance quality guarantee. If you experience any recurring issue with this job, you can raise a warranty rework claim.',
-              })}
+              {!isEligible
+                ? (exclusionReason || warranty?.terms || t('warranty.exempt_description', { defaultValue: 'Personal grooming, salon, beauty, and consumable treatments are excluded from the 7-day home service warranty.' }))
+                : (warranty?.terms || t('warranty.description', {
+                    defaultValue:
+                      'This service is covered by our home maintenance quality guarantee. If you experience any recurring issue with this job, you can raise a warranty rework claim.',
+                  }))}
             </p>
 
             {expiresDate && (
@@ -192,35 +205,44 @@ export const WarrantyCard: React.FC<WarrantyCardProps> = ({
 
         {/* Claim Action Button */}
         <div>
-          {!localClaimStatus && !isExpired && (
-            <button
-              onClick={() => setShowClaimModal(true)}
-              className="px-4 py-2.5 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"
-            >
-              <AlertTriangle className="w-4 h-4 text-[#C9A15A]" />
-              <span>{t('warranty.raise_claim', { defaultValue: 'Raise Warranty Claim' })}</span>
-            </button>
-          )}
-
-          {localClaimStatus === 'Pending' && (
-            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200">
-              <Clock className="w-4 h-4" />
-              <span>{t("warranty.claim_pending", { defaultValue: "Claim Under Inspection" })}</span>
+          {!isEligible ? (
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-stone-600 bg-stone-100 px-3 py-2 rounded-xl border border-stone-200">
+              <ShieldCheck className="w-4 h-4 text-stone-400" />
+              <span>{t('warranty.not_eligible_badge', { defaultValue: 'Exempt from Rework Warranty' })}</span>
             </div>
-          )}
+          ) : (
+            <>
+              {!localClaimStatus && !isExpired && (
+                <button
+                  onClick={() => setShowClaimModal(true)}
+                  className="px-4 py-2.5 bg-[#2F5233] hover:bg-[#3D6B42] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-center"
+                >
+                  <AlertTriangle className="w-4 h-4 text-[#C9A15A]" />
+                  <span>{t('warranty.raise_claim', { defaultValue: 'Raise Warranty Claim' })}</span>
+                </button>
+              )}
 
-          {localClaimStatus === 'Resolved' && (
-            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
-              <CheckCircle className="w-4 h-4" />
-              <span>{t("warranty.claim_resolved", { defaultValue: "Claim Resolved" })}</span>
-            </div>
-          )}
+              {localClaimStatus === 'Pending' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200">
+                  <Clock className="w-4 h-4" />
+                  <span>{t("warranty.claim_pending", { defaultValue: "Claim Under Inspection" })}</span>
+                </div>
+              )}
 
-          {localClaimStatus === 'Rejected' && (
-            <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 px-3 py-2 rounded-xl border border-rose-200">
-              <XCircle className="w-4 h-4 text-rose-600" />
-              <span>{t("warranty.claim_rejected", { defaultValue: "Claim Rejected" })}</span>
-            </div>
+              {localClaimStatus === 'Resolved' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-200">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>{t("warranty.claim_resolved", { defaultValue: "Claim Resolved" })}</span>
+                </div>
+              )}
+
+              {localClaimStatus === 'Rejected' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 px-3 py-2 rounded-xl border border-rose-200">
+                  <XCircle className="w-4 h-4 text-rose-600" />
+                  <span>{t("warranty.claim_rejected", { defaultValue: "Claim Rejected" })}</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -49,6 +49,54 @@ def get_service_domain(db: Session = Depends(get_db)) -> ProviderServiceDomain:
     return ProviderServiceDomain(db)
 
 
+def _invalidate_catalog_and_notify(provider_id: uuid.UUID, reason: str) -> None:
+    """Clear public catalog caches and broadcast real-time catalog update event."""
+    from app.core.cache import get_cache
+    from app.core.websockets import broadcast_realtime
+
+    cache = get_cache()
+    cache.invalidate_prefix("customer:catalog:")
+    cache.invalidate_prefix("catalog:")
+    broadcast_realtime(
+        ["catalog_updates", f"provider_{provider_id}", "dashboard"],
+        {
+            "event_id": str(uuid.uuid4()),
+            "type": "PROVIDER_CATALOG_UPDATED",
+            "event": "provider.catalog.updated",
+            "event_type": "provider.catalog.updated",
+            "provider_id": str(provider_id),
+            "reason": reason,
+        },
+    )
+
+
+def _broadcast_booking_photo_event(booking: Booking, actor_id: uuid.UUID, photo_kind: str, photo_url: str) -> None:
+    """Broadcast real-time photo upload event so Customer & Admin views update without refresh."""
+    from app.core.websockets import broadcast_realtime
+
+    cust_id = str(booking.customer_id) if booking.customer_id else None
+    cust_user_id = str(booking.customer.user_id) if booking.customer and hasattr(booking.customer, "user_id") else None
+    channels = ["dashboard", "bookings", "admin", f"booking_{booking.id}", f"admin_booking_{booking.id}"]
+    if cust_id:
+        channels.extend([f"customer_{cust_id}", f"user_{cust_id}"])
+    if cust_user_id:
+        channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
+    channels.extend([f"provider_{actor_id}", f"user_{actor_id}"])
+
+    broadcast_realtime(
+        channels,
+        {
+            "event_id": str(uuid.uuid4()),
+            "type": "BOOKING_PHOTO_UPLOADED",
+            "event": "booking.photo.uploaded",
+            "event_type": "booking.photo.uploaded",
+            "booking_id": str(booking.id),
+            "photo_kind": photo_kind,
+            "photo_url": photo_url,
+        },
+    )
+
+
 # ==========================================
 # PROVIDER PROFILE ENDPOINTS
 # ==========================================
@@ -75,7 +123,9 @@ def update_my_provider_profile(
     current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
-    return service.update_my_profile(current_user, update_data)
+    res = service.update_my_profile(current_user, update_data)
+    _invalidate_catalog_and_notify(current_user.id, "profile_updated")
+    return res
 
 
 @router.get(
@@ -164,7 +214,9 @@ def create_provider_service_offering(
     current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
-    return service.add_provider_service(current_user, data)
+    res = service.add_provider_service(current_user, data)
+    _invalidate_catalog_and_notify(current_user.id, "service_created")
+    return res
 
 
 @router.patch(
@@ -178,7 +230,9 @@ def update_provider_service_offering(
     current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
-    return service.update_provider_service(current_user, id, data)
+    res = service.update_provider_service(current_user, id, data)
+    _invalidate_catalog_and_notify(current_user.id, "service_updated")
+    return res
 
 
 @router.delete(
@@ -192,6 +246,7 @@ def delete_provider_service_offering(
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
     service.delete_provider_service(current_user, id)
+    _invalidate_catalog_and_notify(current_user.id, "service_deleted")
     return None
 
 
@@ -235,7 +290,9 @@ def add_availability_slot(
     current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
-    return service.add_availability_slot(current_user, data)
+    res = service.add_availability_slot(current_user, data)
+    _invalidate_catalog_and_notify(current_user.id, "availability_added")
+    return res
 
 
 @router.patch(
@@ -249,7 +306,9 @@ def update_availability_slot(
     current_user: AuthUser = Depends(require_provider),
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
-    return service.update_availability_slot(current_user, id, data)
+    res = service.update_availability_slot(current_user, id, data)
+    _invalidate_catalog_and_notify(current_user.id, "availability_updated")
+    return res
 
 
 @router.get(
@@ -276,6 +335,7 @@ def delete_availability_slot(
     service: ProviderServiceDomain = Depends(get_service_domain),
 ):
     service.delete_availability_slot(current_user, id)
+    _invalidate_catalog_and_notify(current_user.id, "availability_deleted")
     return None
 
 
@@ -524,7 +584,9 @@ def accept_booking(
         channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
     channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
 
+    shared_event_id = str(uuid.uuid4())
     accepted_msg = {
+        "event_id": shared_event_id,
         "type": "BOOKING_ACCEPTED",
         "event": "booking.accepted",
         "event_type": "booking.accepted",
@@ -555,6 +617,7 @@ def accept_booking(
     try:
         from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
         accepted_event = KafkaEvent(
+            event_id=shared_event_id,
             event_type=KafkaTopics.BOOKING_ACCEPTED,
             booking_id=str(updated.id),
             sender_id=str(current_user.id),
@@ -606,7 +669,9 @@ def reject_booking(
         channels.extend([f"customer_{cust_user_id}", f"user_{cust_user_id}"])
     channels.extend([f"provider_{current_user.id}", f"user_{current_user.id}"])
 
+    shared_event_id = str(uuid.uuid4())
     rejected_msg = {
+        "event_id": shared_event_id,
         "type": "BOOKING_REJECTED",
         "event": "booking.rejected",
         "event_type": "booking.rejected",
@@ -642,6 +707,7 @@ def reject_booking(
     try:
         from app.services.kafka import kafka_producer, KafkaTopics, KafkaEvent
         rejected_event = KafkaEvent(
+            event_id=shared_event_id,
             event_type=KafkaTopics.BOOKING_REJECTED,
             booking_id=str(updated.id),
             sender_id=str(current_user.id),
@@ -1201,6 +1267,8 @@ async def upload_before_service_photo(
     db.commit()
     db.refresh(booking)
 
+    _broadcast_booking_photo_event(booking, current_user.id, "before", url)
+
     return {
         "success": True,
         "photo_url": url,
@@ -1283,6 +1351,8 @@ async def upload_after_service_photo(
     db.add(booking)
     db.commit()
     db.refresh(booking)
+
+    _broadcast_booking_photo_event(booking, current_user.id, "after", url)
 
     return {
         "success": True,
@@ -1422,6 +1492,8 @@ def update_provider_location(
     if booking.customer and hasattr(booking.customer, "user_id") and booking.customer.user_id:
         channels.extend([f"customer_{booking.customer.user_id}", f"user_{booking.customer.user_id}"])
 
+    from app.core.websockets import to_utc_iso
+    utc_ts = to_utc_iso(now_utc)
     loc_msg = {
         "type": "PROVIDER_LOCATION_UPDATED",
         "event": "provider.location.updated",
@@ -1435,7 +1507,7 @@ def update_provider_location(
         "speed": float(payload.speed) if payload.speed is not None else None,
         "accuracy": float(payload.accuracy) if payload.accuracy is not None else None,
         "status": booking.status,
-        "updated_at": f"{now_utc.isoformat()}Z",
+        "updated_at": utc_ts,
     }
     broadcast_realtime(channels, loc_msg)
 
@@ -1444,7 +1516,7 @@ def update_provider_location(
         "booking_id": str(booking.id),
         "latitude": float(payload.latitude),
         "longitude": float(payload.longitude),
-        "updated_at": f"{now_utc.isoformat()}Z",
+        "updated_at": utc_ts,
     }
 
 
@@ -1529,6 +1601,8 @@ def dev_simulate_provider_location(
     if booking.customer and hasattr(booking.customer, "user_id") and booking.customer.user_id:
         channels.extend([f"customer_{booking.customer.user_id}", f"user_{booking.customer.user_id}"])
 
+    from app.core.websockets import to_utc_iso
+    utc_ts = to_utc_iso(now_utc)
     loc_msg = {
         "type": "PROVIDER_LOCATION_UPDATED",
         "event": "provider.location.updated",
@@ -1542,7 +1616,7 @@ def dev_simulate_provider_location(
         "speed": float(payload.speed) if payload.speed is not None else None,
         "accuracy": float(payload.accuracy) if payload.accuracy is not None else 5.0,
         "status": booking.status,
-        "updated_at": f"{now_utc.isoformat()}Z",
+        "updated_at": utc_ts,
     }
     broadcast_realtime(channels, loc_msg)
 
@@ -1551,7 +1625,7 @@ def dev_simulate_provider_location(
         "booking_id": str(booking.id),
         "latitude": float(payload.latitude),
         "longitude": float(payload.longitude),
-        "updated_at": f"{now_utc.isoformat()}Z",
+        "updated_at": utc_ts,
     }
 
 

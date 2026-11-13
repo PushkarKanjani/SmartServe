@@ -6,7 +6,7 @@ import { formatDateINR } from '../utils/formatters';
 import { getLocalizedStatus, getLocalizedSupportCategory } from '../utils/localizedNames';
 import { useToast } from '../hooks/useToast';
 import { ArrowLeft, Send, Clock, User, ShieldCheck, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
-import { subscribeToRealtime } from '../utils/realtime';
+import { subscribeToRealtime, getCustomerRealtimeChannels } from '../utils/realtime';
 
 export const CustomerSupportDetail: React.FC = () => {
   const { ticketId } = useParams<{ ticketId: string }>();
@@ -40,7 +40,7 @@ export const CustomerSupportDetail: React.FC = () => {
     fetchDetail();
     if (!ticketId) return;
 
-    const channels = [`ticket_${ticketId}`, 'support', 'support_tickets'];
+    const channels = getCustomerRealtimeChannels([`ticket_${ticketId}`]);
     const unsubscribeWs = subscribeToRealtime(channels, (payload) => {
       const type = payload.type || payload.event_type || payload.event;
       if (type === 'NEW_SUPPORT_MESSAGE' || type === 'support.message') {

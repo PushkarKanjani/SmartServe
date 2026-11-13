@@ -50,6 +50,10 @@ def _is_authorized_for_channel(auth_payload: Optional[Dict[str, Any]], channel: 
     sub = str(auth_payload.get("sub") or "").lower() if auth_payload else ""
     cust_id = str(auth_payload.get("customer_id") or "").lower() if auth_payload else ""
 
+    # 0. Public Read-Only Catalog / Provider Availability Channel
+    if clean_channel == "catalog_updates":
+        return True
+
     # 1. Admin & Operational Super-Channels (Strictly require Admin / Super Admin)
     admin_channels = {"dashboard", "emergency", "admin", "system"}
     if clean_channel in admin_channels or clean_channel.startswith("admin_"):
@@ -81,13 +85,17 @@ def _is_authorized_for_channel(auth_payload: Optional[Dict[str, Any]], channel: 
         return target_id in [sub, cust_id]
 
     # 6. Specific Booking or Ticket tracking channels (Enforce tenant boundary)
-    if clean_channel.startswith("booking_") or clean_channel.startswith("ticket_"):
+    if clean_channel.startswith("booking_chat_") or clean_channel.startswith("booking_") or clean_channel.startswith("ticket_"):
         if role in ["admin", "super_admin"]:
             return True
         if not auth_payload:
             return False
 
-        target_uuid_str = clean_channel.split("_", 1)[1] if "_" in clean_channel else ""
+        is_booking_channel = clean_channel.startswith("booking_chat_") or clean_channel.startswith("booking_")
+        if clean_channel.startswith("booking_chat_"):
+            target_uuid_str = clean_channel[len("booking_chat_"):]
+        else:
+            target_uuid_str = clean_channel.split("_", 1)[1] if "_" in clean_channel else ""
         if not target_uuid_str:
             return False
 
@@ -97,7 +105,7 @@ def _is_authorized_for_channel(auth_payload: Optional[Dict[str, Any]], channel: 
             from app.core.database import SessionLocal
             db = SessionLocal()
             try:
-                if clean_channel.startswith("booking_"):
+                if is_booking_channel:
                     from app.models.booking import Booking
                     from app.models.customer import Customer
                     b = db.query(Booking).filter(Booking.id == t_uuid).first()

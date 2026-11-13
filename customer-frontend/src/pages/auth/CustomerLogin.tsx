@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, Loader2, AlertCircle, ShieldCheck, KeyRound, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../auth/useAuth';
 import { useToast } from '../../hooks/useToast';
 import { CustomerLoginVideoCarousel } from '../../components/auth/CustomerLoginVideoCarousel';
-import { initiateOAuth, forgotPassword } from '../../api/auth';
+import { initiateOAuth, forgotPassword, getOAuthProviders } from '../../api/auth';
 import { useTranslation } from 'react-i18next';
 
 export const CustomerLogin: React.FC = () => {
@@ -18,7 +18,24 @@ export const CustomerLogin: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<'google' | 'apple' | 'github' | null>(null);
+  const [oauthProviders, setOauthProviders] = useState<{ google: boolean; apple: boolean; github: boolean }>({
+    google: false,
+    apple: false,
+    github: false,
+  });
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    getOAuthProviders()
+      .then((res: any) => {
+        setOauthProviders({
+          google: !!res?.google?.configured,
+          apple: !!res?.apple?.configured,
+          github: !!res?.github?.configured,
+        });
+      })
+      .catch(() => {});
+  }, []);
   const [is2FaRequired, setIs2FaRequired] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState('');
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
@@ -88,6 +105,21 @@ export const CustomerLogin: React.FC = () => {
 
   const handleSocialLogin = async (provider: 'google' | 'apple' | 'github') => {
     setErrorMessage(null);
+
+    // Client-side discovery guard: prevent 503 error if provider credentials are not in backend .env
+    if (provider === 'google' && !oauthProviders.google) {
+      setErrorMessage(t('auth.oauth_google_unavailable', { defaultValue: 'Google Sign-In is not configured on this server. Please sign in using your email and password.' }));
+      return;
+    }
+    if (provider === 'apple' && !oauthProviders.apple) {
+      setErrorMessage(t('auth.oauth_apple_unavailable', { defaultValue: 'Apple Sign-In is not configured on this server. Please sign in using your email and password.' }));
+      return;
+    }
+    if (provider === 'github' && !oauthProviders.github) {
+      setErrorMessage(t('auth.oauth_github_unavailable', { defaultValue: 'GitHub Sign-In is not configured on this server. Please sign in using your email and password.' }));
+      return;
+    }
+
     setSocialLoading(provider);
     try {
       const redirectUri = `${window.location.origin}/auth/callback/${provider}`;
