@@ -60,7 +60,6 @@ export function getCustomerRealtimeChannels(extraChannels: string[] = []): strin
   }
   return Array.from(channels);
 }
-}
 
 export function getWebSocketUrl(channels: string[] = []): string {
   const rawApiUrl = getApiBaseUrl();
