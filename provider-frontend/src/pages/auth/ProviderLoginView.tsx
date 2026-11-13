@@ -324,20 +324,62 @@ export const ProviderLoginView: React.FC = () => {
           </form>
 
           {/* Quick Demo Credentials Helper */}
-          <div 
-            onClick={() => {
-              setEmail('rajesh.sharma@smartserve.com');
-              setPassword('ProviderPass123!');
-              setError(null);
-            }}
-            className="mt-6 p-3.5 bg-white hover:bg-[#FAF7F0] transition-colors rounded-2xl border border-[#E5DEC9] text-xs cursor-pointer group"
-            title="Click to autofill demo credentials"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-bold text-[#1F2A1E]/70 uppercase tracking-wider text-[10px]">Verified Partner Demo Login</span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 group-hover:bg-emerald-100 transition-colors">Click to Auto-fill</span>
+          <div className="mt-6 p-4 bg-white rounded-2xl border border-[#E5DEC9] text-xs shadow-2xs">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-bold text-[#1F2A1E]/70 uppercase tracking-wider text-[10px]">
+                Demo Partner Accounts (1-Click Fill)
+              </span>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                Verified
+              </span>
             </div>
-            <p className="text-[11px] text-[#1F2A1E]/60 font-mono">rajesh.sharma@smartserve.com / ProviderPass123!</p>
+            <div className="grid grid-cols-1 gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('demo.provider@smartserve.com');
+                  setPassword('DemoProvider123!');
+                  setError(null);
+                }}
+                className="w-full text-left px-3 py-2 rounded-xl bg-[#FAF7F0] hover:bg-[#F2EDE1] transition-colors flex items-center justify-between group cursor-pointer"
+              >
+                <div>
+                  <div className="font-bold text-[11px] text-[#1F2A1E]">Demo Pro Services (All Services)</div>
+                  <div className="font-mono text-[10px] text-[#1F2A1E]/60">demo.provider@smartserve.com</div>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-700 group-hover:underline">Use &rarr;</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('rajesh.sharma@smartserve.com');
+                  setPassword('ProviderPass123!');
+                  setError(null);
+                }}
+                className="w-full text-left px-3 py-2 rounded-xl bg-[#FAF7F0] hover:bg-[#F2EDE1] transition-colors flex items-center justify-between group cursor-pointer"
+              >
+                <div>
+                  <div className="font-bold text-[11px] text-[#1F2A1E]">Rajesh Sharma (Salon & Beauty)</div>
+                  <div className="font-mono text-[10px] text-[#1F2A1E]/60">rajesh.sharma@smartserve.com</div>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-700 group-hover:underline">Use &rarr;</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail('deepak.repair@smartserve.com');
+                  setPassword('ProviderPass123!');
+                  setError(null);
+                }}
+                className="w-full text-left px-3 py-2 rounded-xl bg-[#FAF7F0] hover:bg-[#F2EDE1] transition-colors flex items-center justify-between group cursor-pointer"
+              >
+                <div>
+                  <div className="font-bold text-[11px] text-[#1F2A1E]">Deepak Negi (AC & Appliances)</div>
+                  <div className="font-mono text-[10px] text-[#1F2A1E]/60">deepak.repair@smartserve.com</div>
+                </div>
+                <span className="text-[10px] font-bold text-emerald-700 group-hover:underline">Use &rarr;</span>
+              </button>
+            </div>
           </div>
 
           {/* Sign Up / Become a Partner Link */}

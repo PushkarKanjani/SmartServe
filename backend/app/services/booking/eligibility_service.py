@@ -235,8 +235,11 @@ def find_eligible_provider(
         return chosen, matched_slot, "Selected provider assigned"
 
     # Step 5: Auto-assign best candidate (highest reliability score, acceptance rate)
+    # In development mode, prioritize the primary demo provider account (demo.provider@smartserve.com)
+    primary_demo_id = uuid.UUID("1e86f045-6e78-49c8-8035-3820786a9d18")
     eligible_candidates.sort(
         key=lambda p: (
+            1 if p.user_id == primary_demo_id else 0,
             float(p.reliability_score or 100.0),
             float(p.acceptance_rate or 100.0),
             float(p.experience_years or 0)

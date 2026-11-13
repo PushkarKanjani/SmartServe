@@ -96,6 +96,37 @@ const resolvePhotoUrl = (url?: string | null) => {
   return `${apiBase}/${url.replace(/^\/+/, '')}`;
 };
 
+// Web Audio API synthesized notification sound
+const playNotificationChime = () => {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.35);
+
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1320, now + 0.15);
+    gain2.gain.setValueAtTime(0.35, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.15);
+    osc2.stop(now + 0.6);
+  } catch (_) {}
+};
+
 export const ProviderDashboardView: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -107,6 +138,7 @@ export const ProviderDashboardView: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'active' | 'completed'>('all');
+  const [newBookingAlert, setNewBookingAlert] = useState<any | null>(null);
   const [rejectingBooking, setRejectingBooking] = useState<any | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('Schedule conflict with another job');
 
@@ -490,7 +522,35 @@ export const ProviderDashboardView: React.FC = () => {
       ) {
         const targetId = String(payload.booking_id || payload.booking?.id || '');
         const newStatus = payload.status || payload.booking?.status;
-        if (targetId && newStatus) {
+
+        // On newly created booking: play chime, show alert banner, prepend to state
+        if (type === 'BOOKING_CREATED' || type === 'booking.created') {
+          playNotificationChime();
+          const bData = payload.booking || payload.data;
+          if (bData) {
+            const newB = {
+              id: bData.booking_id || bData.id || targetId,
+              booking_reference: bData.booking_reference || `BK-${String(targetId).slice(0, 8).toUpperCase()}`,
+              customer_name: bData.customer_name || 'Customer',
+              customer_phone: bData.customer_phone || '',
+              service_name: bData.service_name || 'Home Service',
+              category: bData.category || 'General',
+              status: 'Requested',
+              scheduled_date: bData.scheduled_date,
+              scheduled_time: bData.scheduled_time,
+              address: bData.address || '',
+              total_price: bData.total_price || 0,
+              created_at: bData.created_at || new Date().toISOString(),
+            };
+            setBookings((prev) => {
+              const exists = prev.some((b) => String(b.id) === String(newB.id));
+              if (exists) return prev;
+              return [newB, ...prev];
+            });
+            setNewBookingAlert(newB);
+            setActiveTab('all');
+          }
+        } else if (targetId && newStatus) {
           setBookings((prev) =>
             prev.map((b) => (String(b.id) === targetId ? { ...b, status: newStatus } : b))
           );
@@ -694,6 +754,51 @@ export const ProviderDashboardView: React.FC = () => {
           </button>
         </div>
       </div>
+
+            {/* New Booking Live Real-Time Banner */}
+      {newBookingAlert && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-emerald-600 via-emerald-700 to-green-800 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-emerald-400/30 animate-pulse">
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-xl shrink-0">
+              🔔
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-200 bg-emerald-900/50 px-2 py-0.5 rounded-full">
+                  New Order Received Just Now
+                </span>
+                <span className="text-xs font-mono font-bold text-white/90">
+                  {newBookingAlert.booking_reference}
+                </span>
+              </div>
+              <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">
+                {newBookingAlert.service_name} • {newBookingAlert.customer_name}
+              </h4>
+              <p className="text-xs text-emerald-100/80">
+                {newBookingAlert.address || 'Service Location on File'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
+            <button
+              onClick={() => {
+                setActiveTab('pending');
+                setNewBookingAlert(null);
+              }}
+              className="px-4 py-2 bg-white text-emerald-900 text-xs font-bold rounded-xl shadow-xs hover:bg-emerald-50 transition-colors cursor-pointer"
+            >
+              View in Requests →
+            </button>
+            <button
+              onClick={() => setNewBookingAlert(null)}
+              className="p-2 text-white/70 hover:text-white transition-colors cursor-pointer"
+              title="Dismiss"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ══════════════════════════════════════════════════
           2. VERIFICATION STATUS NOTIFICATION BANNER
